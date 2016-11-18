@@ -7,7 +7,7 @@
 
 import os, sys
 
-from Aligners import SplitBlastnAligner, GMAPAligner, DualAligner, ListAligner, SELECTION_BEST_SCORE
+from Aligners import AlignmentResults, SplitBlastnAligner, GMAPAligner, DualAligner, ListAligner, SELECTION_BEST_SCORE
 import barleymapcore.utils.alignment_utils as alignment_utils
 from barleymapcore.alignment.RefsReader import RefsReader
 
@@ -106,8 +106,8 @@ class AlignmentFacade():
             best_score_filtering = {}
             for db in results:
                 for result in results[db]:
-                    query_id = result[0]
-                    align_score = float(result[4])
+                    query_id = result[AlignmentResults.QUERY_ID]
+                    align_score = float(result[AlignmentResults.ALIGNMENT_SCORE])
                     
                     if query_id in best_score_filtering:
                         query_best_score = best_score_filtering[query_id]["best_score"]
@@ -129,7 +129,7 @@ class AlignmentFacade():
             
             for query_id in best_score_filtering:
                 for result in best_score_filtering[query_id]["results"]:
-                    db = result[7]
+                    db = result[AlignmentResults.DB_NAME]
                     results[db].append(result)
         
         self._alignment_results = results
@@ -142,8 +142,8 @@ class AlignmentFacade():
             no_redundant_results = set()
             for db in self._alignment_results:
                 for result in self._alignment_results[db]:
-                    if result[0] not in no_redundant_results:
-                        no_redundant_results.add(result[0])
+                    if result[AlignmentResults.QUERY_ID] not in no_redundant_results:
+                        no_redundant_results.add(result[AlignmentResults.QUERY_ID])
                 
             self._alignment_unmapped = alignment_utils.filter_list(fasta_headers, no_redundant_results)
         
@@ -176,7 +176,7 @@ class AlignmentFacade():
         elif "," in query_type:
             aligner_list = []
             for aligner_type in query_type.split(","):
-                sys.stderr.write("AlignmentFacade: aligner "+str(aligner_type)+"\n")
+                if self._verbose: sys.stderr.write("AlignmentFacade: aligner "+str(aligner_type)+"\n")
                 if aligner_type == "genomic":
                     current_aligner = SplitBlastnAligner(self._blastn_app_path, n_threads, self._blastn_dbs_path, self._split_blast_path, self._verbose)
                     aligner_list.append(current_aligner)

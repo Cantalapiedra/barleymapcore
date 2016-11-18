@@ -183,7 +183,7 @@ def __compress(output, db_name):
     
     return compressed
 
-def __filter_gmap_results(results, threshold_id, threshold_cov, selection, db_name):
+def __filter_gmap_results(results, threshold_id, threshold_cov, selection, db_name, verbose = False):
     filtered_results = []
     
     chimera_num = 0 #chimera_dict = set([])
@@ -219,9 +219,11 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, selection, db_na
         
         if strand == "+":
             local_position = long(line_data[9].split(":")[1].split("..")[0])
+            end_position = long(line_data[9].split(":")[1].split("..")[1])
             #local_position = long(s_pos.group(1))
         elif strand == "-":
             local_position = long(line_data[9].split(":")[1].split("..")[1])
+            end_position = long(line_data[9].split(":")[1].split("..")[0])
             #local_position = long(s_pos.group(2))
         else:
             raise Exception("m2p_gmap: wrong strand.")
@@ -233,7 +235,7 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, selection, db_na
         #if query_id == "i_BK_02": debug = True
         #else: debug = False
         
-        result_tuple = (subject_id, align_ident, query_cov, align_score, strand, local_position)
+        result_tuple = (subject_id, align_ident, query_cov, align_score, strand, local_position, end_position)
         
         if selection == SELECTION_BEST_SCORE:
             if query_id in filter_dict:
@@ -302,12 +304,14 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, selection, db_na
             align_score = alignment_data[3]
             strand = alignment_data[4]
             local_position = alignment_data[5]
+            end_position = alignment_data[6]
             # This MUST coincide with Aligners.AlignmentResults fields
-            filtered_results.append([query_id, subject_id, align_ident, query_cov, align_score, strand, local_position, db_name, algorithm])
+            filtered_results.append([query_id, subject_id, align_ident, query_cov, align_score, strand,
+                                     local_position, end_position, db_name, algorithm])
     
     #sys.stderr.write("m2p_gmap: number of chimeras found: "+str(len(chimera_dict))+"\n")
     
-    sys.stderr.write("m2p_gmap: number of chimeras found: "+str(chimera_num)+"\n")
+    if verbose: sys.stderr.write("m2p_gmap: number of chimeras found: "+str(chimera_num)+"\n")
     
     return filtered_results
 
@@ -315,13 +319,14 @@ def get_hits(gmap_app_path, n_threads, query_fasta_path, gmap_dbs_path, db_name,
              threshold_id, threshold_cov, selection, verbose = False):
     results = []
     
-    sys.stderr.write("m2p_gmap: "+query_fasta_path+" against "+db_name+"\n")
+    if verbose: sys.stderr.write("m2p_gmap: "+query_fasta_path+" against "+db_name+"\n")
     
-    results = __gmap(gmap_app_path, n_threads, threshold_id, threshold_cov, query_fasta_path, gmap_dbs_path, db_name, verbose)
+    results = __gmap(gmap_app_path, n_threads, threshold_id, threshold_cov, query_fasta_path,
+                     gmap_dbs_path, db_name, verbose)
     
     if verbose: sys.stderr.write("m2p_gmap: raw results --> "+str(len(results))+"\n")
     if len(results)>0:
-        results = __filter_gmap_results(results, threshold_id, threshold_cov, selection, db_name)
+        results = __filter_gmap_results(results, threshold_id, threshold_cov, selection, db_name, verbose)
     if verbose: sys.stderr.write("m2p_gmap: pass-filter results --> "+str(len(results))+"\n")
     #sys.stderr.write(str(results)+"\n")
     

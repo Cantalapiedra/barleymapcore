@@ -21,9 +21,10 @@ class AlignmentResults(object):
     QUERY_COVERAGE = 3
     ALIGNMENT_SCORE = 4
     STRAND = 5
-    LOCAL_POSITION = 6
-    DB_NAME = 7
-    ALGORITHM = 8
+    START_POSITION = 6
+    END_POSITION = 7
+    DB_NAME = 8
+    ALGORITHM = 9
 
 class BaseAligner(object):
     
@@ -57,35 +58,50 @@ class SplitBlastnAligner(BaseAligner):
         self._split_blast_path = split_blast_path
         
     def align(self, fasta_path, db, threshold_id, threshold_cov, selection):
+        
         fasta_headers = alignment_utils.get_fasta_headers(fasta_path)
-        sys.stderr.write("SplitBlastnAligner: num of seqs to align to "+str(db)+" "+str(len(fasta_headers))+"\n")
+        
+        sys.stderr.write("SplitBlastnAligner: DB --> "+str(db)+"\n")
+        sys.stderr.write("SplitBlastnAligner: to align "+str(len(fasta_headers))+"\n")
         
         # get_best_score_hits from m2p_split_blast.py
         self._results_hits = get_best_score_hits(self._split_blast_path, self._app_path, self._n_threads, \
                                                  fasta_path, self._dbs_path, db, threshold_id, threshold_cov, \
                                                  selection, self._verbose)
         
-        self._results_unmapped = alignment_utils.filter_list(fasta_headers, [a[0] for a in self._results_hits])
+        self._results_unmapped = alignment_utils.filter_list(fasta_headers,
+                                                             [a[AlignmentResults.QUERY_ID] for a in self._results_hits])
         
-        sys.stderr.write("SplitBlastnAligner: num of seqs unmapped "+str(len(self._results_unmapped))+"\n")
+        sys.stderr.write("SplitBlastnAligner: aligned "+
+                         str(len(set([a.split(" ")[0] for a in
+                                      [a[AlignmentResults.QUERY_ID] for a in self._results_hits]])))+"\n")
+        
+        sys.stderr.write("SplitBlastnAligner: no hits "+str(len(self._results_unmapped))+"\n")
     
 class GMAPAligner(BaseAligner):
     def align(self, fasta_path, db, threshold_id, threshold_cov, selection):
+        
         fasta_headers = alignment_utils.get_fasta_headers(fasta_path)
         
-        sys.stderr.write("GMAPAligner: num of seqs to align to "+str(db)+" "+str(len(fasta_headers))+"\n")
+        sys.stderr.write("GMAPAligner: DB --> "+str(db)+"\n")
+        sys.stderr.write("GMAPAligner: to align "+str(len(fasta_headers))+"\n")
         
         # get_hits from m2p_gmap.py
-        self._results_hits = get_hits(self._app_path, self._n_threads, fasta_path, self._dbs_path, db, threshold_id, threshold_cov, \
+        self._results_hits = get_hits(self._app_path, self._n_threads, fasta_path, self._dbs_path, db,
+                                      threshold_id, threshold_cov, \
                                       selection, self._verbose)
         
         #sys.stderr.write("Results: "+str(len([a[0] for a in self._results_hits]))+"\n")
         #sys.stderr.write("ResultsB: "+str(len(set([a.split(" ")[0] for a in [a[0] for a in self._results_hits]])))+"\n")
         
-        self._results_unmapped = alignment_utils.filter_list(fasta_headers, [a[0] for a in self._results_hits])
+        self._results_unmapped = alignment_utils.filter_list(fasta_headers,
+                                                             [a[AlignmentResults.QUERY_ID] for a in self._results_hits])
         
-        sys.stderr.write("GMAPAligner: num of seqs aligned "+str(len(set([a.split(" ")[0] for a in [a[0] for a in self._results_hits]])))+"\n")
-        sys.stderr.write("GMAPAligner: num of seqs without hits "+str(len(self._results_unmapped))+"\n")
+        sys.stderr.write("GMAPAligner: aligned "+
+                         str(len(set([a.split(" ")[0] for a in
+                                      [a[AlignmentResults.QUERY_ID] for a in self._results_hits]])))+"\n")
+        
+        sys.stderr.write("GMAPAligner: no hits "+str(len(self._results_unmapped))+"\n")
 
 class DualAligner(BaseAligner):
     _blastn_aligner = None
@@ -103,7 +119,8 @@ class DualAligner(BaseAligner):
         fasta_to_align = fasta_path
         self._blastn_aligner.align(fasta_to_align, db, threshold_id, threshold_cov, selection)
         
-        gmap_fasta_to_align = alignment_utils.extract_fasta_headers(fasta_path, self._blastn_aligner.get_unmapped(), self._tmp_files_dir)
+        gmap_fasta_to_align = alignment_utils.extract_fasta_headers(fasta_path, self._blastn_aligner.get_unmapped(),
+                                                                    self._tmp_files_dir)
         try:
             self._gmap_aligner.align(gmap_fasta_to_align, db, threshold_id, threshold_cov, selection)
         except Exception:

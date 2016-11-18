@@ -6,12 +6,12 @@
 # (terms of use can be found within the distributed LICENSE file).
 
 import sys
-from maps.Mappers import Mappers
-from maps.MapsBase import MapTypes, MapFields
-from barleymapcore.maps.MarkersBase import MarkersFields, MarkersData
-from maps.MapReader import MapReader
-from genes.GenesFacade import GenesFacade
-from datasets.DatasetsFacade import DatasetsFacade
+from Mappers import Mappers
+from MapsBase import MapTypes, MapFields
+from MarkersBase import MarkersFields, MarkersData
+from MapReader import MapReader
+from barleymapcore.genes.GenesFacade import GenesFacade
+from barleymapcore.datasets.DatasetsFacade import DatasetsFacade
 from barleymapcore.alignment.Aligners import AlignmentResults
 
 ## Read conf file
@@ -79,7 +79,7 @@ class MapMarkers(object):
         for marker_alignment in alignments_list:
             marker_id = marker_alignment[AlignmentResults.QUERY_ID]
             contig_id = marker_alignment[AlignmentResults.SUBJECT_ID]
-            local_position = marker_alignment[AlignmentResults.LOCAL_POSITION]
+            local_position = marker_alignment[AlignmentResults.START_POSITION]
             
             # Markers dict
             if marker_id in markers_dict:

@@ -94,11 +94,14 @@ def __filter_blast_results(results, threshold_id, threshold_cov, selection, db_n
         if line_data[7]>line_data[8]:
             strand = "-"
             local_position = long(line_data[8])
+            end_position = long(line_data[7])
         else:
             strand = "+"
             local_position = long(line_data[7])
+            end_position = long(line_data[8])
         
-        result_tuple = (subject_id, align_ident, query_cov, align_score, strand, local_position)
+        result_tuple = (subject_id, align_ident, query_cov, align_score,
+                        strand, local_position, end_position)
         
         if selection == SELECTION_BEST_SCORE:
             if query_id in filter_dict:
@@ -133,14 +136,17 @@ def __filter_blast_results(results, threshold_id, threshold_cov, selection, db_n
             align_score = alignment_data[3]
             strand = alignment_data[4]
             local_position = alignment_data[5]
+            end_position = alignment_data[6]
             # This MUST coincide with Aligners.AlignmentResults fields
-            filtered_results.append([query_id, subject_id, align_ident, query_cov, align_score, strand, local_position, db_name, algorithm])
+            filtered_results.append([query_id, subject_id, align_ident, query_cov, align_score, strand,
+                                     local_position, end_position, db_name, algorithm])
     
     return filtered_results
 
 def get_best_score_hits(split_blast_path, blast_app_path, n_threads, query_fasta_path, blast_dbs_path, db_name, \
                         threshold_id, threshold_cov, selection, verbose = False):
-    sys.stderr.write("m2p_split_blast: "+query_fasta_path+" against "+db_name+"\n")
+    
+    if verbose: sys.stderr.write("m2p_split_blast: "+query_fasta_path+" against "+db_name+"\n")
     
     results = __split_blast(split_blast_path, blast_app_path, n_threads, query_fasta_path, blast_dbs_path, db_name, verbose)
     
