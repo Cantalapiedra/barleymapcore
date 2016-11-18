@@ -81,6 +81,8 @@ class MapMarkers(object):
             contig_id = marker_alignment[AlignmentResults.SUBJECT_ID]
             local_position = marker_alignment[AlignmentResults.START_POSITION]
             
+            
+            
             # Markers dict
             if marker_id in markers_dict:
                 marker_dict = markers_dict[marker_id]
