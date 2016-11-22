@@ -100,8 +100,11 @@ def __filter_blast_results(results, threshold_id, threshold_cov, selection, db_n
             local_position = long(line_data[7])
             end_position = long(line_data[8])
         
+        qstart_pos = long(line_data[5])
+        qend_pos = long(line_data[6])
+        
         result_tuple = (subject_id, align_ident, query_cov, align_score,
-                        strand, local_position, end_position)
+                        strand, local_position, end_position, qstart_pos, qend_pos)
         
         if selection == SELECTION_BEST_SCORE:
             if query_id in filter_dict:
@@ -137,9 +140,12 @@ def __filter_blast_results(results, threshold_id, threshold_cov, selection, db_n
             strand = alignment_data[4]
             local_position = alignment_data[5]
             end_position = alignment_data[6]
+            qstart_pos = alignment_data[7]
+            qend_pos = alignment_data[8]
             # This MUST coincide with Aligners.AlignmentResults fields
             filtered_results.append([query_id, subject_id, align_ident, query_cov, align_score, strand,
-                                     local_position, end_position, db_name, algorithm])
+                                     qstart_pos, qend_pos, local_position, end_position,  
+                                     db_name, algorithm])
     
     return filtered_results
 

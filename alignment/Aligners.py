@@ -21,10 +21,12 @@ class AlignmentResults(object):
     QUERY_COVERAGE = 3
     ALIGNMENT_SCORE = 4
     STRAND = 5
-    START_POSITION = 6
-    END_POSITION = 7
-    DB_NAME = 8
-    ALGORITHM = 9
+    START_POSITION = 8
+    END_POSITION = 9
+    QSTART_POS = 6
+    QEND_POS = 7
+    DB_NAME = 10
+    ALGORITHM = 11
 
 class BaseAligner(object):
     

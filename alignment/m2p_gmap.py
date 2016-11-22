@@ -231,11 +231,14 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, selection, db_na
         #sys.stderr.write("Local position "+str(local_position)+"\n")
         
         query_positions = line_data[7].split("..")
-        align_score = (long(query_positions[1]) - long(query_positions[0])) * (align_ident / 100)
+        qstart_pos = query_positions[0]
+        qend_pos = query_positions[1]
+        align_score = (long(qend_pos) - long(qstart_pos)) * (align_ident / 100)
         #if query_id == "i_BK_02": debug = True
         #else: debug = False
         
-        result_tuple = (subject_id, align_ident, query_cov, align_score, strand, local_position, end_position)
+        result_tuple = (subject_id, align_ident, query_cov, align_score, strand, local_position, end_position,
+                        qstart_pos, qend_pos)
         
         if selection == SELECTION_BEST_SCORE:
             if query_id in filter_dict:
@@ -305,9 +308,12 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, selection, db_na
             strand = alignment_data[4]
             local_position = alignment_data[5]
             end_position = alignment_data[6]
+            qstart_pos = alignment_data[7]
+            qend_pos = alignment_data[8]
             # This MUST coincide with Aligners.AlignmentResults fields
             filtered_results.append([query_id, subject_id, align_ident, query_cov, align_score, strand,
-                                     local_position, end_position, db_name, algorithm])
+                                     qstart_pos, qend_pos, local_position, end_position, 
+                                     db_name, algorithm])
     
     #sys.stderr.write("m2p_gmap: number of chimeras found: "+str(len(chimera_dict))+"\n")
     
