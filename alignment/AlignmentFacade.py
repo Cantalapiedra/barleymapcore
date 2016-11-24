@@ -9,14 +9,9 @@ import os, sys
 
 from Aligners import AlignmentResults, SplitBlastnAligner, GMAPAligner, DualAligner, ListAligner, SELECTION_BEST_SCORE
 import barleymapcore.utils.alignment_utils as alignment_utils
-from barleymapcore.alignment.RefsReader import RefsReader
+from barleymapcore.db.DatabasesConfig import REF_TYPE_BIG, REF_TYPE_STD, DatabasesConfig
 
 class AlignmentFacade():
-    
-    _REF_TYPE_NORMAL = "std" # std value in references.conf
-    _REF_TYPE_BIG = "big" # big value in references.conf
-    
-    _refs_reader = None
     
     _split_blast_path = ""
     _blastn_app_path = ""
@@ -25,7 +20,7 @@ class AlignmentFacade():
     _gmap_dbs_path = ""
     _gmapl_app_path = ""
     _tmp_files_dir = ""
-    _references_conf_path = ""
+    _databases_config = None
     
     _alignment_results = {}
     _alignment_unmapped = []
@@ -34,7 +29,7 @@ class AlignmentFacade():
     
     def __init__(self, split_blast_path, blastn_app_path, gmap_app_path,
                  blastn_dbs_path, gmap_dbs_path, gmapl_app_path, 
-                 tmp_files_dir, references_conf_path = "", verbose = False):
+                 tmp_files_dir, databases_config, verbose = False):
         self._split_blast_path = split_blast_path
         self._blastn_app_path = blastn_app_path
         self._gmap_app_path = gmap_app_path
@@ -44,17 +39,12 @@ class AlignmentFacade():
         self._tmp_files_dir = tmp_files_dir
         self._verbose = verbose
         
-        if references_conf_path != "":
-            self._references_conf_path = references_conf_path
-            self._refs_reader = RefsReader(references_conf_path, verbose)
-        else:
-            self._references_conf_path = ""
-            self._refs_reader = None
+        self._databases_config = databases_config
         
     def perform_alignment(self, query_fasta_path, dbs_list, hierarchical, query_type = "genomic", \
                           threshold_id = 98, threshold_cov = 95, n_threads = 1, \
                           selection = SELECTION_BEST_SCORE, best_score_filter = False,
-                            ref_type = _REF_TYPE_NORMAL):
+                            ref_type_param = REF_TYPE_STD):
         results = {} # A list of hits for each db
         
         fasta_to_align = query_fasta_path
@@ -69,8 +59,9 @@ class AlignmentFacade():
                 # CPCantalapiedra 2016-11
                 # Obtain ref_type of current database
                 
-                if self._refs_reader:
-                    ref_type = self._refs_reader.get_ref_type(db)
+                if self._databases_config.database_exists(db):
+                    database_config = self._databases_config.get_database(db)
+                    ref_type = self._databases_config.get_ref_type(database_config)
                 else:
                     ref_type = ref_type_param
                 
@@ -150,7 +141,7 @@ class AlignmentFacade():
         
         return results
     
-    def _get_aligner(self, query_type, n_threads, tmp_files_dir = "./", ref_type = _REF_TYPE_NORMAL): # This is an AlignerFactory
+    def _get_aligner(self, query_type, n_threads, tmp_files_dir = "./", ref_type = REF_TYPE_STD): # This is an AlignerFactory
         
         aligner = None
         
@@ -159,7 +150,7 @@ class AlignmentFacade():
             
         elif query_type == "cdna":
             # CPCantalapiedra 2016-11
-            if ref_type == self._REF_TYPE_BIG: # When sequence DB is too big to use gmap, instead gmapl has to be used
+            if ref_type == REF_TYPE_BIG: # When sequence DB is too big to use gmap, instead gmapl has to be used
                 aligner = GMAPAligner(self._gmapl_app_path, n_threads, self._gmap_dbs_path, self._verbose)
             else:
                 aligner = GMAPAligner(self._gmap_app_path, n_threads, self._gmap_dbs_path, self._verbose)
@@ -167,7 +158,7 @@ class AlignmentFacade():
         elif query_type == "auto":
             blastn_aligner = SplitBlastnAligner(self._blastn_app_path, n_threads, self._blastn_dbs_path, self._split_blast_path, self._verbose)
             # CPCantalapiedra 2016-11
-            if ref_type == self._REF_TYPE_BIG:
+            if ref_type == REF_TYPE_BIG:
                 gmap_aligner = GMAPAligner(self._gmapl_app_path, n_threads, self._gmap_dbs_path, self._verbose)
             else:
                 gmap_aligner = GMAPAligner(self._gmap_app_path, n_threads, self._gmap_dbs_path, self._verbose)
@@ -183,7 +174,7 @@ class AlignmentFacade():
                     aligner_list.append(current_aligner)
                 elif aligner_type == "cdna":
                     # CPCantalapiedra 2016-11
-                    if ref_type == self._REF_TYPE_BIG:
+                    if ref_type == REF_TYPE_BIG:
                         current_aligner = GMAPAligner(self._gmapl_app_path, n_threads, self._gmap_dbs_path, self._verbose)
                     else:
                         current_aligner = GMAPAligner(self._gmap_app_path, n_threads, self._gmap_dbs_path, self._verbose)

@@ -5,6 +5,9 @@
 # Copyright (C)  2016  Carlos P Cantalapiedra.
 # (terms of use can be found within the distributed LICENSE file).
 
+import sys
+from barleymapcore.utils.data_utils import load_conf
+
 # Fields in references.conf file
 REF_NAME = 0
 REF_ID = 1
@@ -31,10 +34,9 @@ class DatabasesConfig(object):
         conf_rows = load_conf(config_file, self._verbose) # data_utils.load_conf
         
         for conf_row in conf_rows:
-            config_data = conf_row.strip().split(" ")
-            ref_id = config_data[REF_ID]
-            ref_name = config_data[REF_NAME]
-            ref_type = config_data[REF_TYPE]
+            ref_id = conf_row[REF_ID]
+            ref_name = conf_row[REF_NAME]
+            ref_type = conf_row[REF_TYPE]
             
             self._config_dict[ref_id] = {REF_NAME:ref_name, REF_TYPE:ref_type}
         
@@ -77,10 +79,12 @@ class DatabasesConfig(object):
         
         return databases_names
     
-    
-    
     # Obtain type (big or std size) of fasta DB
     def get_ref_type(self, database_config):
         return database_config[REF_TYPE]
+    
+    def database_exists(self, database):
+        return database in self._config_dict
+    
 
 ## END
