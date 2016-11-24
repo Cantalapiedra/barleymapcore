@@ -1,20 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# DatabasesConf.py is part of Barleymap.
+# DatabasesConfig.py is part of Barleymap.
 # Copyright (C)  2016  Carlos P Cantalapiedra.
 # (terms of use can be found within the distributed LICENSE file).
 
-class DatabasesConf(object):
-    
-    # Fields in references.conf file
-    REF_NAME = 0
-    REF_ID = 1
-    REF_TYPE = 2
-    
-    # REF_TYPE values
-    REF_TYPE_BIG = "big"
-    REF_TYPE_STD = "std"
+# Fields in references.conf file
+REF_NAME = 0
+REF_ID = 1
+REF_TYPE = 2
+
+# REF_TYPE values
+REF_TYPE_BIG = "big"
+REF_TYPE_STD = "std"
+
+class DatabasesConfig(object):
     
     _config_file = ""
     _verbose = False
@@ -44,6 +44,40 @@ class DatabasesConf(object):
     
     def get_database(self, database):
         return self._config_dict[database]
+    
+    def get_databases_ids(self, databases_names):
+        databases_ids = []
+        
+        # Doing this in a loop to conserve order
+        for database_name in databases_names:
+            found = False
+            for database in self._config_dict:
+                if self._config_dict[database][REF_NAME] == database_name:
+                    databases_ids.append(database)
+                    found = True
+                    break
+            
+            if not found:
+                sys.stderr.write("DatabasesConfig: database name "+database_name+" not found in config.\n")
+        
+        return databases_ids
+    
+    def get_databases_names(self, databases_ids):
+        databases_names = []
+        
+        for database in databases_ids:
+            found = False
+            if database in self._config_dict:
+                databases_names.append(self._config_dict[database][REF_NAME])
+                found = True
+            
+            if not found:
+                sys.stderr.write("DatabasesConfig: database ID "+database+" not found in config.\n")
+                databases_names.append(database)
+        
+        return databases_names
+    
+    
     
     # Obtain type (big or std size) of fasta DB
     def get_ref_type(self, database_config):
