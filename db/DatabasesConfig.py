@@ -12,6 +12,10 @@ class DatabasesConf(object):
     REF_ID = 1
     REF_TYPE = 2
     
+    # REF_TYPE values
+    REF_TYPE_BIG = "big"
+    REF_TYPE_STD = "std"
+    
     _config_file = ""
     _verbose = False
     _config_dict = {}
@@ -19,18 +23,18 @@ class DatabasesConf(object):
     
     def __init__(self, config_file, verbose = True):
         self._config_file = config_file
-        self._load_config()
+        self._load_config(config_file)
         self._verbose = verbose
     
-    def _load_config(self):
-        for config_line in open(self._config_file, 'r'):
-            config_data = config_line.strip().split(" ")
+    def _load_config(self, config_file):
+        self._config_dict = {}
+        conf_rows = load_conf(config_file, self._verbose) # data_utils.load_conf
+        
+        for conf_row in conf_rows:
+            config_data = conf_row.strip().split(" ")
             ref_id = config_data[REF_ID]
             ref_name = config_data[REF_NAME]
             ref_type = config_data[REF_TYPE]
-            # ref_type:
-            # ----big (AlignmentFacade._REF_TYPE_BIG)
-            # ----std (AlignmentFacade._REF_TYPE_NORMAL)
             
             self._config_dict[ref_id] = {REF_NAME:ref_name, REF_TYPE:ref_type}
         

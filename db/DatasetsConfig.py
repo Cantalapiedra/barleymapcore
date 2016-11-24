@@ -24,12 +24,12 @@ class DatasetsConfig(object):
     
     def __init__(self, config_file, verbose = True):
         self._config_file = config_file
-        self._load_config()
+        self._load_config(config_file)
         self._verbose = verbose
     
-    def _load_config(self):
+    def _load_config(self, config_file):
         self._config_dict = {}
-        conf_rows = load_conf(self._config_file, self._verbose) # data_utils.load_conf
+        conf_rows = load_conf(config_file, self._verbose) # data_utils.load_conf
         
         #self._config_dict = load_maps(self._config_file, self._verbose) # data_utils.load_maps
         for conf_row in conf_rows:
