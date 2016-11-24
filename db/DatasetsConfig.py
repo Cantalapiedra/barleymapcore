@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # DatasetsConfig.py is part of Barleymap.
-# Copyright (C)  2013-2014  Carlos P Cantalapiedra.
+# Copyright (C)  2016  Carlos P Cantalapiedra.
 # (terms of use can be found within the distributed LICENSE file).
 
 from barleymapcore.utils.data_utils import load_conf
