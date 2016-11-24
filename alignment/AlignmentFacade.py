@@ -54,7 +54,7 @@ class AlignmentFacade():
     def perform_alignment(self, query_fasta_path, dbs_list, hierarchical, query_type = "genomic", \
                           threshold_id = 98, threshold_cov = 95, n_threads = 1, \
                           selection = SELECTION_BEST_SCORE, best_score_filter = False,
-                            ref_type_param = _REF_TYPE_NORMAL):
+                            ref_type = _REF_TYPE_NORMAL):
         results = {} # A list of hits for each db
         
         fasta_to_align = query_fasta_path
