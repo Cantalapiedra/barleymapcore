@@ -7,14 +7,15 @@
 
 import sys, os
 from barleymapcore.utils.data_utils import load_datasets
-from barleymapcore.maps.MapsBase import MapFields
+import DatasetsConfig
 
 SELECTION_BEST_SCORE = "best_score"
 SELECTION_NONE = "none"
 
 class DatasetsFacade(object):
     
-    _datasets_conf_file = ""
+    #_datasets_conf_file = ""
+    _datasets_config = None
     _datasets_path = ""
     _results = {}
     _query_ids_path = ""
@@ -24,7 +25,8 @@ class DatasetsFacade(object):
     _genes_hit_dict_loaded = False
     
     def __init__(self, datasets_conf_file, datasets_path, verbose = True):
-        self._datasets_conf_file = datasets_conf_file
+        #self._datasets_conf_file = datasets_conf_file
+        self._datasets_config = DatasetsConfig(datasets_config_file, verbose)
         self._datasets_path = datasets_path
         self._verbose = verbose
     
@@ -73,7 +75,8 @@ class DatasetsFacade(object):
         
         if self._verbose: sys.stderr.write("DatasetsFacade: loading contig's index with markers data...\n")
         
-        datasets_dict = load_datasets(self._datasets_conf_file, self._verbose)
+        #datasets_config = DatasetsConfig(self._datasets_conf_file, self._verbose)
+        datasets_dict = self._datasets_config.get_datasets()
         
         if not self._genes_hit_dict_loaded:
             self._load_genes_hit_dict(dataset_list)
@@ -82,10 +85,12 @@ class DatasetsFacade(object):
         # Look for markers for each dataset
         for dataset in dataset_list:
             
-            dataset_name = datasets_dict[dataset]["dataset_name"]
+            dataset_config = self._datasets_config.get_dataset(dataset)
+            dataset_name = self._datasets_config.get_dataset_name(dataset_config)#datasets_dict[dataset]["dataset_name"]
+            dataset_type = self._datasets_config.get_dataset_type(dataset_config)
             
             ####### IF DATASET IS OF GENETIC MARKERS: EXCLUDE flcDNAs, HarvEST, ...
-            if datasets_dict[dataset]["dataset_type"] != "genetic_marker":
+            if dataset_type != DatasetsConfig.DATASET_TYPE_GENETIC_MARKER:
                 if self._verbose: sys.stderr.write("\t No markers dataset: "+dataset+"\n")
                 continue
             
@@ -142,7 +147,8 @@ class DatasetsFacade(object):
     def retrieve_markers(self, contigs_dict):
         pass
     
-    def retrieve_ids(self, query_ids_path, dataset_list, db_list, hierarchical = True, selection = SELECTION_BEST_SCORE, best_score_filter = False):
+    def retrieve_ids(self, query_ids_path, dataset_list, db_list, hierarchical = True,
+                     selection = SELECTION_BEST_SCORE, best_score_filter = False):
         results = {}
         num_of_results = 0
         

@@ -34,10 +34,12 @@ def load_data(conf_file, users_list = None, verbose = False):
     if verbose: sys.stderr.write("Configured data:\n")
     
     databases_param_default = []
+    databases_param_default_ids = []
     databases_configured = {}
     for database in open(conf_file, 'r'):
         database_data = database.strip().split(" ")
         databases_param_default.append(database_data[0])
+        databases_param_default_ids.append(database_data[1])
         databases_configured[database_data[0]] = database_data[1]
         
         if verbose: sys.stderr.write("\t"+database_data[0]+" --> ID: "+database_data[1]+"\n")
@@ -53,30 +55,103 @@ def load_data(conf_file, users_list = None, verbose = False):
         
         databases_param = ",".join(databases_param)
     else:
-        databases_list = [database for database in [databases_configured[db] for db in databases_param_default]]
+        databases_list = databases_param_default_ids
         databases_param = ",".join(databases_param_default)
         
     return (databases_param, databases_list)
 
-def load_datasets(conf_file, verbose = False):
-    datasets_dict = {}
+def load_ids(conf_file, users_list = None, verbose = False):
+    databases_list = []
+    databases_param = []
     
-    if verbose: sys.stderr.write("Loading datasets configuration...\n")
+    if verbose: sys.stderr.write("Configured data:\n")
+    
+    databases_param_default = []
+    databases_param_default_ids = []
+    databases_configured = {}
+    for database in open(conf_file, 'r'):
+        database_data = database.strip().split(" ")
+        databases_param_default.append(database_data[0])
+        databases_param_default_ids.append(database_data[1])
+        databases_configured[database_data[1]] = database_data[0]
+        
+        if verbose: sys.stderr.write("\t"+database_data[0]+" --> ID: "+database_data[1]+"\n")
+    
+    if users_list:
+        databases = users_list.split(",")
+        for database in databases:
+            if database in databases_configured:
+                databases_list.append(database)
+                databases_param.append(databases_configured[database])
+            else:
+                databases_list.append(database)
+                databases_param.append(database)
+                #raise m2pException("Warning: data "+database+" is not present in config file.")
+        
+        databases_param = ",".join(databases_param)
+    else:
+        databases_list = databases_param_default_ids
+        databases_param = ",".join(databases_param_default)
+        
+    return (databases_param, databases_list)
+
+def load_name(conf_file, user_name, verbose = False):
+    databases_list = []
+    databases_param = []
+    
+    if verbose: sys.stderr.write("Configured data:\n")
+    
+    databases_param_default = []
+    databases_configured = {}
+    for database in open(conf_file, 'r'):
+        database_data = database.strip().split(" ")
+        databases_param_default.append(database_data[0])
+        databases_configured[database_data[0]] = database_data[1]
+        
+        if verbose: sys.stderr.write("\t"+database_data[0]+" --> ID: "+database_data[1]+"\n")
+    
+    database = user_name
+    if database in databases_configured:
+        database_id = databases_configured[database]
+        database_name = database
+    else:
+        raise m2pException("Warning: data "+database+" is not present in config file.")
+        
+    return (database_name, database_id)
+
+def load_conf(conf_file, verbose = False):
+    conf_rows = []
+    
+    if verbose: sys.stderr.write("Loading configuration file "+conf_file+"...\n")
     
     for line in open(conf_file, 'r'):
-        dataset_data = line.strip().split(" ")
-        if verbose: sys.stderr.write("\t dataset: "+str(dataset_data)+"\n")
-        dataset_name = dataset_data[0]
-        dataset_id = dataset_data[1]
-        dataset_type = dataset_data[2]
+        if verbose: sys.stderr.write("\t conf line: "+line.strip()+"\n")
         
-        if dataset_id in datasets_dict:
-            raise Exception("Duplicated dataset "+str(dataset_id)+" in config file.")
-        else:
-            datasets_dict[dataset_id] = {"dataset_id":dataset_id, "dataset_name":dataset_name, "dataset_type":dataset_type}
+        line_data = line.strip().split(" ")
+        
+        conf_rows.append(line_data)
     
-    if verbose: sys.stderr.write("Datasets configuration loaded.\n")
-    
-    return datasets_dict
+    return conf_rows
+
+#def load_datasets(conf_file, verbose = False):
+#    datasets_dict = {}
+#    
+#    if verbose: sys.stderr.write("Loading datasets configuration...\n")
+#    
+#    for line in open(conf_file, 'r'):
+#        dataset_data = line.strip().split(" ")
+#        if verbose: sys.stderr.write("\t dataset: "+str(dataset_data)+"\n")
+#        dataset_name = dataset_data[0]
+#        dataset_id = dataset_data[1]
+#        dataset_type = dataset_data[2]
+#        
+#        if dataset_id in datasets_dict:
+#            raise Exception("Duplicated dataset "+str(dataset_id)+" in config file.")
+#        else:
+#            datasets_dict[dataset_id] = {"dataset_id":dataset_id, "dataset_name":dataset_name, "dataset_type":dataset_type}
+#    
+#    if verbose: sys.stderr.write("Datasets configuration loaded.\n")
+#    
+#    return datasets_dict
 
 ## END

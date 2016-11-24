@@ -7,76 +7,33 @@
 
 import sys
 from MapsBase import MapFile, MapTypes
+from MapsConfig import MapsConfig
 
 class MapReader(object):
     
-    MAP_CONFIG_MAP_NAME = 0
-    MAP_CONFIG_MAP_ID = 1
-    MAP_CONFIG_HAS_CM_POS = 2
-    MAP_CONFIG_HAS_BP_POS = 3
-    MAP_CONFIG_AS_PHYSICAL = 4
-    MAP_CONFIG_DB_LIST = 5
-    
     _maps_path = ""
-    _config_file = ""
+    _maps_config = None
     _verbose = False
-    
-    _config_dict = {}
-    # [map_id] = {"map_name", "has_cm_pos", "has_bp_pos", "db_list":set([db_id])}
     
     def __init__(self, maps_path, config_file, verbose = True):
         self._maps_path = maps_path
-        self._config_file = config_file
-        self._load_config()
+        self._maps_config = MapsConfig(config_file, verbose)
         self._verbose = verbose
-    
-    def _load_config(self):
-        for config_line in open(self._config_file, 'r'):
-            config_data = config_line.strip().split(" ")
-            if config_data[self.MAP_CONFIG_HAS_CM_POS] == "cm_true":
-                has_cm_pos = True
-            else:
-                has_cm_pos = False
-                
-            if config_data[self.MAP_CONFIG_HAS_BP_POS] == "bp_true":
-                has_bp_pos = True
-            else:
-                has_bp_pos = False
-            
-            if config_data[self.MAP_CONFIG_AS_PHYSICAL] == "physical":
-                as_physical = True
-            else:
-                as_physical = False
-                
-            self._config_dict[config_data[self.MAP_CONFIG_MAP_ID]] = {"map_name":config_data[self.MAP_CONFIG_MAP_NAME], \
-                                                                      MapTypes.MAP_HAS_CM_POS:has_cm_pos, MapTypes.MAP_HAS_BP_POS:has_bp_pos, \
-                                                                      MapTypes.MAP_AS_PHYSICAL:as_physical, \
-                                                                      "db_list":set(config_data[self.MAP_CONFIG_DB_LIST].split(","))}
-        
-    
-    def __map_config(self, genetic_map):
-        
-        if genetic_map in self._config_dict:
-            map_config = self._config_dict[genetic_map]
-        else:
-            raise Exception("Genetic map "+genetic_map+" is not in config file.")
-        
-        return map_config
     
     def __get_position_indexed_data(self, genetic_map, dbs_list, datasets_contig_index, sort_param):
         
         positions_index = {}
         
-        map_config = self.__map_config(genetic_map)
-        has_cm_pos = map_config[MapTypes.MAP_HAS_CM_POS]
-        has_bp_pos = map_config[MapTypes.MAP_HAS_BP_POS] # "has_bp_pos"
+        map_config = self._maps_config.get_map(genetic_map)#__map_config(genetic_map)
+        has_cm_pos = self._maps_config.get_map_has_cm_pos(map_config) #map_config[MapTypes.MAP_HAS_CM_POS]
+        has_bp_pos = self._maps_config.get_map_has_bp_pos(map_config) #map_config[MapTypes.MAP_HAS_BP_POS] # "has_bp_pos"
         
-        if sort_param == "cm":
+        if sort_param == MapTypes.MAP_SORT_PARAM_CM:
             if has_cm_pos:
                 position_offset = MapFile.MAP_FILE_CM
             else:
                 position_offset = MapFile.MAP_FILE_BP
-        elif sort_param == "bp":
+        elif sort_param == MapTypes.MAP_SORT_PARAM_BP:
             if has_bp_pos:
                 position_offset = MapFile.MAP_FILE_BP
             else:
@@ -84,7 +41,7 @@ class MapReader(object):
         
         # For each database configured for this map
         for db in dbs_list:
-            if db in map_config["db_list"]:
+            if db in self._maps_config.get_map_db_list(map_config):
                 if self._verbose: sys.stderr.write("\tMapReader: DB: "+db+"\n")
                 
                 map_path = self._maps_path+genetic_map+"/"+genetic_map+"."+db
@@ -139,7 +96,7 @@ class MapReader(object):
         positions_dict = {}
         # [contig_id] = {"chr", "cm_pos", "bp_pos"}
         
-        map_config = self.__map_config(genetic_map)
+        map_config = self._maps_config.get_map(genetic_map)
         
         # Preload contigs to search for
         positions_dict = dict((contig, {"chr":-1, "cm_pos":-1, "bp_pos":-1}) for contig in contig_set)
@@ -148,7 +105,7 @@ class MapReader(object):
         # For this genetic_map, read the info related to each database of contigs
         for db in dbs_list:
             db_records_read = 0
-            if db in map_config["db_list"]:
+            if db in self._maps_config.get_map_db_list(map_config):
                 if self._verbose: sys.stderr.write("\tMapReader: DB: "+db+"\n")
                 
                 map_path = self._maps_path+genetic_map+"/"+genetic_map+"."+db

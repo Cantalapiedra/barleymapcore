@@ -5,6 +5,16 @@
 # Copyright (C)  2013-2014  Carlos P Cantalapiedra.
 # (terms of use can be found within the distributed LICENSE file).
 
+# MapFile: fields of original maps of contigs (IBSC2012 Morex contigs, IBSC2016 chromosomes, ...)
+class MapFile(object):
+    
+    # These are the fields in the map files
+    MAP_FILE_MARKER = 0
+    MAP_FILE_CHR = 1
+    MAP_FILE_CM = 2
+    MAP_FILE_BP = 3
+
+# MapFields in table of results from barleymap
 class MapFields(object):
     
     MAP_FIELDS = 7
@@ -16,14 +26,6 @@ class MapFields(object):
     MULTIPLE_POS = 4
     OTHER_ALIGNMENTS_POS = 5
     MAP_NAME = 6
-    
-class MapFile(object):
-    
-    # These are the fields in the map files
-    MAP_FILE_MARKER = 0
-    MAP_FILE_CHR = 1
-    MAP_FILE_CM = 2
-    MAP_FILE_BP = 3
     
 class MapTypes(object):
     
@@ -45,6 +47,9 @@ class MapTypes(object):
     MAP_AS_PHYSICAL = "as_physical" # whether add local_position from alignment to position of contig in map
     MAP_SORT_BY = "sort_by"
     MAP_SORT_SEC_POS = "sort_sec_pos"
+    MAP_SORT_PARAM_CM = "cm"
+    MAP_SORT_PARAM_BP = "bp"
+    
 
 class MapHeaders(object):
     

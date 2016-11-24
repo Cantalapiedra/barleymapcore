@@ -53,7 +53,8 @@ class AlignmentFacade():
         
     def perform_alignment(self, query_fasta_path, dbs_list, hierarchical, query_type = "genomic", \
                           threshold_id = 98, threshold_cov = 95, n_threads = 1, \
-                          selection = SELECTION_BEST_SCORE, best_score_filter = False):
+                          selection = SELECTION_BEST_SCORE, best_score_filter = False,
+                            ref_type_param = _REF_TYPE_NORMAL):
         results = {} # A list of hits for each db
         
         fasta_to_align = query_fasta_path
@@ -71,7 +72,7 @@ class AlignmentFacade():
                 if self._refs_reader:
                     ref_type = self._refs_reader.get_ref_type(db)
                 else:
-                    ref_type = self._REF_TYPE_NORMAL
+                    ref_type = ref_type_param
                 
                 # CPCantalapiedra 2016-11
                 # Obtain suitable aligner for each database
