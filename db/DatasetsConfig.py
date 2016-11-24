@@ -5,6 +5,7 @@
 # Copyright (C)  2016  Carlos P Cantalapiedra.
 # (terms of use can be found within the distributed LICENSE file).
 
+import sys
 from barleymapcore.utils.data_utils import load_conf
 
 class DatasetsConfig(object):
@@ -57,5 +58,22 @@ class DatasetsConfig(object):
     
     def get_dataset_type(self, dataset_config):
         return dataset_config[DATASET_TYPE]
+    
+    def get_datasets_names(self, datasets_ids):
+        datasets_names = []
+        
+        for dataset in datasets_ids:
+            found = False
+            if dataset in self._config_dict:
+                datasets_names.append(self._config_dict[dataset][DATASET_NAME])
+                found = True
+            
+            if not found:
+                sys.stderr.write("DatasetsConfig: dataset ID "+dataset+" not found in config.\n")
+                datasets_names.append(dataset)
+        
+        
+        return datasets_names
+    
 
 ## END    

@@ -20,22 +20,26 @@ FIND_ACTION = "find"
 
 class MapMarkers(object):
     
-    _config_path_dict = {}
+    #_config_path_dict = {}
+    _maps_path = ""
+    _maps_config = None
     _genetic_maps_list = ""
     _genetic_map_dict = {}
     _verbose = False
     _maps_data = {}
     _mapReader = None
     
-    def __init__(self, config_path_dict, genetic_maps_list, verbose = False):
-        self._config_path_dict = config_path_dict
+    def __init__(self, maps_path, maps_config, genetic_maps_list, verbose = False):
+        self._maps_path = maps_path
+        self._maps_config = maps_config
         self._genetic_maps_list = genetic_maps_list
         self._verbose = verbose
     
     def get_genetic_maps(self):
         return self._genetic_map_dict
     
-    def create_genetic_maps(self, markers_alignment, unmapped_list, dbs_list, sort_param, multiple_param, merge_maps = False):
+    def create_genetic_maps(self, markers_alignment, unmapped_list, dbs_list,
+                            sort_param, multiple_param, merge_maps = False):
         
         sys.stderr.write("MapMarkers: creating maps...\n")
         
@@ -46,17 +50,16 @@ class MapMarkers(object):
         del markers_dict["contig_set"]
         
         # Load MapReader
-        maps_path = self._config_path_dict["app_path"]+self._config_path_dict["maps_path"]
-        maps_config_file = self._config_path_dict["app_path"]+"conf/maps.conf"
-        self._mapReader = MapReader(maps_path, maps_config_file, self._verbose)
-        #self._maps_data = mapReader.get_maps_data()
+        self._mapReader = MapReader(self._maps_path, self._maps_config, self._verbose)
         
         # Obtain Mapper
         mapper = Mappers().get_mapper(self._mapReader, enrich = False, merge_maps = merge_maps, verbose = self._verbose)
         
         # Create the genetic maps from the alignments
         for genetic_map in self._genetic_maps_list:
-            self._genetic_map_dict[genetic_map] = mapper.get_genetic_map(markers_dict, contig_set, genetic_map, dbs_list, unmapped_list, sort_param, multiple_param)
+            self._genetic_map_dict[genetic_map] = mapper.get_genetic_map(markers_dict, contig_set,
+                                                                        genetic_map, dbs_list, unmapped_list,
+                                                                        sort_param, multiple_param)
         
         sys.stderr.write("MapMarkers: Maps created.\n")
         

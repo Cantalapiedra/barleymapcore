@@ -6,8 +6,7 @@
 # (terms of use can be found within the distributed LICENSE file).
 
 import sys, os
-from barleymapcore.utils.data_utils import load_datasets
-import DatasetsConfig
+import barleymapcore.db.DatasetsConfig
 
 SELECTION_BEST_SCORE = "best_score"
 SELECTION_NONE = "none"

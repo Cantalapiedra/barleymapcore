@@ -42,21 +42,23 @@ class Mapper(object):
             self._markerEnricher = MarkerEnricher()
         self._verbose = verbose
     
-    def get_genetic_map(self, markers_dict, contig_set, genetic_maps, dbs_list, unmapped_list, sort_param, multiple_param):
-        return self._get_genetic_maps(markers_dict, contig_set, genetic_maps, dbs_list, unmapped_list, sort_param, multiple_param)
+    def get_genetic_map(self, markers_dict, contig_set, genetic_maps, dbs_list,
+                        unmapped_list, sort_param, multiple_param):
+        return self._get_genetic_maps(markers_dict, contig_set, genetic_maps, dbs_list,
+                                      unmapped_list, sort_param, multiple_param)
     
     def _get_genetic_maps(self, markers_dict, contig_set, genetic_map, dbs_list, unmapped_list, sort_param, multiple_param):
         genetic_map_dict = {}
         
         maps_data = self._mapReader.get_maps_data()
-        
+        map_config = maps_data.get_map(genetic_map)
         #sys.stderr.write(str(maps_data)+"\n")
         
         # Get full configuration for genetic map
-        genetic_map_name = maps_data[genetic_map][MapTypes.MAP_NAME]
-        genetic_map_as_physical = maps_data[genetic_map][MapTypes.MAP_AS_PHYSICAL]
-        genetic_map_has_cm_pos = maps_data[genetic_map][MapTypes.MAP_HAS_CM_POS]
-        genetic_map_has_bp_pos = maps_data[genetic_map][MapTypes.MAP_HAS_BP_POS]
+        genetic_map_name = maps_data.get_map_name(map_config) #[genetic_map][MapTypes.MAP_NAME]
+        genetic_map_as_physical = maps_data.get_map_as_physical(map_config) #[genetic_map][MapTypes.MAP_AS_PHYSICAL]
+        genetic_map_has_cm_pos = maps_data.get_map_has_cm_pos(map_config) #maps_data[genetic_map][MapTypes.MAP_HAS_CM_POS]
+        genetic_map_has_bp_pos = maps_data.get_map_has_bp_pos(map_config) #maps_data[genetic_map][MapTypes.MAP_HAS_BP_POS]
         (sort_by, sort_sec_pos) = self._get_sort_pos_map(sort_param, genetic_map_has_cm_pos, genetic_map_has_bp_pos)
         
         if self._verbose: sys.stderr.write("Genetic map: "+str(genetic_map)+"\n")

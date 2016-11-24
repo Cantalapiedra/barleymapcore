@@ -7,7 +7,7 @@
 
 import sys
 from MapsBase import MapFile, MapTypes
-from MapsConfig import MapsConfig
+from barleymapcore.db.MapsConfig import MapsConfig
 
 class MapReader(object):
     
@@ -15,9 +15,9 @@ class MapReader(object):
     _maps_config = None
     _verbose = False
     
-    def __init__(self, maps_path, config_file, verbose = True):
+    def __init__(self, maps_path, maps_config, verbose = True):
         self._maps_path = maps_path
-        self._maps_config = MapsConfig(config_file, verbose)
+        self._maps_config = maps_config
         self._verbose = verbose
     
     def __get_position_indexed_data(self, genetic_map, dbs_list, datasets_contig_index, sort_param):
@@ -120,12 +120,14 @@ class MapReader(object):
                     if contig_id in test_set:
                         positions_dict[contig_id]["chr"] = int(map_data[MapFile.MAP_FILE_CHR])
                         
-                        if map_config[MapTypes.MAP_HAS_CM_POS]:
+                        map_has_cm_pos = self._maps_config.get_map_has_cm_pos(map_config)
+                        if map_has_cm_pos:
                             positions_dict[contig_id]["cm_pos"] = float(map_data[MapFile.MAP_FILE_CM])
                         else:
                             positions_dict[contig_id]["cm_pos"] = -1.0
                         
-                        if map_config[MapTypes.MAP_HAS_BP_POS]: # "has_bp_pos"
+                        map_has_bp_pos = self._maps_config.get_map_has_bp_pos(map_config)
+                        if map_has_bp_pos: # "has_bp_pos"
                             positions_dict[contig_id]["bp_pos"] = long(map_data[MapFile.MAP_FILE_BP])
                         else:
                             positions_dict[contig_id]["bp_pos"] = -1
@@ -147,6 +149,6 @@ class MapReader(object):
         return positions_dict
     
     def get_maps_data(self):
-        return self._config_dict
+        return self._maps_config
     
 ## END
