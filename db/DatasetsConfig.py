@@ -8,16 +8,16 @@
 import sys
 from barleymapcore.utils.data_utils import load_conf
 
+DATASET_NAME = 0
+DATASET_ID = 1
+DATASET_TYPE = 2
+FASTA_PATH = 3
+
+# DATASET_TYPE values
+DATASET_TYPE_GENETIC_MARKER = "genetic_marker"
+DATASET_TYPE_RNA = "RNA"
+
 class DatasetsConfig(object):
-    
-    DATASET_NAME = 0
-    DATASET_ID = 1
-    DATASET_TYPE = 2
-    FASTA_PATH = 3
-    
-    # DATASET_TYPE values
-    DATASET_TYPE_GENETIC_MARKER = "genetic_marker"
-    DATASET_TYPE_RNA = "RNA"
     
     _config_file = ""
     _verbose = False
@@ -43,7 +43,7 @@ class DatasetsConfig(object):
             dataset_dict = {DATASET_NAME:dataset_name,
                         DATASET_ID:dataset_id,
                         DATASET_TYPE:dataset_type,
-                        DATASET_FASTA_PATH:dataset_fasta_path}
+                        FASTA_PATH:dataset_fasta_path}
             
             self._config_dict[dataset_id] = dataset_dict
     

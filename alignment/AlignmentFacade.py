@@ -9,7 +9,7 @@ import os, sys
 
 from Aligners import AlignmentResults, SplitBlastnAligner, GMAPAligner, DualAligner, ListAligner, SELECTION_BEST_SCORE
 import barleymapcore.utils.alignment_utils as alignment_utils
-from barleymapcore.db.DatabasesConfig import REF_TYPE_BIG, REF_TYPE_STD, DatabasesConfig
+from barleymapcore.db.DatabasesConfig import REF_TYPE_BIG, REF_TYPE_STD
 
 class AlignmentFacade():
     

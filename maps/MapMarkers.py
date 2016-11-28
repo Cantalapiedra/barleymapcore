@@ -39,7 +39,7 @@ class MapMarkers(object):
         return self._genetic_map_dict
     
     def create_genetic_maps(self, markers_alignment, unmapped_list, dbs_list,
-                            sort_param, multiple_param, merge_maps = False):
+                            sort_param, multiple_param):
         
         sys.stderr.write("MapMarkers: creating maps...\n")
         
@@ -53,13 +53,15 @@ class MapMarkers(object):
         self._mapReader = MapReader(self._maps_path, self._maps_config, self._verbose)
         
         # Obtain Mapper
-        mapper = Mappers().get_mapper(self._mapReader, enrich = False, merge_maps = merge_maps, verbose = self._verbose)
+        mapper = Mappers().get_mapper(self._mapReader, enrich = False, verbose = self._verbose)
         
         # Create the genetic maps from the alignments
         for genetic_map in self._genetic_maps_list:
             self._genetic_map_dict[genetic_map] = mapper.get_genetic_map(markers_dict, contig_set,
                                                                         genetic_map, dbs_list, unmapped_list,
                                                                         sort_param, multiple_param)
+            
+            sys.stderr.write(str(self._genetic_map_dict[genetic_map]))
         
         sys.stderr.write("MapMarkers: Maps created.\n")
         
@@ -83,8 +85,6 @@ class MapMarkers(object):
             marker_id = marker_alignment[AlignmentResults.QUERY_ID]
             contig_id = marker_alignment[AlignmentResults.SUBJECT_ID]
             local_position = marker_alignment[AlignmentResults.START_POSITION]
-            
-            
             
             # Markers dict
             if marker_id in markers_dict:

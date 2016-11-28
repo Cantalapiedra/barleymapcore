@@ -23,9 +23,9 @@ class DatasetsFacade(object):
     _genes_hit_dict = {}
     _genes_hit_dict_loaded = False
     
-    def __init__(self, datasets_conf_file, datasets_path, verbose = True):
+    def __init__(self, datasets_config, datasets_path, verbose = True):
         #self._datasets_conf_file = datasets_conf_file
-        self._datasets_config = DatasetsConfig(datasets_config_file, verbose)
+        self._datasets_config = datasets_config
         self._datasets_path = datasets_path
         self._verbose = verbose
     
@@ -270,6 +270,134 @@ class DatasetsFacade(object):
             for query_id in best_score_filtering:
                 for result in best_score_filtering[query_id]["results"]:
                     db = result[7]
+                    results[db].append(result)
+        # else: # NO FILTERING
+        
+        
+        if self._verbose: sys.stderr.write("DatasetsFacade: final number of results "+str(num_of_results)+"\n")
+        sys.stderr.write("DatasetsFacade: found "+str(queries_found)+" out of "+str(initial_num_queries)+"\n")
+        
+        self._results = results
+        self._unmapped = [query for query in query_ids_dict.keys() if query_ids_dict[query] == 0]
+        
+        return results
+    
+    def retrieve_ids_map(self, query_ids_path, dataset_list, map_id,
+                         selection = SELECTION_BEST_SCORE, best_score_filter = False):
+        results = {}
+        num_of_results = 0
+        
+        self._query_ids_path = query_ids_path
+        
+        sys.stderr.write("DatasetsFacade: searching...\n")
+        
+        # Load list of queries to search for
+        initial_num_queries = 0
+        query_ids_dict = {}
+        for query_ids in open(query_ids_path, 'r'):
+            query_ids_dict[query_ids.strip()] = 0
+            initial_num_queries += 1
+        
+        map_results = []
+        num_queries_left = initial_num_queries
+        for dataset in dataset_list:
+            sys.stderr.write("\t dataset: "+dataset+"\n")
+            
+            # This is hierarchical or not,
+            # it is done because each marker has to have a uniq identifier
+            # so doing this we expect to do the search faster
+            temp_query_dict = dict([(query, 0) for query in query_ids_dict if query_ids_dict[query] == 0])
+            num_queries_left = len(temp_query_dict)
+            
+            #for db in db_list: --> map_id
+            if num_queries_left == 0:
+                if self._verbose: sys.stderr.write("\t\t All queries found.\n")
+                break
+            
+            map_results = []
+            
+            data_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(map_id)+".hits"
+            
+            if self._verbose:
+                sys.stderr.write("\t\t MAP: "+map_id+"\n")
+                sys.stderr.write("\t\t\t queries to search for: "+str(num_queries_left)+"\n")
+                sys.stderr.write("\t\t\t path: "+data_path+"\n")
+            
+            test_set = set(query for query in temp_query_dict)
+            
+            #sys.stderr.write(str(len(test_set)))
+            
+            map_results = self._get_hits(temp_query_dict, data_path, test_set)
+            
+            num_of_results += len(map_results)
+            if self._verbose: sys.stderr.write("\t\t\t hits found: "+str(len(map_results))+"\n")
+            
+            #sys.stderr.write(str(map_results)+"\n")
+            for result in map_results:
+                db_result = map_results[10] # TODO: hardcode DB field in alignment table
+                if db_result in results:
+                    results[db_result].extend(map_results)
+                else:
+                    results[db_result] = map_results
+            
+            # end for db_list
+            
+            query_ids_dict.update(temp_query_dict)
+        
+        queries_found = initial_num_queries - num_queries_left
+        
+        ##### FILTERS: selection (by database), best_score (global filtering)
+        if selection == SELECTION_BEST_SCORE and not best_score_filter:
+            
+            for db in results:
+                map_dict = {}
+                
+                for result in results[db]:
+                    query_id = result[0]
+                    align_score = float(result[4])
+                    
+                    if query_id in map_dict:
+                        query_map_score = map_dict[query_id]["map_score"]
+                        if align_score < query_map_score:
+                            continue
+                        elif align_score == query_map_score:
+                            map_dict[query_id]["results"].append(result)
+                        else: # align_score > query_db_score
+                            map_dict[query_id]["results"] = [result]
+                            map_dict[query_id]["map_score"] = align_score
+                    else:
+                        map_dict[query_id] = {"results":[result], "map_score":align_score}
+                    
+                results[db] = []
+                for query_id in map_dict:
+                    for result in map_dict[query_id]["results"]:
+                        results[db].append(result)
+        
+        ### Best score
+        elif best_score_filter:
+            best_score_filtering = {}
+            
+            for db in results:
+                for result in results[db]:
+                    query_id = result[0]
+                    align_score = float(result[4])
+                    
+                    if query_id in best_score_filtering:
+                        query_best_score = best_score_filtering[query_id]["best_score"]
+                        if align_score < query_best_score:
+                            continue
+                        elif align_score == query_best_score:
+                            best_score_filtering[query_id]["results"].append(result)
+                        else: # align_score > query_best_score
+                            best_score_filtering[query_id]["results"] = [result]
+                            best_score_filtering[query_id]["best_score"] = align_score
+                    else:
+                        best_score_filtering[query_id] = {"results":[result], "best_score":align_score}
+                
+            results = {db:[]}
+            
+            for query_id in best_score_filtering:
+                for result in best_score_filtering[query_id]["results"]:
                     results[db].append(result)
         # else: # NO FILTERING
         

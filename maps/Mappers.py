@@ -18,15 +18,10 @@ class Mappers(object):
         return
     
     # Factory
-    def get_mapper(self, mapReader, enrich = False, merge_maps = False, verbose = False):
+    def get_mapper(self, mapReader, enrich = False, verbose = False):
         mapper = None
         
-        if merge_maps:
-            sys.stderr.write("Mappers: Warning: merge mode is deprecated, so regular Mapper will be used instead.\n")
-            #mapper = MergedMapper(mapReader, enrich, verbose)
-            mapper = Mapper(mapReader, enrich, verbose)
-        else:
-            mapper = Mapper(mapReader, enrich, verbose)
+        mapper = Mapper(mapReader, enrich, verbose)
         
         return mapper
 
@@ -62,7 +57,8 @@ class Mapper(object):
         (sort_by, sort_sec_pos) = self._get_sort_pos_map(sort_param, genetic_map_has_cm_pos, genetic_map_has_bp_pos)
         
         if self._verbose: sys.stderr.write("Genetic map: "+str(genetic_map)+"\n")
-        if self._verbose: sys.stderr.write("\t parameters: total contigs --> "+str(len(contig_set))+"; genetic_map --> "+genetic_map+"; databases --> "+str(dbs_list)+"\n")
+        if self._verbose: sys.stderr.write("\t parameters: total contigs --> "+str(len(contig_set))+\
+                                           "; genetic_map --> "+genetic_map+"; databases --> "+str(dbs_list)+"\n")
         
         # Obtain the positions of contigs: contig_id --> chr, cM, bp
         positions_dict = self._mapReader.obtain_positions(contig_set, genetic_map, dbs_list)
