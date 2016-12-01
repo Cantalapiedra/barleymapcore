@@ -7,6 +7,7 @@
 
 import sys, os
 import barleymapcore.db.DatasetsConfig
+from barleymapcore.alignment.Aligners import AlignmentResults
 
 SELECTION_BEST_SCORE = "best_score"
 SELECTION_NONE = "none"
@@ -213,66 +214,7 @@ class DatasetsFacade(object):
         
         queries_found = initial_num_queries - num_queries_left
         
-        ##### FILTERS: selection (by database), best_score (global filtering)
-        if selection == SELECTION_BEST_SCORE and not best_score_filter:
-            
-            for db in results:
-                db_dict = {}
-                
-                for result in results[db]:
-                    query_id = result[0]
-                    align_score = float(result[4])
-                    
-                    if query_id in db_dict:
-                        query_db_score = db_dict[query_id]["db_score"]
-                        if align_score < query_db_score:
-                            continue
-                        elif align_score == query_db_score:
-                            db_dict[query_id]["results"].append(result)
-                        else: # align_score > query_db_score
-                            db_dict[query_id]["results"] = [result]
-                            db_dict[query_id]["db_score"] = align_score
-                    else:
-                        db_dict[query_id] = {"results":[result], "db_score":align_score}
-                    
-                results[db] = []
-                for query_id in db_dict:
-                    for result in db_dict[query_id]["results"]:
-                        results[db].append(result)
-        
-        ### Best score
-        elif best_score_filter:
-            best_score_filtering = {}
-            
-            for db in results:
-                for result in results[db]:
-                    query_id = result[0]
-                    align_score = float(result[4])
-                    
-                    if query_id in best_score_filtering:
-                        query_best_score = best_score_filtering[query_id]["best_score"]
-                        if align_score < query_best_score:
-                            continue
-                        elif align_score == query_best_score:
-                            best_score_filtering[query_id]["results"].append(result)
-                        else: # align_score > query_best_score
-                            best_score_filtering[query_id]["results"] = [result]
-                            best_score_filtering[query_id]["best_score"] = align_score
-                    else:
-                        best_score_filtering[query_id] = {"results":[result], "best_score":align_score}
-                
-            results = {}
-            
-            # Create a record for each DB
-            for db in db_list:
-                results[db] = []
-            
-            for query_id in best_score_filtering:
-                for result in best_score_filtering[query_id]["results"]:
-                    db = result[7]
-                    results[db].append(result)
-        # else: # NO FILTERING
-        
+        results = self._best_score(results, selection, best_score_filter)
         
         if self._verbose: sys.stderr.write("DatasetsFacade: final number of results "+str(num_of_results)+"\n")
         sys.stderr.write("DatasetsFacade: found "+str(queries_found)+" out of "+str(initial_num_queries)+"\n")
@@ -334,7 +276,7 @@ class DatasetsFacade(object):
             
             #sys.stderr.write(str(map_results)+"\n")
             for result in map_results:
-                db_result = map_results[10] # TODO: hardcode DB field in alignment table
+                db_result = result[AlignmentResults.DB_NAME] # TODO: hardcode DB field in alignment table
                 if db_result in results:
                     results[db_result].extend(map_results)
                 else:
@@ -346,6 +288,17 @@ class DatasetsFacade(object):
         
         queries_found = initial_num_queries - num_queries_left
         
+        results = self._best_score(results, selection, best_score_filter)
+        
+        if self._verbose: sys.stderr.write("DatasetsFacade: final number of results "+str(num_of_results)+"\n")
+        sys.stderr.write("DatasetsFacade: found "+str(queries_found)+" out of "+str(initial_num_queries)+"\n")
+        
+        self._results = results
+        self._unmapped = [query for query in query_ids_dict.keys() if query_ids_dict[query] == 0]
+        
+        return results
+    
+    def _best_score(self, results, selection, best_score_filter):
         ##### FILTERS: selection (by database), best_score (global filtering)
         if selection == SELECTION_BEST_SCORE and not best_score_filter:
             
@@ -400,13 +353,6 @@ class DatasetsFacade(object):
                 for result in best_score_filtering[query_id]["results"]:
                     results[db].append(result)
         # else: # NO FILTERING
-        
-        
-        if self._verbose: sys.stderr.write("DatasetsFacade: final number of results "+str(num_of_results)+"\n")
-        sys.stderr.write("DatasetsFacade: found "+str(queries_found)+" out of "+str(initial_num_queries)+"\n")
-        
-        self._results = results
-        self._unmapped = [query for query in query_ids_dict.keys() if query_ids_dict[query] == 0]
         
         return results
     

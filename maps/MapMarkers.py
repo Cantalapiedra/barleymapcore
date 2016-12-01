@@ -60,8 +60,6 @@ class MapMarkers(object):
             self._genetic_map_dict[genetic_map] = mapper.get_genetic_map(markers_dict, contig_set,
                                                                         genetic_map, dbs_list, unmapped_list,
                                                                         sort_param, multiple_param)
-            
-            sys.stderr.write(str(self._genetic_map_dict[genetic_map]))
         
         sys.stderr.write("MapMarkers: Maps created.\n")
         
