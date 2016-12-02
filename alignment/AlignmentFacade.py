@@ -120,6 +120,8 @@ class AlignmentFacade():
     
     def _best_score(self, results, best_score_filter):
         ###### best score filtering
+        # chooses the best score from alignments
+        # to ALL databases for a given query
         if best_score_filter:
             best_score_filtering = {}
             for db in results:
@@ -129,6 +131,8 @@ class AlignmentFacade():
                     
                     if query_id in best_score_filtering:
                         query_best_score = best_score_filtering[query_id]["best_score"]
+                        
+                        # update best score if needed
                         if align_score < query_best_score:
                             continue
                         elif align_score == query_best_score:
@@ -139,7 +143,7 @@ class AlignmentFacade():
                     else:
                         best_score_filtering[query_id] = {"results":[result], "best_score":align_score}
                 
-                results[db] = []
+                results[db] = [] # Reset all database results once that have been processed
             
             #results = {}
             #

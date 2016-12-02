@@ -142,7 +142,9 @@ class MapsConfig(object):
     def get_maps_ids(self, maps_names):
         maps_ids = []
         
-        map_names_set = set([
+        # changing dict[id]-->name to dict[name]-->id
+        # This means that both id and name must be unique in configuration
+        map_names_set = dict([
                             (self.get_map_name(self.get_map(map_id)),map_id)
                             for map_id in self.get_maps()
                             ])
