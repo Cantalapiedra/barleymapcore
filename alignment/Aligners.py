@@ -7,9 +7,6 @@
 
 import os, sys
 
-#SELECTION_BEST_SCORE = "best_score"
-#SELECTION_NONE = "none"
-
 from m2p_split_blast import get_best_score_hits
 from m2p_gmap import get_hits
 import barleymapcore.utils.alignment_utils as alignment_utils
@@ -102,56 +99,6 @@ class GMAPAligner(BaseAligner):
         
         sys.stderr.write("GMAPAligner: no hits "+str(len(self._results_unmapped))+"\n")
 
-class DualAligner(BaseAligner):
-    _blastn_aligner = None
-    _gmap_aligner = None
-    _blastn_hits = []
-    _gmap_hits = []
-    _tmp_files_dir = ""
-    
-    def __init__(self, blastn_aligner, gmap_aligner, tmp_files_dir):
-        self._blastn_aligner = blastn_aligner
-        self._gmap_aligner = gmap_aligner
-        self._tmp_files_dir = tmp_files_dir
-        
-    def align(self, fasta_path, db, threshold_id, threshold_cov):
-        fasta_to_align = fasta_path
-        #self._blastn_aligner.align(fasta_to_align, db, threshold_id, threshold_cov, selection)
-        self._gmap_aligner.align(fasta_to_align, db, threshold_id, threshold_cov)
-        
-        blastn_fasta_to_align = alignment_utils.extract_fasta_headers(fasta_path,
-                                                                      self._gmap_aligner.get_unmapped(),
-                                                                      self._tmp_files_dir)
-        
-        try:
-            #self._gmap_aligner.align(gmap_fasta_to_align, db, threshold_id, threshold_cov, selection)
-            self._blastn_aligner.align(blastn_fasta_to_align, db, threshold_id, threshold_cov)
-        except Exception:
-            raise
-        finally:
-            os.remove(blastn_fasta_to_align)
-            
-        #self._gmap_hits = self._gmap_aligner.get_hits()
-        self._blastn_hits = self._blastn_aligner.get_hits()
-        
-        #self._results_hits = self._blastn_aligner.get_hits()+self._gmap_hits
-        self._results_hits = self._blastn_hits+self._gmap_aligner.get_hits()
-        
-        #self._results_unmapped = self.get_gmap_unmapped()
-        self._results_unmapped = self.get_blastn_unmapped()
-        
-    def get_blastn_hits(self):
-        return self._blastn_aligner.get_hits()
-    
-    def get_blastn_unmapped(self):
-        return self._blastn_aligner.get_unmapped()
-    
-    def get_gmap_hits(self):
-        return self._gmap_aligner.get_hits()
-    
-    def get_gmap_unmapped(self):
-        return self._gmap_aligner.get_unmapped()
-
 class ListAligner(BaseAligner):
     _aligner_list = []
     _blastn_hits = []
@@ -185,5 +132,55 @@ class ListAligner(BaseAligner):
         finally:
             
             if fasta_created: os.remove(prev_aligner_to_align)
-    
+   
+#class DualAligner(BaseAligner):
+#    _blastn_aligner = None
+#    _gmap_aligner = None
+#    _blastn_hits = []
+#    _gmap_hits = []
+#    _tmp_files_dir = ""
+#    
+#    def __init__(self, blastn_aligner, gmap_aligner, tmp_files_dir):
+#        self._blastn_aligner = blastn_aligner
+#        self._gmap_aligner = gmap_aligner
+#        self._tmp_files_dir = tmp_files_dir
+#        
+#    def align(self, fasta_path, db, threshold_id, threshold_cov):
+#        fasta_to_align = fasta_path
+#        #self._blastn_aligner.align(fasta_to_align, db, threshold_id, threshold_cov, selection)
+#        self._gmap_aligner.align(fasta_to_align, db, threshold_id, threshold_cov)
+#        
+#        blastn_fasta_to_align = alignment_utils.extract_fasta_headers(fasta_path,
+#                                                                      self._gmap_aligner.get_unmapped(),
+#                                                                      self._tmp_files_dir)
+#        
+#        try:
+#            #self._gmap_aligner.align(gmap_fasta_to_align, db, threshold_id, threshold_cov, selection)
+#            self._blastn_aligner.align(blastn_fasta_to_align, db, threshold_id, threshold_cov)
+#        except Exception:
+#            raise
+#        finally:
+#            os.remove(blastn_fasta_to_align)
+#            
+#        #self._gmap_hits = self._gmap_aligner.get_hits()
+#        self._blastn_hits = self._blastn_aligner.get_hits()
+#        
+#        #self._results_hits = self._blastn_aligner.get_hits()+self._gmap_hits
+#        self._results_hits = self._blastn_hits+self._gmap_aligner.get_hits()
+#        
+#        #self._results_unmapped = self.get_gmap_unmapped()
+#        self._results_unmapped = self.get_blastn_unmapped()
+#        
+#    def get_blastn_hits(self):
+#        return self._blastn_aligner.get_hits()
+#    
+#    def get_blastn_unmapped(self):
+#        return self._blastn_aligner.get_unmapped()
+#    
+#    def get_gmap_hits(self):
+#        return self._gmap_aligner.get_hits()
+#    
+#    def get_gmap_unmapped(self):
+#        return self._gmap_aligner.get_unmapped()
+ 
 ##

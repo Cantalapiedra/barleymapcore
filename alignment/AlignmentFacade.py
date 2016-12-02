@@ -8,14 +8,14 @@
 
 import os, sys
 
-from Aligners import AlignmentResults, SplitBlastnAligner, GMAPAligner, DualAligner, ListAligner
+from Aligners import AlignmentResults, SplitBlastnAligner, GMAPAligner, ListAligner #, DualAligner
 #, SELECTION_BEST_SCORE
 import barleymapcore.utils.alignment_utils as alignment_utils
 from barleymapcore.db.DatabasesConfig import REF_TYPE_BIG, REF_TYPE_STD
 
-QUERY_MODE_GENOMIC = "genomic"
-QUERY_MODE_CDNA = "cdna"
-QUERY_MODE_DUAL = "auto"
+QUERY_MODE_GENOMIC = "blastn"
+QUERY_MODE_CDNA = "gmap"
+#QUERY_MODE_DUAL = "auto"
 
 class AlignmentFacade():
     
@@ -173,16 +173,16 @@ class AlignmentFacade():
             else:
                 aligner = GMAPAligner(self._gmap_app_path, n_threads, self._gmap_dbs_path, self._verbose)
                 
-        elif query_type == QUERY_MODE_DUAL:
-            blastn_aligner = SplitBlastnAligner(self._blastn_app_path, n_threads, self._blastn_dbs_path, self._split_blast_path, self._verbose)
-            # CPCantalapiedra 2016-11
-            if ref_type == REF_TYPE_BIG:
-                gmap_aligner = GMAPAligner(self._gmapl_app_path, n_threads, self._gmap_dbs_path, self._verbose)
-            else:
-                gmap_aligner = GMAPAligner(self._gmap_app_path, n_threads, self._gmap_dbs_path, self._verbose)
-                
-            aligner = DualAligner(blastn_aligner, gmap_aligner, tmp_files_dir)
-            
+        #elif query_type == QUERY_MODE_DUAL:
+        #    blastn_aligner = SplitBlastnAligner(self._blastn_app_path, n_threads, self._blastn_dbs_path, self._split_blast_path, self._verbose)
+        #    # CPCantalapiedra 2016-11
+        #    if ref_type == REF_TYPE_BIG:
+        #        gmap_aligner = GMAPAligner(self._gmapl_app_path, n_threads, self._gmap_dbs_path, self._verbose)
+        #    else:
+        #        gmap_aligner = GMAPAligner(self._gmap_app_path, n_threads, self._gmap_dbs_path, self._verbose)
+        #        
+        #    aligner = DualAligner(blastn_aligner, gmap_aligner, tmp_files_dir)
+        #    
         elif "," in query_type:
             aligner_list = []
             for aligner_type in query_type.split(","):

@@ -9,9 +9,6 @@ import sys, os
 import barleymapcore.db.DatasetsConfig
 from barleymapcore.alignment.Aligners import AlignmentResults
 
-SELECTION_BEST_SCORE = "best_score"
-SELECTION_NONE = "none"
-
 class DatasetsFacade(object):
     
     #_datasets_conf_file = ""
@@ -147,87 +144,9 @@ class DatasetsFacade(object):
     def retrieve_markers(self, contigs_dict):
         pass
     
-    # Obtain the alignments from a dataset in a list of DBs
-    def retrieve_ids(self, query_ids_path, dataset_list, db_list, hierarchical = True,
-                     selection = SELECTION_BEST_SCORE, best_score_filter = False):
-        results = {}
-        num_of_results = 0
-        
-        self._query_ids_path = query_ids_path
-        
-        sys.stderr.write("DatasetsFacade: searching...\n")
-        
-        # Load list of queries to search for
-        initial_num_queries = 0
-        query_ids_dict = {}
-        for query_ids in open(query_ids_path, 'r'):
-            query_ids_dict[query_ids.strip()] = 0
-            initial_num_queries += 1
-        
-        db_results = []
-        num_queries_left = initial_num_queries
-        for dataset in dataset_list:
-            if self._verbose: sys.stderr.write("\t dataset: "+dataset+"\n")
-            
-            # This is hierarchical or not,
-            # it is done because each marker has to have a uniq identifier
-            # so doing this we expect to do the search faster
-            temp_query_dict = dict([(query, 0) for query in query_ids_dict if query_ids_dict[query] == 0])
-            num_queries_left = len(temp_query_dict)
-            
-            for db in db_list:
-                
-                if num_queries_left == 0:
-                    if self._verbose: sys.stderr.write("\t\t All queries found.\n")
-                    break
-                
-                db_results = []
-                
-                data_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(db)+".hits"
-                
-                if self._verbose:
-                    sys.stderr.write("\t\t DB: "+db+"\n")
-                    sys.stderr.write("\t\t\t queries to search for: "+str(num_queries_left)+"\n")
-                    sys.stderr.write("\t\t\t path: "+data_path+"\n")
-                
-                if hierarchical:
-                    test_set = set(query for query in temp_query_dict if temp_query_dict[query] == 0)
-                else:
-                    test_set = set(query for query in temp_query_dict)
-                
-                #sys.stderr.write(str(len(test_set)))
-                
-                db_results = self._get_hits(temp_query_dict, data_path, test_set)
-                
-                num_of_results += len(db_results)
-                if self._verbose: sys.stderr.write("\t\t\t hits found: "+str(len(db_results))+"\n")
-                
-                if db in results:
-                    results[db].extend(db_results) # Results from different datasets
-                else:
-                    results[db] = db_results
-                
-                if hierarchical:
-                    num_queries_left = len([query for query in temp_query_dict.keys() if temp_query_dict[query] == 0])
-                # else: The same, because it does not change inside this dataset. We search all the markers in all the DBs
-            
-            query_ids_dict.update(temp_query_dict)
-        
-        queries_found = initial_num_queries - num_queries_left
-        
-        results = self._best_score(results, selection, best_score_filter)
-        
-        if self._verbose: sys.stderr.write("DatasetsFacade: final number of results "+str(num_of_results)+"\n")
-        sys.stderr.write("DatasetsFacade: found "+str(queries_found)+" out of "+str(initial_num_queries)+"\n")
-        
-        self._results = results
-        self._unmapped = [query for query in query_ids_dict.keys() if query_ids_dict[query] == 0]
-        
-        return results
-    
     # Obtain the alignments from a dataset in a given Map
     def retrieve_ids_map(self, query_ids_path, dataset_list, map_id,
-                         selection = SELECTION_BEST_SCORE, best_score_filter = False):
+                         best_score_filter = False):
         results = {}
         num_of_results = 0
         
@@ -258,8 +177,6 @@ class DatasetsFacade(object):
                 if self._verbose: sys.stderr.write("\t\t All queries found.\n")
                 break
             
-            map_results = []
-            
             data_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(map_id)+".hits"
             
             if self._verbose:
@@ -269,20 +186,20 @@ class DatasetsFacade(object):
             
             test_set = set(query for query in temp_query_dict)
             
-            #sys.stderr.write(str(len(test_set)))
-            
+            #map_results = []
             map_results = self._get_hits(temp_query_dict, data_path, test_set)
             
             num_of_results += len(map_results)
             if self._verbose: sys.stderr.write("\t\t\t hits found: "+str(len(map_results))+"\n")
             
-            #sys.stderr.write(str(map_results)+"\n")
+            #sys.stderr.write("DatasetsFacade.py map_results "+str(map_results)+"\n")
             for result in map_results:
-                db_result = result[AlignmentResults.DB_NAME] # TODO: hardcode DB field in alignment table
+                #sys.stderr.write("DatasetsFacade.py results "+str(result)+"\n")
+                db_result = result[AlignmentResults.DB_NAME]
                 if db_result in results:
-                    results[db_result].extend(map_results)
+                    results[db_result].append(result)
                 else:
-                    results[db_result] = map_results
+                    results[db_result] = [result]
             
             # end for db_list
             
@@ -290,7 +207,8 @@ class DatasetsFacade(object):
         
         queries_found = initial_num_queries - num_queries_left
         
-        results = self._best_score(results, selection, best_score_filter)
+        if best_score_filter:
+            results = self._best_score(results)
         
         if self._verbose: sys.stderr.write("DatasetsFacade: final number of results "+str(num_of_results)+"\n")
         sys.stderr.write("DatasetsFacade: found "+str(queries_found)+" out of "+str(initial_num_queries)+"\n")
@@ -300,61 +218,32 @@ class DatasetsFacade(object):
         
         return results
     
-    def _best_score(self, results, selection, best_score_filter):
-        ##### FILTERS: selection (by database), best_score (global filtering)
-        if selection == SELECTION_BEST_SCORE and not best_score_filter:
-            
-            for db in results:
-                db_dict = {}
-                for result in results[db]:
-                    query_id = result[0]
-                    align_score = float(result[4])
-                    
-                    if query_id in db_dict:
-                        query_map_score = db_dict[query_id]["map_score"]
-                        if align_score < query_map_score:
-                            continue
-                        elif align_score == query_map_score:
-                            db_dict[query_id]["results"].append(result)
-                        else: # align_score > query_db_score
-                            db_dict[query_id]["results"] = [result]
-                            db_dict[query_id]["map_score"] = align_score
-                    else:
-                        db_dict[query_id] = {"results":[result], "map_score":align_score}
-                    
-                results[db] = []
-                
-                for query_id in db_dict:
-                    for result in db_dict[query_id]["results"]:
-                        results[db].append(result)
+    def _best_score(self, results):
+        best_score_filtering = {}
         
-        ### Best score
-        elif best_score_filter:
-            best_score_filtering = {}
-            
-            for db in results:
-                for result in results[db]:
-                    query_id = result[0]
-                    align_score = float(result[4])
-                    
-                    if query_id in best_score_filtering:
-                        query_best_score = best_score_filtering[query_id]["best_score"]
-                        if align_score < query_best_score:
-                            continue
-                        elif align_score == query_best_score:
-                            best_score_filtering[query_id]["results"].append(result)
-                        else: # align_score > query_best_score
-                            best_score_filtering[query_id]["results"] = [result]
-                            best_score_filtering[query_id]["best_score"] = align_score
-                    else:
-                        best_score_filtering[query_id] = {"results":[result], "best_score":align_score}
+        for db in results:
+            for result in results[db]:
+                query_id = result[0]
+                align_score = float(result[4])
                 
-                results[db] = []
+                if query_id in best_score_filtering:
+                    query_best_score = best_score_filtering[query_id]["best_score"]
+                    if align_score < query_best_score:
+                        continue
+                    elif align_score == query_best_score:
+                        best_score_filtering[query_id]["results"].append(result)
+                    else: # align_score > query_best_score
+                        best_score_filtering[query_id]["results"] = [result]
+                        best_score_filtering[query_id]["best_score"] = align_score
+                else:
+                    best_score_filtering[query_id] = {"results":[result], "best_score":align_score}
             
-            for query_id in best_score_filtering:
-                for result in best_score_filtering[query_id]["results"]:
-                    db = result[AlignmentResults.DB_NAME]
-                    results[db].append(result)
+            results[db] = []
+        
+        for query_id in best_score_filtering:
+            for result in best_score_filtering[query_id]["results"]:
+                db = result[AlignmentResults.DB_NAME]
+                results[db].append(result)
         # else: # NO FILTERING
         
         return results
@@ -365,12 +254,12 @@ class DatasetsFacade(object):
         for hit in open(data_path, 'r'):
             #sys.stderr.write(str(hit)+"\n")
             hit_data = hit.strip().split("\t")
-            hit_query = hit_data[0]
+            hit_query = hit_data[AlignmentResults.QUERY_ID]
             
             if hit_query in test_set:
                 #sys.stderr.write(str(hit_query)+"\n")
                 hits.append(hit_data)
-                query_ids_dict[hit_query] = 1
+                query_ids_dict[hit_query] = 1 # found
                 #if hierarchical: query_ids_dict[hit_query] = 1
         
         return hits

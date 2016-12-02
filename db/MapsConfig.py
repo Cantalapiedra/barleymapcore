@@ -52,7 +52,6 @@ class MapsConfig(object):
         self._config_dict = {}
         conf_rows = load_conf(config_file, self._verbose) # data_utils.load_conf
         
-        #self._config_dict = load_maps(self._config_file, self._verbose) # data_utils.load_maps
         for conf_row in conf_rows:
             
             map_name = conf_row[MAP_NAME]
@@ -85,6 +84,9 @@ class MapsConfig(object):
                         DB_LIST:map_db_list}
             
             self._config_dict[map_id] = map_dict
+    
+    def get_config_file(self):
+        return self._config_file
     
     def get_maps(self):
         return self._config_dict
@@ -126,13 +128,9 @@ class MapsConfig(object):
         maps_names = []
         
         for map_ids in maps_ids:
-            found = False
             if map_ids in self._config_dict:
                 maps_names.append(self.get_map_name(self.get_map(map_id)))
-                #maps_names.append(self._config_dict[map_ids][MAP_NAME])
-                found = True
-            
-            if not found:
+            else:
                 sys.stderr.write("MapsConfig: map ID "+database+" not found in config.\n")
                 maps_names.append(map_ids)
         
@@ -151,17 +149,10 @@ class MapsConfig(object):
         
         # Doing this in a loop to conserve order
         for map_name in maps_names:
-            found = False
             if map_name in map_names_set:
                 map_id = map_names_set[map_name]
-            #for map_id in self._config_dict:
-                #if self.get_map_name(self.get_map(map_id)) == map_name:
-                #if self._config_dict[map_id][MAP_NAME] == map_name:
                 maps_ids.append(map_id)
-                found = True
-                break
-            
-            if not found:
+            else:
                 sys.stderr.write("MapsConfig: map name "+map_name+" not found in config.\n")
         
         return maps_ids

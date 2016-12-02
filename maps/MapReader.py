@@ -7,7 +7,7 @@
 
 import sys
 from MapsBase import MapFile, MapTypes
-from barleymapcore.db.MapsConfig import MapsConfig
+#from barleymapcore.db.MapsConfig import MapsConfig
 
 class MapReader(object):
     
@@ -144,11 +144,12 @@ class MapReader(object):
                 if self._verbose: sys.stderr.write("\tMapReader: warning: DB "+db+" is not in config file.\n")
         
         if filter_results:
-            positions_dict = dict((contig, positions_dict[contig]) for contig in positions_dict if positions_dict[contig]["chr"] != -1)
+            positions_dict = dict((contig, positions_dict[contig]) for contig in positions_dict
+                                                        if positions_dict[contig]["chr"] != -1)
         
         return positions_dict
     
-    def get_maps_data(self):
+    def get_maps_config(self):
         return self._maps_config
     
 ## END

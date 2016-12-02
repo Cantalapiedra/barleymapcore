@@ -23,16 +23,15 @@ class MapMarkers(object):
     #_config_path_dict = {}
     _maps_path = ""
     _maps_config = None
-    _genetic_maps_list = ""
     _genetic_map_dict = {}
     _verbose = False
     _maps_data = {}
     _mapReader = None
     
-    def __init__(self, maps_path, maps_config, genetic_maps_list, verbose = False):
+    def __init__(self, maps_path, maps_config, genetic_map, verbose = False):
         self._maps_path = maps_path
         self._maps_config = maps_config
-        self._genetic_maps_list = genetic_maps_list
+        self._genetic_map = genetic_map
         self._verbose = verbose
     
     def get_genetic_maps(self):
@@ -43,23 +42,23 @@ class MapMarkers(object):
         
         sys.stderr.write("MapMarkers: creating maps...\n")
         
-        # Indexes the alignments by marker_id
-        markers_dict = self._get_markers_dict(markers_alignment, dbs_list)
-        # This is a temporal list of all the contigs in the alignments
-        contig_set = markers_dict["contig_set"]
-        del markers_dict["contig_set"]
-        
         # Load MapReader
         self._mapReader = MapReader(self._maps_path, self._maps_config, self._verbose)
         
         # Obtain Mapper
         mapper = Mappers().get_mapper(self._mapReader, enrich = False, verbose = self._verbose)
         
+        # Indexes the alignments by marker_id
+        markers_dict = self._get_markers_dict(markers_alignment, dbs_list)
+        
+        # This is a temporal list of all the contigs in the alignments
+        contig_set = markers_dict["contig_set"]
+        del markers_dict["contig_set"]
+        
         # Create the genetic maps from the alignments
-        for genetic_map in self._genetic_maps_list:
-            self._genetic_map_dict[genetic_map] = mapper.get_genetic_map(markers_dict, contig_set,
-                                                                        genetic_map, dbs_list, unmapped_list,
-                                                                        sort_param, multiple_param)
+        self._genetic_map_dict[self._genetic_map] = mapper.get_genetic_map(markers_dict, contig_set,
+                                                                    self._genetic_map, dbs_list, unmapped_list,
+                                                                    sort_param, multiple_param)
         
         sys.stderr.write("MapMarkers: Maps created.\n")
         
@@ -70,7 +69,7 @@ class MapMarkers(object):
         # [marker_id] = {"contigs_set":{[(contig_id, local_position)]}
         # ["contig_set"] = {[contig_id]}
         
-        # Extract alignments of the several databases
+        # Extract alignments from databases
         alignments_list = []
         for db in dbs_list:
             if db in markers_alignment:
@@ -80,6 +79,7 @@ class MapMarkers(object):
         # Extract contigs set and marker positions dict
         contig_set = set()
         for marker_alignment in alignments_list:
+            #sys.stderr.write("MapMarkers.py "+str(marker_alignment)+"\n")
             marker_id = marker_alignment[AlignmentResults.QUERY_ID]
             contig_id = marker_alignment[AlignmentResults.SUBJECT_ID]
             local_position = marker_alignment[AlignmentResults.START_POSITION]
@@ -101,7 +101,8 @@ class MapMarkers(object):
         return markers_dict
     
     def enrich_with_markers(self, genes_extend, genes_window_cm, genes_window_bp, sort_param, \
-                            dbs_list, datasets_ids, datasets_conf_file, hierarchical, merge_maps, constrain_fine_mapping = True):
+                            dbs_list, datasets_ids, datasets_conf_file, hierarchical, merge_maps,
+                            constrain_fine_mapping = True):
         
         sys.stderr.write("MapMarkers: adding other markers...\n")
         
@@ -118,52 +119,50 @@ class MapMarkers(object):
         maps_config_file = self._config_path_dict["app_path"]+"conf/maps.conf"
         #mapReader = MapReader(maps_path, maps_config_file, self._verbose)
         mapper = Mappers().get_mapper(self._mapReader, enrich = True, merge_maps = merge_maps, verbose = self._verbose)
+            
+        if self._verbose: sys.stderr.write("\tMap : "+self._genetic_map+"\n")
         
-        # For each map
-        for genetic_map in self._genetic_maps_list:
+        genetic_map_data = self._genetic_map_dict[self._genetic_map]
+        
+        if constrain_fine_mapping:
+            fine_mapping = genetic_map_data[MapTypes.FINE_MAPPING]
             
-            if self._verbose: sys.stderr.write("\tMap : "+genetic_map+"\n")
+            if self._verbose: sys.stderr.write("\tFine mapping: "+str(fine_mapping)+"\n")
             
-            genetic_map_data = self._genetic_map_dict[genetic_map]
-            
-            if constrain_fine_mapping:
-                fine_mapping = genetic_map_data[MapTypes.FINE_MAPPING]
-                
-                if self._verbose: sys.stderr.write("\tFine mapping: "+str(fine_mapping)+"\n")
-                
-                if not fine_mapping: continue
-            
-            genetic_map_has_cm_pos = genetic_map_data[MapTypes.MAP_HAS_CM_POS]
-            genetic_map_has_bp_pos = genetic_map_data[MapTypes.MAP_HAS_BP_POS] # "has_bp_pos"
-            genetic_map_mapped = genetic_map_data[MapTypes.MAP_MAPPED]
-            
-            genes_window = self._get_genes_window(genes_extend, sort_param, genes_window_cm, genes_window_bp, \
-                                                  genetic_map_has_cm_pos, genetic_map_has_bp_pos)
-            
-            map_sort_by = genetic_map_data[MapTypes.MAP_SORT_BY]
-            
-            #sys.stderr.write(str(genetic_map_mapped[0])+"\n")
-            
-            # Contigs index is only loaded once, and only if there is a genetic_map ready for fine mapping
-            # Contains the relation of contigs with markers, so it loads only contigs with markers aligned to them
-            if not datasets_contig_index_loaded:
-                datasets_contig_index = facade.load_index_by_contig(datasets_ids, dbs_list, hierarchical)
-            
-            # Obtain the contigs with positions in the interval between each pair of markers
-            new_positions = mapper.get_contigs(genetic_map, genetic_map_has_cm_pos, genetic_map_has_bp_pos, genetic_map_mapped, \
-                                               dbs_list, datasets_contig_index, map_sort_by, sort_param, genes_extend, genes_window)
-            
-            # MapFields.MAP_FIELDS points out that the contig_ID, to be replaced by marker information
-            # is the first field after the marker map regular information
-            translated_positions = self._translate_contigs_to_markers(new_positions, MapFields.MAP_FIELDS, datasets_contig_index)
-            
-            genetic_map_data[MapTypes.MAP_WITH_MARKERS] = translated_positions
+            if not fine_mapping: return
+        
+        genetic_map_has_cm_pos = genetic_map_data[MapTypes.MAP_HAS_CM_POS]
+        genetic_map_has_bp_pos = genetic_map_data[MapTypes.MAP_HAS_BP_POS] # "has_bp_pos"
+        genetic_map_mapped = genetic_map_data[MapTypes.MAP_MAPPED]
+        
+        genes_window = self._get_genes_window(genes_extend, sort_param, genes_window_cm, genes_window_bp, \
+                                              genetic_map_has_cm_pos, genetic_map_has_bp_pos)
+        
+        map_sort_by = genetic_map_data[MapTypes.MAP_SORT_BY]
+        
+        #sys.stderr.write(str(genetic_map_mapped[0])+"\n")
+        
+        # Contigs index is only loaded once, and only if there is a genetic_map ready for fine mapping
+        # Contains the relation of contigs with markers, so it loads only contigs with markers aligned to them
+        if not datasets_contig_index_loaded:
+            datasets_contig_index = facade.load_index_by_contig(datasets_ids, dbs_list, hierarchical)
+        
+        # Obtain the contigs with positions in the interval between each pair of markers
+        new_positions = mapper.get_contigs(self._genetic_map, genetic_map_has_cm_pos, genetic_map_has_bp_pos, genetic_map_mapped, \
+                                           dbs_list, datasets_contig_index, map_sort_by, sort_param, genes_extend, genes_window)
+        
+        # MapFields.MAP_FIELDS points out that the contig_ID, to be replaced by marker information
+        # is the first field after the marker map regular information
+        translated_positions = self._translate_contigs_to_markers(new_positions, MapFields.MAP_FIELDS, datasets_contig_index)
+        
+        genetic_map_data[MapTypes.MAP_WITH_MARKERS] = translated_positions
             
         sys.stderr.write("MapMarkers: added other markers.\n")
         
         return
     
-    def _get_genes_window(self, genes_extend, sort_param, genes_window_cm, genes_window_bp, genetic_map_has_cm_pos, genetic_map_has_bp_pos):
+    def _get_genes_window(self, genes_extend, sort_param, genes_window_cm, genes_window_bp,
+                          genetic_map_has_cm_pos, genetic_map_has_bp_pos):
         
         genes_window = 0
         
@@ -233,37 +232,37 @@ class MapMarkers(object):
         genesManager = GenesFacade(self._config_path_dict, load_annot, show_genes_option, self._verbose)
         
         # For each map
-        for genetic_map in self._genetic_maps_list:
+        #for genetic_map in self._genetic_maps_list:
+        
+        if self._verbose: sys.stderr.write("\tMap: "+self._genetic_map+"\n")
+        
+        genetic_map_data = self._genetic_map_dict[self._genetic_map]
+        
+        if constrain_fine_mapping:
+            fine_mapping = genetic_map_data[MapTypes.FINE_MAPPING]
             
-            if self._verbose: sys.stderr.write("\tMap: "+genetic_map+"\n")
+            if self._verbose: sys.stderr.write("\tFine mapping: "+str(fine_mapping)+"\n")
             
-            genetic_map_data = self._genetic_map_dict[genetic_map]
-            
-            if constrain_fine_mapping:
-                fine_mapping = genetic_map_data[MapTypes.FINE_MAPPING]
-                
-                if self._verbose: sys.stderr.write("\tFine mapping: "+str(fine_mapping)+"\n")
-                
-                if not fine_mapping: continue
-            
-            # Load genes and annotation
-            genesManager.load_data(genetic_map, load_annot)
-            
-            genetic_map_has_cm_pos = genetic_map_data[MapTypes.MAP_HAS_CM_POS] # "has_cm_pos"
-            genetic_map_has_bp_pos = genetic_map_data[MapTypes.MAP_HAS_BP_POS] # "has_bp_pos"
-            genes_window = self._get_genes_window(genes_extend, sort_param, genes_window_cm, genes_window_bp, \
-                                                  genetic_map_has_cm_pos, genetic_map_has_bp_pos)
-            
-            sort_by = genetic_map_data[MapTypes.MAP_SORT_BY]
-            
-            genetic_map_positions = genetic_map_data[MapTypes.MAP_MAPPED]
-            
-            enriched_positions = genesManager.enrich_by_pos(genetic_map, genetic_map_positions, \
-                                                            genes_extend, genes_window, \
-                                                            sort_by, sort_param, load_annot, \
-                                                            genetic_map_has_cm_pos, genetic_map_has_bp_pos)
-            
-            genetic_map_data[MapTypes.MAP_WITH_GENES] = enriched_positions
+            if not fine_mapping: return
+        
+        # Load genes and annotation
+        genesManager.load_data(self._genetic_map, load_annot)
+        
+        genetic_map_has_cm_pos = genetic_map_data[MapTypes.MAP_HAS_CM_POS] # "has_cm_pos"
+        genetic_map_has_bp_pos = genetic_map_data[MapTypes.MAP_HAS_BP_POS] # "has_bp_pos"
+        genes_window = self._get_genes_window(genes_extend, sort_param, genes_window_cm, genes_window_bp, \
+                                              genetic_map_has_cm_pos, genetic_map_has_bp_pos)
+        
+        sort_by = genetic_map_data[MapTypes.MAP_SORT_BY]
+        
+        genetic_map_positions = genetic_map_data[MapTypes.MAP_MAPPED]
+        
+        enriched_positions = genesManager.enrich_by_pos(self._genetic_map, genetic_map_positions, \
+                                                        genes_extend, genes_window, \
+                                                        sort_by, sort_param, load_annot, \
+                                                        genetic_map_has_cm_pos, genetic_map_has_bp_pos)
+        
+        genetic_map_data[MapTypes.MAP_WITH_GENES] = enriched_positions
         
         sys.stderr.write("MapMarkers: Genes added.\n")
         
