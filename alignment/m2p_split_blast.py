@@ -8,7 +8,7 @@
 import sys
 from subprocess import Popen, PIPE
 
-from Aligners import SELECTION_BEST_SCORE, SELECTION_NONE
+#from Aligners import SELECTION_BEST_SCORE, SELECTION_NONE
 
 def __split_blast(split_blast_path, blast_app_path, n_threads, query_fasta_path, blast_dbs_path, db_name, verbose = False):
     results = []
@@ -58,7 +58,7 @@ def __split_blast(split_blast_path, blast_app_path, n_threads, query_fasta_path,
     
     return results
 
-def __filter_blast_results(results, threshold_id, threshold_cov, selection, db_name):
+def __filter_blast_results(results, threshold_id, threshold_cov, db_name, verbose = False):
     
     filtered_results = []
     
@@ -106,28 +106,29 @@ def __filter_blast_results(results, threshold_id, threshold_cov, selection, db_n
         result_tuple = (subject_id, align_ident, query_cov, align_score,
                         strand, local_position, end_position, qstart_pos, qend_pos)
         
-        if selection == SELECTION_BEST_SCORE:
-            if query_id in filter_dict:
-                prev_max_score = filter_dict[query_id]["max_score"]
+        # For a given DB, keep always the best score
+        #if selection == SELECTION_BEST_SCORE:
+        if query_id in filter_dict:
+            prev_max_score = filter_dict[query_id]["max_score"]
+            
+            if align_score > prev_max_score:
+                filter_dict[query_id]["query_list"] = [result_tuple]
+                filter_dict[query_id]["max_score"] = align_score
                 
-                if align_score > prev_max_score:
-                    filter_dict[query_id]["query_list"] = [result_tuple]
-                    filter_dict[query_id]["max_score"] = align_score
-                    
-                elif align_score == prev_max_score:
-                    filter_dict[query_id]["query_list"].append(result_tuple)
-                #else:
-                #    print "FILTERED"
-            else:
-                filter_dict[query_id] = {"query_list":[result_tuple], "max_score":align_score}
-                
-        elif selection == SELECTION_NONE:
-            if query_id in filter_dict:
+            elif align_score == prev_max_score:
                 filter_dict[query_id]["query_list"].append(result_tuple)
-            else:
-                filter_dict[query_id] = {"query_list":[result_tuple], "max_score":-1}
+            #else:
+            #    print "FILTERED"
         else:
-            raise Exception("m2p_split_blast: unknown value "+str(selection)+" for selection parameter.")
+            filter_dict[query_id] = {"query_list":[result_tuple], "max_score":align_score}
+        
+        #elif selection == SELECTION_NONE:
+        #    if query_id in filter_dict:
+        #        filter_dict[query_id]["query_list"].append(result_tuple)
+        #    else:
+        #        filter_dict[query_id] = {"query_list":[result_tuple], "max_score":-1}
+        #else:
+        #    raise Exception("m2p_split_blast: unknown value "+str(selection)+" for selection parameter.")
     
     algorithm = "blastn"
     # Recover filtered results
@@ -150,7 +151,7 @@ def __filter_blast_results(results, threshold_id, threshold_cov, selection, db_n
     return filtered_results
 
 def get_best_score_hits(split_blast_path, blast_app_path, n_threads, query_fasta_path, blast_dbs_path, db_name, \
-                        threshold_id, threshold_cov, selection, verbose = False):
+                        threshold_id, threshold_cov, verbose = False):
     
     if verbose: sys.stderr.write("m2p_split_blast: "+query_fasta_path+" against "+db_name+"\n")
     
@@ -159,7 +160,7 @@ def get_best_score_hits(split_blast_path, blast_app_path, n_threads, query_fasta
     if verbose: sys.stderr.write("m2p_split_blast: raw results --> "+str(len(results))+"\n")
     
     if len(results)>0:
-        results = __filter_blast_results(results, threshold_id, threshold_cov, selection, db_name)
+        results = __filter_blast_results(results, threshold_id, threshold_cov, db_name, verbose)
         
     if verbose: sys.stderr.write("m2p_split_blast: pass-filter results --> "+str(len(results))+"\n")
     #sys.stderr.write(str(len(results))+"\n")

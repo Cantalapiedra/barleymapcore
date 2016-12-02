@@ -14,7 +14,8 @@ HAS_CM_POS = 2
 HAS_BP_POS = 3
 AS_PHYSICAL = 4
 IS_HIERARCHICAL = 5
-DB_LIST = 6
+BEST_SCORE = 6
+DB_LIST = 7
 
 # HAS_CM_POS values
 #HAS_CM_POS_FALSE = "cm_false"
@@ -31,6 +32,10 @@ AS_PHYSICAL_TRUE = "physical"
 # IS_HIERARCHICAL values
 IS_HIERARCHICAL_TRUE = "hierarchical"
 #IS_HIERARCHICAL_FALSE = "greedy"
+
+# BEST_SCORE values
+BEST_SCORE_YES = "yes"
+#BEST_SCORE_NO = "no"
 
 class MapsConfig(object):
     
@@ -65,6 +70,9 @@ class MapsConfig(object):
             if conf_row[IS_HIERARCHICAL] == IS_HIERARCHICAL_TRUE: map_hierarchical = True
             else: map_hierarchical = False
             
+            if conf_row[BEST_SCORE] == BEST_SCORE_YES: best_score = True
+            else: best_score = False
+            
             map_db_list = conf_row[DB_LIST].split(",")
             
             map_dict = {MAP_NAME:map_name,
@@ -73,6 +81,7 @@ class MapsConfig(object):
                         HAS_BP_POS:map_bp,
                         AS_PHYSICAL:map_physical,
                         IS_HIERARCHICAL:map_hierarchical,
+                        BEST_SCORE:best_score,
                         DB_LIST:map_db_list}
             
             self._config_dict[map_id] = map_dict
@@ -92,8 +101,8 @@ class MapsConfig(object):
     def get_map_name(self, map_config):
         return map_config[MAP_NAME]
     
-    def get_map_db_list(self, map_config):
-        return map_config[DB_LIST]
+    def get_map_id(self, map_config):
+        return map_config[MAP_ID]
     
     def get_map_has_cm_pos(self, map_config):
         return map_config[HAS_CM_POS]
@@ -104,9 +113,14 @@ class MapsConfig(object):
     def get_map_as_physical(self, map_config):
         return map_config[AS_PHYSICAL]
     
-    
     def get_map_is_hierarchical(self, map_config):
         return map_config[IS_HIERARCHICAL]
+    
+    def get_map_is_best_score(self, map_config):
+        return map_config[BEST_SCORE]
+    
+    def get_map_db_list(self, map_config):
+        return map_config[DB_LIST]
     
     def get_maps_names(self, maps_ids):
         maps_names = []
@@ -114,7 +128,8 @@ class MapsConfig(object):
         for map_ids in maps_ids:
             found = False
             if map_ids in self._config_dict:
-                maps_names.append(self._config_dict[map_ids][MAP_NAME])
+                maps_names.append(self.get_map_name(self.get_map(map_id)))
+                #maps_names.append(self._config_dict[map_ids][MAP_NAME])
                 found = True
             
             if not found:
@@ -127,14 +142,22 @@ class MapsConfig(object):
     def get_maps_ids(self, maps_names):
         maps_ids = []
         
+        map_names_set = set([
+                            (self.get_map_name(self.get_map(map_id)),map_id)
+                            for map_id in self.get_maps()
+                            ])
+        
         # Doing this in a loop to conserve order
         for map_name in maps_names:
             found = False
-            for map_id in self._config_dict:
-                if self._config_dict[map_id][MAP_NAME] == map_name:
-                    maps_ids.append(map_id)
-                    found = True
-                    break
+            if map_name in map_names_set:
+                map_id = map_names_set[map_name]
+            #for map_id in self._config_dict:
+                #if self.get_map_name(self.get_map(map_id)) == map_name:
+                #if self._config_dict[map_id][MAP_NAME] == map_name:
+                maps_ids.append(map_id)
+                found = True
+                break
             
             if not found:
                 sys.stderr.write("MapsConfig: map name "+map_name+" not found in config.\n")

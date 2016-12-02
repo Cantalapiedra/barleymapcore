@@ -147,6 +147,7 @@ class DatasetsFacade(object):
     def retrieve_markers(self, contigs_dict):
         pass
     
+    # Obtain the alignments from a dataset in a list of DBs
     def retrieve_ids(self, query_ids_path, dataset_list, db_list, hierarchical = True,
                      selection = SELECTION_BEST_SCORE, best_score_filter = False):
         results = {}
@@ -224,6 +225,7 @@ class DatasetsFacade(object):
         
         return results
     
+    # Obtain the alignments from a dataset in a given Map
     def retrieve_ids_map(self, query_ids_path, dataset_list, map_id,
                          selection = SELECTION_BEST_SCORE, best_score_filter = False):
         results = {}
@@ -303,27 +305,27 @@ class DatasetsFacade(object):
         if selection == SELECTION_BEST_SCORE and not best_score_filter:
             
             for db in results:
-                map_dict = {}
-                
+                db_dict = {}
                 for result in results[db]:
                     query_id = result[0]
                     align_score = float(result[4])
                     
-                    if query_id in map_dict:
-                        query_map_score = map_dict[query_id]["map_score"]
+                    if query_id in db_dict:
+                        query_map_score = db_dict[query_id]["map_score"]
                         if align_score < query_map_score:
                             continue
                         elif align_score == query_map_score:
-                            map_dict[query_id]["results"].append(result)
+                            db_dict[query_id]["results"].append(result)
                         else: # align_score > query_db_score
-                            map_dict[query_id]["results"] = [result]
-                            map_dict[query_id]["map_score"] = align_score
+                            db_dict[query_id]["results"] = [result]
+                            db_dict[query_id]["map_score"] = align_score
                     else:
-                        map_dict[query_id] = {"results":[result], "map_score":align_score}
+                        db_dict[query_id] = {"results":[result], "map_score":align_score}
                     
                 results[db] = []
-                for query_id in map_dict:
-                    for result in map_dict[query_id]["results"]:
+                
+                for query_id in db_dict:
+                    for result in db_dict[query_id]["results"]:
                         results[db].append(result)
         
         ### Best score
@@ -347,10 +349,11 @@ class DatasetsFacade(object):
                     else:
                         best_score_filtering[query_id] = {"results":[result], "best_score":align_score}
                 
-            results = {db:[]}
+                results[db] = []
             
             for query_id in best_score_filtering:
                 for result in best_score_filtering[query_id]["results"]:
+                    db = result[AlignmentResults.DB_NAME]
                     results[db].append(result)
         # else: # NO FILTERING
         

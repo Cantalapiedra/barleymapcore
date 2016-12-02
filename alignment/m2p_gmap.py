@@ -8,7 +8,7 @@
 import sys, re
 from subprocess import Popen, PIPE
 
-from Aligners import SELECTION_BEST_SCORE, SELECTION_NONE
+#from Aligners import SELECTION_BEST_SCORE, SELECTION_NONE
 
 def __gmap(gmap_app_path, n_threads, threshold_id, threshold_cov, query_fasta_path, gmap_dbs_path, db_name, verbose = False):
     
@@ -183,7 +183,7 @@ def __compress(output, db_name):
     
     return compressed
 
-def __filter_gmap_results(results, threshold_id, threshold_cov, selection, db_name, verbose = False):
+def __filter_gmap_results(results, threshold_id, threshold_cov, db_name, verbose = False):
     filtered_results = []
     
     chimera_num = 0 #chimera_dict = set([])
@@ -240,56 +240,57 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, selection, db_na
         result_tuple = (subject_id, align_ident, query_cov, align_score, strand, local_position, end_position,
                         qstart_pos, qend_pos)
         
-        if selection == SELECTION_BEST_SCORE:
-            if query_id in filter_dict:
-                prev_max_scores = filter_dict[query_id]["max_scores"]
-                
-                new_max_score = True
-                new_max_score_list = []
-                for max_score in prev_max_scores:
-                    max_align_ident = max_score[0]
-                    max_query_cov = max_score[1]
-                    
-                    # If it is worse than at least one alignment, will be discarded
-                    if (align_ident <= max_align_ident and query_cov < max_query_cov) \
-                    or (align_ident < max_align_ident and query_cov <= max_query_cov):
-                        
-                        new_max_score = False # The new alignment is definitely discarded
-                        new_max_score_list.append(max_score)
-                    
-                    # If it is as good as another, the existing one remains in the new list
-                    elif (align_ident == max_align_ident and query_cov == max_query_cov) \
-                    or (align_ident > max_align_ident and query_cov < max_query_cov) \
-                    or (align_ident < max_align_ident and query_cov > max_query_cov):
-                        
-                        new_max_score_list.append(max_score)
-                        pass#new_max_score_list.append((align_ident, query_cov))
-                    
-                    # If it is better than the other, the old one is not added to the new list
-                    elif (align_ident >= max_align_ident and query_cov > max_query_cov) \
-                    or (align_ident > max_align_ident and query_cov >= max_query_cov):
-                        
-                        pass#new_max_score_list.append((align_ident, query_cov))
-                    
-                    else:
-                        raise Exception("m2p_gmap: unknown max score relation between alignments.")
-                
-                if new_max_score:
-                    new_max_score_list.append((align_ident, query_cov))
-                
-                # Update the max_scores list for this query
-                filter_dict[query_id]["max_scores"] = new_max_score_list
-                
-            else:
-                filter_dict[query_id] = {"query_list":[result_tuple], "max_scores":[(align_ident, query_cov)]}
+        # For a given DB, keep always the best score
+        #if selection == SELECTION_BEST_SCORE:
+        if query_id in filter_dict:
+            prev_max_scores = filter_dict[query_id]["max_scores"]
             
-        elif selection == SELECTION_NONE:
-            if query_id in filter_dict:
-                filter_dict[query_id]["query_list"].append(result_tuple)
-            else:
-                filter_dict[query_id] = {"query_list":[result_tuple], "max_score":-1}
+            new_max_score = True
+            new_max_score_list = []
+            for max_score in prev_max_scores:
+                max_align_ident = max_score[0]
+                max_query_cov = max_score[1]
+                
+                # If it is worse than at least one alignment, will be discarded
+                if (align_ident <= max_align_ident and query_cov < max_query_cov) \
+                or (align_ident < max_align_ident and query_cov <= max_query_cov):
+                    
+                    new_max_score = False # The new alignment is definitely discarded
+                    new_max_score_list.append(max_score)
+                
+                # If it is as good as another, the existing one remains in the new list
+                elif (align_ident == max_align_ident and query_cov == max_query_cov) \
+                or (align_ident > max_align_ident and query_cov < max_query_cov) \
+                or (align_ident < max_align_ident and query_cov > max_query_cov):
+                    
+                    new_max_score_list.append(max_score)
+                    pass#new_max_score_list.append((align_ident, query_cov))
+                
+                # If it is better than the other, the old one is not added to the new list
+                elif (align_ident >= max_align_ident and query_cov > max_query_cov) \
+                or (align_ident > max_align_ident and query_cov >= max_query_cov):
+                    
+                    pass#new_max_score_list.append((align_ident, query_cov))
+                
+                else:
+                    raise Exception("m2p_gmap: unknown max score relation between alignments.")
+            
+            if new_max_score:
+                new_max_score_list.append((align_ident, query_cov))
+            
+            # Update the max_scores list for this query
+            filter_dict[query_id]["max_scores"] = new_max_score_list
+            
         else:
-            raise Exception("m2p_gmap: unknown value "+str(selection)+" for selection parameter.")
+            filter_dict[query_id] = {"query_list":[result_tuple], "max_scores":[(align_ident, query_cov)]}
+        
+        #elif selection == SELECTION_NONE:
+        #    if query_id in filter_dict:
+        #        filter_dict[query_id]["query_list"].append(result_tuple)
+        #    else:
+        #        filter_dict[query_id] = {"query_list":[result_tuple], "max_score":-1}
+        #else:
+        #    raise Exception("m2p_gmap: unknown value "+str(selection)+" for selection parameter.")
         
         #if debug:
         #    sys.stderr.write(query_id+"\n")
@@ -322,7 +323,7 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, selection, db_na
     return filtered_results
 
 def get_hits(gmap_app_path, n_threads, query_fasta_path, gmap_dbs_path, db_name, \
-             threshold_id, threshold_cov, selection, verbose = False):
+             threshold_id, threshold_cov, verbose = False):
     results = []
     
     if verbose: sys.stderr.write("m2p_gmap: "+query_fasta_path+" against "+db_name+"\n")
@@ -332,7 +333,7 @@ def get_hits(gmap_app_path, n_threads, query_fasta_path, gmap_dbs_path, db_name,
     
     if verbose: sys.stderr.write("m2p_gmap: raw results --> "+str(len(results))+"\n")
     if len(results)>0:
-        results = __filter_gmap_results(results, threshold_id, threshold_cov, selection, db_name, verbose)
+        results = __filter_gmap_results(results, threshold_id, threshold_cov, db_name, verbose)
     if verbose: sys.stderr.write("m2p_gmap: pass-filter results --> "+str(len(results))+"\n")
     #sys.stderr.write(str(results)+"\n")
     
