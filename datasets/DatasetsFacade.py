@@ -6,8 +6,9 @@
 # (terms of use can be found within the distributed LICENSE file).
 
 import sys, os
+
 import barleymapcore.db.DatasetsConfig
-from barleymapcore.alignment.Aligners import AlignmentResults
+from barleymapcore.alignment.AlignmentResult import *
 
 class DatasetsFacade(object):
     
@@ -192,10 +193,9 @@ class DatasetsFacade(object):
             num_of_results += len(map_results)
             if self._verbose: sys.stderr.write("\t\t\t hits found: "+str(len(map_results))+"\n")
             
-            #sys.stderr.write("DatasetsFacade.py map_results "+str(map_results)+"\n")
             for result in map_results:
                 #sys.stderr.write("DatasetsFacade.py results "+str(result)+"\n")
-                db_result = result[AlignmentResults.DB_NAME]
+                db_result = result.get_db_name() #[AlignmentResults.DB_NAME]
                 if db_result in results:
                     results[db_result].append(result)
                 else:
@@ -223,8 +223,8 @@ class DatasetsFacade(object):
         
         for db in results:
             for result in results[db]:
-                query_id = result[0]
-                align_score = float(result[4])
+                query_id = result.get_query_id()#[0]
+                align_score = float(result.get_align_score())#[4])
                 
                 if query_id in best_score_filtering:
                     query_best_score = best_score_filtering[query_id]["best_score"]
@@ -242,7 +242,7 @@ class DatasetsFacade(object):
         
         for query_id in best_score_filtering:
             for result in best_score_filtering[query_id]["results"]:
-                db = result[AlignmentResults.DB_NAME]
+                db = result.get_db_name()#[AlignmentResults.DB_NAME]
                 results[db].append(result)
         # else: # NO FILTERING
         
@@ -258,7 +258,8 @@ class DatasetsFacade(object):
             
             if hit_query in test_set:
                 #sys.stderr.write(str(hit_query)+"\n")
-                hits.append(hit_data)
+                alignment_result = AlignmentResult(hit_data)
+                hits.append(alignment_result)
                 query_ids_dict[hit_query] = 1 # found
                 #if hierarchical: query_ids_dict[hit_query] = 1
         

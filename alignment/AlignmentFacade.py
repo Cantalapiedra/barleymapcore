@@ -210,17 +210,6 @@ class AlignmentFacade():
                 
             aligner = ListAligner(aligner_list, tmp_files_dir)
             
-        #elif query_type == QUERY_MODE_DUAL:
-        #    blastn_aligner = SplitBlastnAligner(self._blastn_app_path, n_threads, self._blastn_dbs_path, self._split_blast_path, self._verbose)
-        #    # CPCantalapiedra 2016-11
-        #    if ref_type == REF_TYPE_BIG:
-        #        gmap_aligner = GMAPAligner(self._gmapl_app_path, n_threads, self._gmap_dbs_path, self._verbose)
-        #    else:
-        #        gmap_aligner = GMAPAligner(self._gmap_app_path, n_threads, self._gmap_dbs_path, self._verbose)
-        #        
-        #    aligner = DualAligner(blastn_aligner, gmap_aligner, tmp_files_dir)
-        #
-            
         else:
             raise Exception("Unknown query type "+query_type+" when requesting aligner.")
         
