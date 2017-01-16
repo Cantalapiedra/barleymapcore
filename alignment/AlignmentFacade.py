@@ -8,7 +8,8 @@
 
 import os, sys
 
-from Aligners import AlignmentResults, SplitBlastnAligner, GMAPAligner, HSBlastnAligner, ListAligner #, DualAligner
+from Aligners import SplitBlastnAligner, GMAPAligner, HSBlastnAligner, ListAligner #, DualAligner
+from AlignmentResult import *
 #, SELECTION_BEST_SCORE
 import barleymapcore.utils.alignment_utils as alignment_utils
 from barleymapcore.db.DatabasesConfig import REF_TYPE_BIG, REF_TYPE_STD
@@ -119,9 +120,10 @@ class AlignmentFacade():
             fasta_headers = alignment_utils.get_fasta_headers(query_fasta_path)
             no_redundant_results = set()
             for db in self._alignment_results:
-                for result in self._alignment_results[db]:
-                    if result[AlignmentResults.QUERY_ID] not in no_redundant_results:
-                        no_redundant_results.add(result[AlignmentResults.QUERY_ID])
+                for alignment_result in self._alignment_results[db]:
+                    query_id = alignment_result.get_query_id()
+                    if query_id not in no_redundant_results:
+                        no_redundant_results.add(query_id)
                 
             self._alignment_unmapped = alignment_utils.filter_list(fasta_headers, no_redundant_results)
         
@@ -134,9 +136,9 @@ class AlignmentFacade():
         if best_score_filter:
             best_score_filtering = {}
             for db in results:
-                for result in results[db]:
-                    query_id = result[AlignmentResults.QUERY_ID]
-                    align_score = float(result[AlignmentResults.ALIGNMENT_SCORE])
+                for alignment_result in results[db]:
+                    query_id = alignment_result.get_query_id()#[AlignmentResults.QUERY_ID]
+                    align_score = float(alignment_result.get_align_score())#float(result[AlignmentResults.ALIGNMENT_SCORE])
                     
                     if query_id in best_score_filtering:
                         query_best_score = best_score_filtering[query_id]["best_score"]
@@ -145,12 +147,12 @@ class AlignmentFacade():
                         if align_score < query_best_score:
                             continue
                         elif align_score == query_best_score:
-                            best_score_filtering[query_id]["results"].append(result)
+                            best_score_filtering[query_id]["results"].append(alignment_result)
                         else: # align_score > query_best_score
-                            best_score_filtering[query_id]["results"] = [result]
+                            best_score_filtering[query_id]["results"] = [alignment_result]
                             best_score_filtering[query_id]["best_score"] = align_score
                     else:
-                        best_score_filtering[query_id] = {"results":[result], "best_score":align_score}
+                        best_score_filtering[query_id] = {"results":[alignment_result], "best_score":align_score}
                 
                 results[db] = [] # Reset all database results once that have been processed
             
@@ -161,9 +163,9 @@ class AlignmentFacade():
             #    results[db] = []
             
             for query_id in best_score_filtering:
-                for result in best_score_filtering[query_id]["results"]:
-                    db = result[AlignmentResults.DB_NAME]
-                    results[db].append(result)
+                for alignment_result in best_score_filtering[query_id]["results"]:
+                    db = alignment_result.get_db_name()#result[AlignmentResults.DB_NAME]
+                    results[db].append(alignment_result)
         
         return results
     
@@ -230,5 +232,4 @@ class AlignmentFacade():
     def get_alignment_unmapped(self):
         return self._alignment_unmapped
     
-    
-    
+## END

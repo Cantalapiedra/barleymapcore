@@ -7,8 +7,10 @@
 
 import sys, os
 from subprocess import Popen, PIPE
+
 from barleymapcore.utils.alignment_utils import load_fasta_lengths
 from barleymapcore.m2p_exception import m2pException
+from AlignmentResult import *
 
 #from Aligners import SELECTION_BEST_SCORE, SELECTION_NONE
 
@@ -85,6 +87,8 @@ def __filter_blast_results(results, threshold_id, threshold_cov, db_name, qlen_d
     
     filter_dict = {}
     
+    algorithm = "hsblastn"
+    
     for line in results:
         line_data = line.split("\t")
         
@@ -122,8 +126,9 @@ def __filter_blast_results(results, threshold_id, threshold_cov, db_name, qlen_d
         qstart_pos = long(line_data[ALIGN_QSTART])
         qend_pos = long(line_data[ALIGN_QEND])
         
-        result_tuple = (subject_id, align_ident, query_cov, align_score,
-                        strand, local_position, end_position, qstart_pos, qend_pos)
+        result_tuple = (query_id, subject_id, align_ident, query_cov, align_score,
+                        strand, local_position, end_position, qstart_pos, qend_pos,
+                        db_name, algorithm)
         
         # For a given DB, keep always the best score
         #if selection == SELECTION_BEST_SCORE:
@@ -149,23 +154,12 @@ def __filter_blast_results(results, threshold_id, threshold_cov, db_name, qlen_d
         #else:
         #    raise Exception("m2p_split_blast: unknown value "+str(selection)+" for selection parameter.")
     
-    algorithm = "hs_blastn"
     # Recover filtered results
     for query_id in filter_dict:
         for alignment_data in filter_dict[query_id]["query_list"]:
-            subject_id = alignment_data[0]
-            align_ident = alignment_data[1]
-            query_cov = alignment_data[2]
-            align_score = alignment_data[3]
-            strand = alignment_data[4]
-            local_position = alignment_data[5]
-            end_position = alignment_data[6]
-            qstart_pos = alignment_data[7]
-            qend_pos = alignment_data[8]
-            # This MUST coincide with Aligners.AlignmentResults fields
-            filtered_results.append([query_id, subject_id, align_ident, query_cov, align_score, strand,
-                                     qstart_pos, qend_pos, local_position, end_position,  
-                                     db_name, algorithm])
+            alignmentResult = AlignmentResult(alignment_data)
+            
+            filtered_results.append(alignmentResult)
     
     return filtered_results
 

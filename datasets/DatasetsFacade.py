@@ -264,6 +264,9 @@ class DatasetsFacade(object):
         
         return hits
     
+    def get_alignment_results(self,):
+        return self._results
+    
     def get_alignment_unmapped(self):
         return self._unmapped
     

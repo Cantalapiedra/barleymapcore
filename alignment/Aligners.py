@@ -10,22 +10,9 @@ import os, sys
 import m2p_split_blast
 import m2p_gmap
 import m2p_hsblastn
+import AlignmentResult
 import barleymapcore.utils.alignment_utils as alignment_utils
 from barleymapcore.m2p_exception import m2pException
-
-class AlignmentResults(object):
-    QUERY_ID = 0
-    SUBJECT_ID = 1
-    ALIGN_IDENTITY = 2
-    QUERY_COVERAGE = 3
-    ALIGNMENT_SCORE = 4
-    STRAND = 5
-    START_POSITION = 8
-    END_POSITION = 9
-    QSTART_POS = 6
-    QEND_POS = 7
-    DB_NAME = 10
-    ALGORITHM = 11
 
 class BaseAligner(object):
     
@@ -72,12 +59,18 @@ class SplitBlastnAligner(BaseAligner):
                                                  fasta_path, self._dbs_path, db, threshold_id, threshold_cov, \
                                                  self._verbose)
         
-        self._results_unmapped = alignment_utils.filter_list(fasta_headers,
-                                                             [a[AlignmentResults.QUERY_ID] for a in self._results_hits])
+        query_list = [a.get_query_id() for a in self._results_hits]
         
-        sys.stderr.write("SplitBlastnAligner: aligned "+
-                         str(len(set([a.split(" ")[0] for a in
-                                      [a[AlignmentResults.QUERY_ID] for a in self._results_hits]])))+"\n")
+        #self._results_unmapped = alignment_utils.filter_list(fasta_headers,
+        #                                                     [a[AlignmentResults.QUERY_ID] for a in self._results_hits])
+        #
+        #sys.stderr.write("SplitBlastnAligner: aligned "+
+        #                 str(len(set([a.split(" ")[0] for a in
+        #                              [a[AlignmentResults.QUERY_ID] for a in self._results_hits]])))+"\n")
+        
+        sys.stderr.write("SplitBlastnAligner: aligned "+str(len(set([a.split(" ")[0] for a in query_list])))+"\n")
+        
+        self._results_unmapped = alignment_utils.filter_list(fasta_headers, query_list)
         
         sys.stderr.write("SplitBlastnAligner: no hits "+str(len(self._results_unmapped))+"\n")
     
@@ -96,12 +89,18 @@ class GMAPAligner(BaseAligner):
                                       threshold_id, threshold_cov, \
                                       self._verbose)
         
-        self._results_unmapped = alignment_utils.filter_list(fasta_headers,
-                                                             [a[AlignmentResults.QUERY_ID] for a in self._results_hits])
+        query_list = [a.get_query_id() for a in self._results_hits]
         
-        sys.stderr.write("GMAPAligner: aligned "+
-                         str(len(set([a.split(" ")[0] for a in
-                                      [a[AlignmentResults.QUERY_ID] for a in self._results_hits]])))+"\n")
+        #self._results_unmapped = alignment_utils.filter_list(fasta_headers,
+        #                                                     [a[AlignmentResults.QUERY_ID] for a in self._results_hits])
+        #
+        #sys.stderr.write("GMAPAligner: aligned "+
+        #                 str(len(set([a.split(" ")[0] for a in
+        #                              [a[AlignmentResults.QUERY_ID] for a in self._results_hits]])))+"\n")
+        
+        sys.stderr.write("GMAPAligner: aligned "+str(len(set([a.split(" ")[0] for a in query_list])))+"\n")
+        
+        self._results_unmapped = alignment_utils.filter_list(fasta_headers, query_list)
         
         sys.stderr.write("GMAPAligner: no hits "+str(len(self._results_unmapped))+"\n")
 
@@ -124,12 +123,18 @@ class HSBlastnAligner(BaseAligner):
                                                  threshold_id, threshold_cov, \
                                                  self._verbose)
         
-        self._results_unmapped = alignment_utils.filter_list(fasta_headers,
-                                                             [a[AlignmentResults.QUERY_ID] for a in self._results_hits])
+        query_list = [a.get_query_id() for a in self._results_hits]
         
-        sys.stderr.write("HSBlastnAligner: aligned "+
-                         str(len(set([a.split(" ")[0] for a in
-                                      [a[AlignmentResults.QUERY_ID] for a in self._results_hits]])))+"\n")
+        #self._results_unmapped = alignment_utils.filter_list(fasta_headers,
+        #                                                     [a[AlignmentResults.QUERY_ID] for a in self._results_hits])
+        #
+        #sys.stderr.write("HSBlastnAligner: aligned "+
+        #                 str(len(set([a.split(" ")[0] for a in
+        #                              [a[AlignmentResults.QUERY_ID] for a in self._results_hits]])))+"\n")
+        
+        sys.stderr.write("HSBlastnAligner: aligned "+str(len(set([a.split(" ")[0] for a in query_list])))+"\n")
+        
+        self._results_unmapped = alignment_utils.filter_list(fasta_headers, query_list)
         
         sys.stderr.write("HSBlastnAligner: no hits "+str(len(self._results_unmapped))+"\n")
 

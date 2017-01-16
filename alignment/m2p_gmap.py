@@ -8,6 +8,8 @@
 import sys, re, os
 from subprocess import Popen, PIPE
 
+from AlignmentResult import *
+
 #from Aligners import SELECTION_BEST_SCORE, SELECTION_NONE
 
 ALIGNER = "GMAP"
@@ -212,6 +214,8 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, db_name, verbose
     
     strand_exp = re.compile("([0-9]+)..([0-9]+)")
     
+    algorithm = "gmap"
+    
     for line in results:
         
         #sys.stderr.write("m2p_gmap Result "+str(line)+"\n")
@@ -256,8 +260,9 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, db_name, verbose
         #if query_id == "i_BK_02": debug = True
         #else: debug = False
         
-        result_tuple = (subject_id, align_ident, query_cov, align_score, strand, local_position, end_position,
-                        qstart_pos, qend_pos)
+        result_tuple = (query_id, subject_id, align_ident, query_cov, align_score,
+                        strand, local_position, end_position, qstart_pos, qend_pos,
+                        db_name, algorithm)
         
         # For a given DB, keep always the best score
         #if selection == SELECTION_BEST_SCORE:
@@ -331,23 +336,12 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, db_name, verbose
         #    sys.stderr.write(str(line)+"\n")
         #    sys.stderr.write("\n")
         
-    algorithm = "gmap"
     # Recover filtered results
     for query_id in filter_dict:
         for alignment_data in filter_dict[query_id]["query_list"]:
-            subject_id = alignment_data[0]
-            align_ident = alignment_data[1]
-            query_cov = alignment_data[2]
-            align_score = alignment_data[3]
-            strand = alignment_data[4]
-            local_position = alignment_data[5]
-            end_position = alignment_data[6]
-            qstart_pos = alignment_data[7]
-            qend_pos = alignment_data[8]
-            # This MUST coincide with Aligners.AlignmentResults fields
-            filtered_results.append([query_id, subject_id, align_ident, query_cov, align_score, strand,
-                                     qstart_pos, qend_pos, local_position, end_position, 
-                                     db_name, algorithm])
+            alignmentResult = AlignmentResult(alignment_data)
+            
+            filtered_results.append(alignmentResult)
     
     #sys.stderr.write("m2p_gmap: number of chimeras found: "+str(len(chimera_dict))+"\n")
     
