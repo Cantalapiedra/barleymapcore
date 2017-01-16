@@ -40,11 +40,12 @@ class AlignmentResult(object):
         self._query_cov = alignment_data[3]
         self._align_score = alignment_data[4]
         self._strand = alignment_data[5]
-        self._local_position = alignment_data[6]
-        self._end_position = alignment_data[7]
         
-        self._qstart_pos = alignment_data[8]
-        self._qend_pos = alignment_data[9]
+        self._qstart_pos = alignment_data[6]
+        self._qend_pos = alignment_data[7]
+        
+        self._local_position = alignment_data[8]
+        self._end_position = alignment_data[9]
         
         self._db_name = alignment_data[10]
         self._algorithm = alignment_data[11]

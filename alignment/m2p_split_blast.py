@@ -127,7 +127,7 @@ def __filter_blast_results(results, threshold_id, threshold_cov, db_name, verbos
         qend_pos = long(line_data[6])
         
         result_tuple = (query_id, subject_id, align_ident, query_cov, align_score,
-                        strand, local_position, end_position, qstart_pos, qend_pos,
+                        strand, qstart_pos, qend_pos, local_position, end_position,
                         db_name, algorithm)
         
         # For a given DB, keep always the best score

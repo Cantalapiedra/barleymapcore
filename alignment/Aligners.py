@@ -61,13 +61,6 @@ class SplitBlastnAligner(BaseAligner):
         
         query_list = [a.get_query_id() for a in self._results_hits]
         
-        #self._results_unmapped = alignment_utils.filter_list(fasta_headers,
-        #                                                     [a[AlignmentResults.QUERY_ID] for a in self._results_hits])
-        #
-        #sys.stderr.write("SplitBlastnAligner: aligned "+
-        #                 str(len(set([a.split(" ")[0] for a in
-        #                              [a[AlignmentResults.QUERY_ID] for a in self._results_hits]])))+"\n")
-        
         sys.stderr.write("SplitBlastnAligner: aligned "+str(len(set([a.split(" ")[0] for a in query_list])))+"\n")
         
         self._results_unmapped = alignment_utils.filter_list(fasta_headers, query_list)
@@ -90,13 +83,6 @@ class GMAPAligner(BaseAligner):
                                       self._verbose)
         
         query_list = [a.get_query_id() for a in self._results_hits]
-        
-        #self._results_unmapped = alignment_utils.filter_list(fasta_headers,
-        #                                                     [a[AlignmentResults.QUERY_ID] for a in self._results_hits])
-        #
-        #sys.stderr.write("GMAPAligner: aligned "+
-        #                 str(len(set([a.split(" ")[0] for a in
-        #                              [a[AlignmentResults.QUERY_ID] for a in self._results_hits]])))+"\n")
         
         sys.stderr.write("GMAPAligner: aligned "+str(len(set([a.split(" ")[0] for a in query_list])))+"\n")
         
@@ -124,13 +110,6 @@ class HSBlastnAligner(BaseAligner):
                                                  self._verbose)
         
         query_list = [a.get_query_id() for a in self._results_hits]
-        
-        #self._results_unmapped = alignment_utils.filter_list(fasta_headers,
-        #                                                     [a[AlignmentResults.QUERY_ID] for a in self._results_hits])
-        #
-        #sys.stderr.write("HSBlastnAligner: aligned "+
-        #                 str(len(set([a.split(" ")[0] for a in
-        #                              [a[AlignmentResults.QUERY_ID] for a in self._results_hits]])))+"\n")
         
         sys.stderr.write("HSBlastnAligner: aligned "+str(len(set([a.split(" ")[0] for a in query_list])))+"\n")
         
@@ -177,55 +156,5 @@ class ListAligner(BaseAligner):
             raise
         finally:
             if fasta_created: os.remove(prev_aligner_to_align)
-   
-#class DualAligner(BaseAligner):
-#    _blastn_aligner = None
-#    _gmap_aligner = None
-#    _blastn_hits = []
-#    _gmap_hits = []
-#    _tmp_files_dir = ""
-#    
-#    def __init__(self, blastn_aligner, gmap_aligner, tmp_files_dir):
-#        self._blastn_aligner = blastn_aligner
-#        self._gmap_aligner = gmap_aligner
-#        self._tmp_files_dir = tmp_files_dir
-#        
-#    def align(self, fasta_path, db, threshold_id, threshold_cov):
-#        fasta_to_align = fasta_path
-#        #self._blastn_aligner.align(fasta_to_align, db, threshold_id, threshold_cov, selection)
-#        self._gmap_aligner.align(fasta_to_align, db, threshold_id, threshold_cov)
-#        
-#        blastn_fasta_to_align = alignment_utils.extract_fasta_headers(fasta_path,
-#                                                                      self._gmap_aligner.get_unmapped(),
-#                                                                      self._tmp_files_dir)
-#        
-#        try:
-#            #self._gmap_aligner.align(gmap_fasta_to_align, db, threshold_id, threshold_cov, selection)
-#            self._blastn_aligner.align(blastn_fasta_to_align, db, threshold_id, threshold_cov)
-#        except Exception:
-#            raise
-#        finally:
-#            os.remove(blastn_fasta_to_align)
-#            
-#        #self._gmap_hits = self._gmap_aligner.get_hits()
-#        self._blastn_hits = self._blastn_aligner.get_hits()
-#        
-#        #self._results_hits = self._blastn_aligner.get_hits()+self._gmap_hits
-#        self._results_hits = self._blastn_hits+self._gmap_aligner.get_hits()
-#        
-#        #self._results_unmapped = self.get_gmap_unmapped()
-#        self._results_unmapped = self.get_blastn_unmapped()
-#        
-#    def get_blastn_hits(self):
-#        return self._blastn_aligner.get_hits()
-#    
-#    def get_blastn_unmapped(self):
-#        return self._blastn_aligner.get_unmapped()
-#    
-#    def get_gmap_hits(self):
-#        return self._gmap_aligner.get_hits()
-#    
-#    def get_gmap_unmapped(self):
-#        return self._gmap_aligner.get_unmapped()
  
 ##

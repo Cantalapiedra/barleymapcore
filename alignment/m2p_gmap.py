@@ -261,7 +261,7 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, db_name, verbose
         #else: debug = False
         
         result_tuple = (query_id, subject_id, align_ident, query_cov, align_score,
-                        strand, local_position, end_position, qstart_pos, qend_pos,
+                        strand, qstart_pos, qend_pos, local_position, end_position,
                         db_name, algorithm)
         
         # For a given DB, keep always the best score
