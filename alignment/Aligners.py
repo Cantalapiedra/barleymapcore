@@ -7,9 +7,11 @@
 
 import os, sys
 
-from m2p_split_blast import get_best_score_hits
-from m2p_gmap import get_hits
+import m2p_split_blast
+import m2p_gmap
+import m2p_hsblastn
 import barleymapcore.utils.alignment_utils as alignment_utils
+from barleymapcore.m2p_exception import m2pException
 
 class AlignmentResults(object):
     QUERY_ID = 0
@@ -58,13 +60,15 @@ class SplitBlastnAligner(BaseAligner):
         
     def align(self, fasta_path, db, threshold_id, threshold_cov):
         
+        sys.stderr.write("\n")
+        
         fasta_headers = alignment_utils.get_fasta_headers(fasta_path)
         
         sys.stderr.write("SplitBlastnAligner: DB --> "+str(db)+"\n")
         sys.stderr.write("SplitBlastnAligner: to align "+str(len(fasta_headers))+"\n")
         
         # get_best_score_hits from m2p_split_blast.py
-        self._results_hits = get_best_score_hits(self._split_blast_path, self._app_path, self._n_threads, \
+        self._results_hits = m2p_split_blast.get_best_score_hits(self._split_blast_path, self._app_path, self._n_threads, \
                                                  fasta_path, self._dbs_path, db, threshold_id, threshold_cov, \
                                                  self._verbose)
         
@@ -80,13 +84,15 @@ class SplitBlastnAligner(BaseAligner):
 class GMAPAligner(BaseAligner):
     def align(self, fasta_path, db, threshold_id, threshold_cov):
         
+        sys.stderr.write("\n")
+        
         fasta_headers = alignment_utils.get_fasta_headers(fasta_path)
         
         sys.stderr.write("GMAPAligner: DB --> "+str(db)+"\n")
         sys.stderr.write("GMAPAligner: to align "+str(len(fasta_headers))+"\n")
         
         # get_hits from m2p_gmap.py
-        self._results_hits = get_hits(self._app_path, self._n_threads, fasta_path, self._dbs_path, db,
+        self._results_hits = m2p_gmap.get_hits(self._app_path, self._n_threads, fasta_path, self._dbs_path, db,
                                       threshold_id, threshold_cov, \
                                       self._verbose)
         
@@ -98,6 +104,34 @@ class GMAPAligner(BaseAligner):
                                       [a[AlignmentResults.QUERY_ID] for a in self._results_hits]])))+"\n")
         
         sys.stderr.write("GMAPAligner: no hits "+str(len(self._results_unmapped))+"\n")
+
+class HSBlastnAligner(BaseAligner):
+    
+    def __init__(self, app_path, n_threads, dbs_path, verbose = False):
+        BaseAligner.__init__(self, app_path, n_threads, dbs_path, verbose)
+        
+    def align(self, fasta_path, db, threshold_id, threshold_cov):
+        
+        sys.stderr.write("\n")
+        
+        fasta_headers = alignment_utils.get_fasta_headers(fasta_path)
+        
+        sys.stderr.write("HSBlastnAligner: DB --> "+str(db)+"\n")
+        sys.stderr.write("HSBlastnAligner: to align "+str(len(fasta_headers))+"\n")
+        
+        # get_best_score_hits from m2p_hs_blast.py
+        self._results_hits = m2p_hsblastn.get_best_score_hits(self._app_path, self._n_threads, fasta_path, self._dbs_path, db, \
+                                                 threshold_id, threshold_cov, \
+                                                 self._verbose)
+        
+        self._results_unmapped = alignment_utils.filter_list(fasta_headers,
+                                                             [a[AlignmentResults.QUERY_ID] for a in self._results_hits])
+        
+        sys.stderr.write("HSBlastnAligner: aligned "+
+                         str(len(set([a.split(" ")[0] for a in
+                                      [a[AlignmentResults.QUERY_ID] for a in self._results_hits]])))+"\n")
+        
+        sys.stderr.write("HSBlastnAligner: no hits "+str(len(self._results_unmapped))+"\n")
 
 class ListAligner(BaseAligner):
     _aligner_list = []
@@ -117,8 +151,14 @@ class ListAligner(BaseAligner):
         
         try:
             for aligner in self._aligner_list:
-                #sys.stderr.write("ListAligner: "+str(aligner)+"\n")
-                aligner.align(prev_aligner_to_align, db, threshold_id, threshold_cov)
+                if self._verbose: sys.stderr.write("ListAligner: "+str(aligner)+"\n")
+                
+                try:
+                    aligner.align(prev_aligner_to_align, db, threshold_id, threshold_cov)
+                except m2pException as m2pe:
+                    sys.stderr.write("\t"+m2pe.msg+"\n")
+                    sys.stderr.write("\tContinuing with next aligner...\n")
+                    continue
                 
                 prev_aligner_to_align = alignment_utils.extract_fasta_headers(fasta_path, \
                                                                               aligner.get_unmapped(), self._tmp_files_dir)
@@ -126,11 +166,11 @@ class ListAligner(BaseAligner):
                 
                 self._results_hits = self._results_hits + aligner.get_hits()
                 self._results_unmapped = aligner.get_unmapped()
-                
+                if len(self._results_unmapped) == 0: break # CPCantalapiedra 201701
+        
         except Exception:
             raise
         finally:
-            
             if fasta_created: os.remove(prev_aligner_to_align)
    
 #class DualAligner(BaseAligner):
