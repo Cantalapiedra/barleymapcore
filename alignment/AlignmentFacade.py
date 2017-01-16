@@ -8,13 +8,15 @@
 
 import os, sys
 
-from Aligners import AlignmentResults, SplitBlastnAligner, GMAPAligner, ListAligner #, DualAligner
+from Aligners import AlignmentResults, SplitBlastnAligner, GMAPAligner, HSBlastnAligner, ListAligner #, DualAligner
 #, SELECTION_BEST_SCORE
 import barleymapcore.utils.alignment_utils as alignment_utils
 from barleymapcore.db.DatabasesConfig import REF_TYPE_BIG, REF_TYPE_STD
+from barleymapcore.m2p_exception import m2pException
 
 QUERY_MODE_GENOMIC = "blastn"
 QUERY_MODE_CDNA = "gmap"
+QUERY_MODE_HS = "hsblastn"
 #QUERY_MODE_DUAL = "auto"
 
 class AlignmentFacade():
@@ -22,8 +24,10 @@ class AlignmentFacade():
     _split_blast_path = ""
     _blastn_app_path = ""
     _gmap_app_path = ""
+    _hsblastn_app_path = ""
     _blastn_dbs_path = ""
     _gmap_dbs_path = ""
+    _hsblastn_dbs_path = ""
     _gmapl_app_path = ""
     _tmp_files_dir = ""
     _databases_config = None
@@ -33,14 +37,16 @@ class AlignmentFacade():
     
     _verbose = False
     
-    def __init__(self, split_blast_path, blastn_app_path, gmap_app_path,
-                 blastn_dbs_path, gmap_dbs_path, gmapl_app_path, 
+    def __init__(self, split_blast_path, blastn_app_path, gmap_app_path, hsblastn_app_path, 
+                 blastn_dbs_path, gmap_dbs_path, hsblastn_dbs_path, gmapl_app_path, 
                  tmp_files_dir, databases_config, verbose = False):
         self._split_blast_path = split_blast_path
         self._blastn_app_path = blastn_app_path
         self._gmap_app_path = gmap_app_path
+        self._hsblastn_app_path = hsblastn_app_path
         self._blastn_dbs_path = blastn_dbs_path
         self._gmap_dbs_path = gmap_dbs_path
+        self._hsblastn_dbs_path = hsblastn_dbs_path
         self._gmapl_app_path = gmapl_app_path
         self._tmp_files_dir = tmp_files_dir
         self._verbose = verbose
@@ -75,20 +81,23 @@ class AlignmentFacade():
                 # Obtain suitable aligner for each database
                 aligner = self._get_aligner(query_type, n_threads, self._tmp_files_dir, ref_type)
                 
-                aligner.align(fasta_to_align, db, threshold_id, threshold_cov)
-                
-                results[db] = aligner.get_hits()
-                
-                ## Recover unmapped queries if needed
-                if len(dbs_list) > 1 and hierarchical:
-                    unmapped = aligner.get_unmapped()
+                try:
+                    aligner.align(fasta_to_align, db, threshold_id, threshold_cov)
+                    results[db] = aligner.get_hits()
                     
-                    if len(unmapped) > 0:
-                        fasta_to_align = alignment_utils.extract_fasta_headers(fasta_to_align, unmapped, self._tmp_files_dir)
-                        tmp_files_list.append(fasta_to_align)
-                    else:
-                        break
-                # else: fasta_to_align = fasta_path
+                    ## Recover unmapped queries if needed
+                    if len(dbs_list) > 1 and hierarchical:
+                        unmapped = aligner.get_unmapped()
+                        
+                        if len(unmapped) > 0:
+                            fasta_to_align = alignment_utils.extract_fasta_headers(fasta_to_align, unmapped, self._tmp_files_dir)
+                            tmp_files_list.append(fasta_to_align)
+                        else:
+                            break
+                    # else: fasta_to_align = fasta_path
+                except m2pException as m2pe:
+                    sys.stderr.write("\t"+m2pe.msg+"\n")
+                    sys.stderr.write("\tContinuing with alignments to next DB...\n")
             
             #unmapped_number = len(alignment_utils.filter_list(fasta_headers, [a[0] for a in self._results_hits]))
             #sys.stderr.write("AlignmentFacade: total number of seqs unmapped "+str(unmapped_number)+"\n")
@@ -172,21 +181,15 @@ class AlignmentFacade():
                 aligner = GMAPAligner(self._gmapl_app_path, n_threads, self._gmap_dbs_path, self._verbose)
             else:
                 aligner = GMAPAligner(self._gmap_app_path, n_threads, self._gmap_dbs_path, self._verbose)
-                
-        #elif query_type == QUERY_MODE_DUAL:
-        #    blastn_aligner = SplitBlastnAligner(self._blastn_app_path, n_threads, self._blastn_dbs_path, self._split_blast_path, self._verbose)
-        #    # CPCantalapiedra 2016-11
-        #    if ref_type == REF_TYPE_BIG:
-        #        gmap_aligner = GMAPAligner(self._gmapl_app_path, n_threads, self._gmap_dbs_path, self._verbose)
-        #    else:
-        #        gmap_aligner = GMAPAligner(self._gmap_app_path, n_threads, self._gmap_dbs_path, self._verbose)
-        #        
-        #    aligner = DualAligner(blastn_aligner, gmap_aligner, tmp_files_dir)
-        #    
+            
+        elif query_type == QUERY_MODE_HS:
+            aligner = HSBlastnAligner(self._hsblastn_app_path, n_threads, self._hsblastn_dbs_path, self._verbose)
+            
         elif "," in query_type:
             aligner_list = []
             for aligner_type in query_type.split(","):
                 if self._verbose: sys.stderr.write("AlignmentFacade: aligner "+str(aligner_type)+"\n")
+                
                 if aligner_type == QUERY_MODE_GENOMIC:
                     current_aligner = SplitBlastnAligner(self._blastn_app_path, n_threads, self._blastn_dbs_path, self._split_blast_path, self._verbose)
                     aligner_list.append(current_aligner)
@@ -197,10 +200,24 @@ class AlignmentFacade():
                     else:
                         current_aligner = GMAPAligner(self._gmap_app_path, n_threads, self._gmap_dbs_path, self._verbose)
                     aligner_list.append(current_aligner)
+                elif aligner_type == QUERY_MODE_HS:
+                    current_aligner = HSBlastnAligner(self._hsblastn_app_path, n_threads, self._hsblastn_dbs_path, self._verbose)
+                    aligner_list.append(current_aligner)
                 else:
                     sys.stderr.write("WARNING: AlignmentFacade: Unknown aligner type "+aligner_type+".\nSkipping to next aligner.\n")
                 
             aligner = ListAligner(aligner_list, tmp_files_dir)
+            
+        #elif query_type == QUERY_MODE_DUAL:
+        #    blastn_aligner = SplitBlastnAligner(self._blastn_app_path, n_threads, self._blastn_dbs_path, self._split_blast_path, self._verbose)
+        #    # CPCantalapiedra 2016-11
+        #    if ref_type == REF_TYPE_BIG:
+        #        gmap_aligner = GMAPAligner(self._gmapl_app_path, n_threads, self._gmap_dbs_path, self._verbose)
+        #    else:
+        #        gmap_aligner = GMAPAligner(self._gmap_app_path, n_threads, self._gmap_dbs_path, self._verbose)
+        #        
+        #    aligner = DualAligner(blastn_aligner, gmap_aligner, tmp_files_dir)
+        #
             
         else:
             raise Exception("Unknown query type "+query_type+" when requesting aligner.")

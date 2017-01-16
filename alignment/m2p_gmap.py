@@ -5,16 +5,29 @@
 # Copyright (C)  2013-2014  Carlos P Cantalapiedra.
 # (terms of use can be found within the distributed LICENSE file).
 
-import sys, re
+import sys, re, os
 from subprocess import Popen, PIPE
 
 #from Aligners import SELECTION_BEST_SCORE, SELECTION_NONE
 
+ALIGNER = "GMAP"
+MAX_NUMBER_PATHS_PER_QUERY = 100
+
 def __gmap(gmap_app_path, n_threads, threshold_id, threshold_cov, query_fasta_path, gmap_dbs_path, db_name, verbose = False):
     
+    # CPCantalapiedra 201701
+    ###### Check that DB is available for this aligner
+    dbpath = gmap_dbs_path + "/" + db_name
+    dbpathfile = dbpath + "/" + db_name + ".ref153positions"
+    sys.stderr.write("Checking database: "+dbpath+" DB exists for "+ALIGNER+".\n")
+    
+    if not (os.path.exists(dbpathfile) and os.path.isfile(dbpathfile)):
+        raise m2pException("DB path "+dbpath+" for "+ALIGNER+" aligner NOT FOUND.")
+    
+    # GMAP
     __command = "".join([gmap_app_path, \
                 " -t ", str(n_threads), \
-                " -B 0 "])
+                " -B 0 -n ", str(MAX_NUMBER_PATHS_PER_QUERY)])
     
     gmap_thres_id = float(threshold_id) / 100.0
     gmap_thres_cov = float(threshold_cov) / 100.0
@@ -31,7 +44,12 @@ def __gmap(gmap_app_path, n_threads, threshold_id, threshold_cov, query_fasta_pa
     if verbose: sys.stderr.write("m2p_gmap: Executing '"+gmap_cmd+"'\n")
     
     retValue = 0
-    p = Popen(gmap_cmd, shell=True, stdout=PIPE, stderr=PIPE)
+    FNULL = open(os.devnull, 'w')
+    if verbose:
+        p = Popen(gmap_cmd, shell=True, stdout=PIPE, stderr=sys.stderr)
+    else:
+        p = Popen(gmap_cmd, shell=True, stdout=PIPE, stderr=FNULL)
+    
     com_list = p.communicate()
     output = com_list[0]
     output_err = com_list[1]
@@ -41,12 +59,11 @@ def __gmap(gmap_app_path, n_threads, threshold_id, threshold_cov, query_fasta_pa
     
     if verbose: sys.stderr.write("m2p_gmap: GMAP return value "+str(retValue)+"\n")
     
-    ### NO MORE USE OF COMPRESS MODE
-    #results = []
-    #[results.append(line) for line in output.strip().split("\n") if line != "" and line.startswith(">")]
-    # startswith(">") to select only headers of the compressed (-Z) output format of GMAP
-    
     results = __compress(output, db_name)
+    
+    #print "M2PGMAP***********************"
+    #for result in results:
+    #    print result
     
     return results
 
@@ -67,7 +84,9 @@ def __compress(output, db_name):
     
     for output_line in output.strip().split("\n"):
         
-        #sys.stderr.write(str(output_line)+"\n")
+        ##print "M2PGMAP***********************"
+        #sys.stdout.write(str(output_line)+"\n")
+        
         ## Header of query
         if output_line.startswith(">"):
             if query_id != None:
@@ -195,7 +214,7 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, db_name, verbose
     
     for line in results:
         
-        #sys.stderr.write("Result "+str(line)+"\n")
+        #sys.stderr.write("m2p_gmap Result "+str(line)+"\n")
         
         # Specific GMAP pre-filter: chimera results
         if line.find("chimera") != -1:
@@ -247,24 +266,36 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, db_name, verbose
             
             new_max_score = True
             new_max_score_list = []
-            for max_score in prev_max_scores:
+            new_query_list = []
+            for i, max_score in enumerate(prev_max_scores):
+                best_query = filter_dict[query_id]["query_list"][i]
+                
+                #print "m2p_gmap************************"
+                #print str(max_score)+"-"+str(best_query)
+                
                 max_align_ident = max_score[0]
                 max_query_cov = max_score[1]
                 
-                # If it is worse than at least one alignment, will be discarded
+                # If it is worse than at least one alignment, it will be discarded
                 if (align_ident <= max_align_ident and query_cov < max_query_cov) \
                 or (align_ident < max_align_ident and query_cov <= max_query_cov):
                     
                     new_max_score = False # The new alignment is definitely discarded
                     new_max_score_list.append(max_score)
+                    new_query_list.append(best_query)
                 
-                # If it is as good as another, the existing one remains in the new list
-                elif (align_ident == max_align_ident and query_cov == max_query_cov) \
-                or (align_ident > max_align_ident and query_cov < max_query_cov) \
+                # If it is equal as another, the existing one remains in the new list
+                elif (align_ident == max_align_ident and query_cov == max_query_cov):
+                    
+                    new_max_score_list.append(max_score)
+                    new_query_list.append(best_query)
+                
+                # If it is as good as another, but different
+                elif (align_ident > max_align_ident and query_cov < max_query_cov) \
                 or (align_ident < max_align_ident and query_cov > max_query_cov):
                     
                     new_max_score_list.append(max_score)
-                    pass#new_max_score_list.append((align_ident, query_cov))
+                    new_query_list.append(best_query)
                 
                 # If it is better than the other, the old one is not added to the new list
                 elif (align_ident >= max_align_ident and query_cov > max_query_cov) \
@@ -277,9 +308,11 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, db_name, verbose
             
             if new_max_score:
                 new_max_score_list.append((align_ident, query_cov))
+                new_query_list.append(result_tuple)
             
             # Update the max_scores list for this query
             filter_dict[query_id]["max_scores"] = new_max_score_list
+            filter_dict[query_id]["query_list"] = new_query_list
             
         else:
             filter_dict[query_id] = {"query_list":[result_tuple], "max_scores":[(align_ident, query_cov)]}

@@ -5,14 +5,30 @@
 # Copyright (C)  2013-2014  Carlos P Cantalapiedra.
 # (terms of use can be found within the distributed LICENSE file).
 
-import sys
+import sys, os
 from subprocess import Popen, PIPE
+from barleymapcore.m2p_exception import m2pException
 
 #from Aligners import SELECTION_BEST_SCORE, SELECTION_NONE
+
+ALIGNER = "Blastn(SplitBlast)-Megablast"
 
 def __split_blast(split_blast_path, blast_app_path, n_threads, query_fasta_path, blast_dbs_path, db_name, verbose = False):
     results = []
     
+    # CPCantalapiedra 201701
+    ###### Check that DB is available for this aligner
+    dbpath = blast_dbs_path + db_name
+    dbpathfile = dbpath + ".nsq"
+    dbpathfile2 = dbpath + ".nal"
+    sys.stderr.write("Checking database: "+dbpath+" DB exists for "+ALIGNER+".\n")
+    
+    if not ((os.path.exists(dbpathfile) or os.path.exists(dbpathfile2)) \
+        and (os.path.isfile(dbpathfile) or os.path.isfile(dbpathfile2))):
+        
+        raise m2pException("DB path "+dbpath+" for "+ALIGNER+" aligner NOT FOUND.")
+    
+    ###### Split blast bins
     ###### Retrieve num of fasta seqs to calculate necessary bins
     retValue = 0
     p = Popen(" ".join(["cat", query_fasta_path, " | grep -c \"^>\""]), \
@@ -30,7 +46,7 @@ def __split_blast(split_blast_path, blast_app_path, n_threads, query_fasta_path,
                 "-dust no -soft_masking false -task megablast", \
                 '-outfmt \\"6 qseqid qlen sseqid slen length qstart qend sstart send bitscore evalue pident mismatch gapopen\\"'])
     
-    blast_db = "".join(["-db ", blast_dbs_path, db_name]) # blast_db = "".join(["-db ", blast_dbs_path, db_name , ".fa"]) # 
+    blast_db = "".join(["-db ", dbpath]) # blast_db = "".join(["-db ", blast_dbs_path, db_name , ".fa"]) # 
     blast_query = " ".join(["-query ", query_fasta_path])
     #blast_cmd = " ".join([ResourcesMng.get_deploy_dir()+blast_command, blast_db, blast_query])
     blast_cmd = " ".join([blast_command, blast_db, blast_query])
@@ -38,7 +54,12 @@ def __split_blast(split_blast_path, blast_app_path, n_threads, query_fasta_path,
     if verbose: sys.stderr.write("m2p_split_blast: Executing '"+blast_cmd+"'\n")
     
     retValue = 0
-    p = Popen(blast_cmd, shell=True, stdout=PIPE, stderr=sys.stderr)
+    FNULL = open(os.devnull, 'w')
+    if verbose:
+        p = Popen(blast_cmd, shell=True, stdout=PIPE, stderr=sys.stderr)
+    else:
+        p = Popen(blast_cmd, shell=True, stdout=PIPE, stderr=FNULL)
+    
     com_list = p.communicate()
     output = com_list[0]
     output_err = com_list[1]
@@ -87,8 +108,6 @@ def __filter_blast_results(results, threshold_id, threshold_cov, db_name, verbos
         query_id = line_data[0]
         subject_id = line_data[2]
         align_score = float(line_data[9])
-        
-        if query_id == "2249-1308": print "FOUND "+subject_id
         
         # strand and local position
         if line_data[7]>line_data[8]:

@@ -7,6 +7,26 @@
 
 import os, tempfile
 
+def load_fasta_lengths(fasta_path):
+    len_dict = {}
+    
+    currlen = 0
+    for fasta_line in open(fasta_path, 'r'):
+        if fasta_line.startswith(">"):
+            if currlen > 0:
+                len_dict[fasta_id] = currlen
+            fasta_id = fasta_line[1:].strip()
+            currlen = 0
+        else:
+            linelen = len(fasta_line.strip())
+            currlen += linelen
+    
+    if currlen > 0:
+        len_dict[fasta_id] = currlen
+        currlen = 0
+    
+    return len_dict
+
 def get_fasta_headers(fasta_path):
     fasta_headers = []
     

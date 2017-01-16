@@ -25,8 +25,8 @@ class DatasetsConfig(object):
     
     def __init__(self, config_file, verbose = True):
         self._config_file = config_file
-        self._load_config(config_file)
         self._verbose = verbose
+        self._load_config(config_file)
     
     def _load_config(self, config_file):
         self._config_dict = {}
@@ -59,21 +59,25 @@ class DatasetsConfig(object):
     def get_dataset_type(self, dataset_config):
         return dataset_config[DATASET_TYPE]
     
-    def get_datasets_names(self, datasets_ids):
+    def get_datasets_ids(self):
+        return self._config_dict.keys()
+    
+    def get_datasets_names(self, datasets_ids = None):
         datasets_names = []
         
-        for dataset in datasets_ids:
-            found = False
-            if dataset in self._config_dict:
-                datasets_names.append(self._config_dict[dataset][DATASET_NAME])
-                found = True
-            
-            if not found:
-                sys.stderr.write("DatasetsConfig: dataset ID "+dataset+" not found in config.\n")
-                datasets_names.append(dataset)
-        
+        if datasets_ids:
+            for dataset in datasets_ids:
+                found = False
+                if dataset in self._config_dict:
+                    datasets_names.append(self._config_dict[dataset][DATASET_NAME])
+                    found = True
+                
+                if not found:
+                    sys.stderr.write("DatasetsConfig: dataset ID "+dataset+" not found in config.\n")
+                    datasets_names.append(dataset)
+        else:
+            datasets_names = [value[DATASET_NAME] for value in self._config_dict.values()]
         
         return datasets_names
-    
 
 ## END    

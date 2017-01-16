@@ -26,8 +26,8 @@ class DatabasesConfig(object):
     
     def __init__(self, config_file, verbose = True):
         self._config_file = config_file
-        self._load_config(config_file)
         self._verbose = verbose
+        self._load_config(config_file)
     
     def _load_config(self, config_file):
         self._config_dict = {}
@@ -44,23 +44,32 @@ class DatabasesConfig(object):
     def get_databases(self):
         return self._config_dict
     
-    def get_database(self, database):
-        return self._config_dict[database]
+    def get_database(self, database_id):
+        return self._config_dict[database_id]
     
-    def get_databases_ids(self, databases_names):
+    def get_database_name(self, database_id):
+        return self._config_dict[database_id][REF_NAME]
+    
+    def get_database_type(self, database_id):
+        return self._config_dict[database_id][REF_TYPE]
+    
+    def get_databases_ids(self, databases_names = None):
         databases_ids = []
         
-        # Doing this in a loop to conserve order
-        for database_name in databases_names:
-            found = False
-            for database in self._config_dict:
-                if self._config_dict[database][REF_NAME] == database_name:
-                    databases_ids.append(database)
-                    found = True
-                    break
-            
-            if not found:
-                sys.stderr.write("DatabasesConfig: database name "+database_name+" not found in config.\n")
+        if databases_names:
+            # Doing this in a loop to conserve order
+            for database_name in databases_names:
+                found = False
+                for database in self._config_dict:
+                    if self._config_dict[database][REF_NAME] == database_name:
+                        databases_ids.append(database)
+                        found = True
+                        break
+                
+                if not found:
+                    sys.stderr.write("DatabasesConfig: database name "+database_name+" not found in config.\n")
+        else:
+            databases_ids = self._config_dict.keys()
         
         return databases_ids
     
@@ -85,6 +94,5 @@ class DatabasesConfig(object):
     
     def database_exists(self, database):
         return database in self._config_dict
-    
 
 ## END

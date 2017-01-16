@@ -45,8 +45,8 @@ class MapsConfig(object):
     
     def __init__(self, config_file, verbose = True):
         self._config_file = config_file
-        self._load_config(config_file)
         self._verbose = verbose
+        self._load_config(config_file)
     
     def _load_config(self, config_file):
         self._config_dict = {}
@@ -137,23 +137,26 @@ class MapsConfig(object):
         
         return maps_names
     
-    def get_maps_ids(self, maps_names):
+    def get_maps_ids(self, maps_names = None):
         maps_ids = []
         
-        # changing dict[id]-->name to dict[name]-->id
-        # This means that both id and name must be unique in configuration
-        map_names_set = dict([
-                            (self.get_map_name(self.get_map(map_id)),map_id)
-                            for map_id in self.get_maps()
-                            ])
-        
-        # Doing this in a loop to conserve order
-        for map_name in maps_names:
-            if map_name in map_names_set:
-                map_id = map_names_set[map_name]
-                maps_ids.append(map_id)
-            else:
-                sys.stderr.write("MapsConfig: map name "+map_name+" not found in config.\n")
+        if maps_names:
+            # changing dict[id]-->name to dict[name]-->id
+            # This means that both id and name must be unique in configuration
+            map_names_set = dict([
+                                (self.get_map_name(self.get_map(map_id)),map_id)
+                                for map_id in self.get_maps()
+                                ])
+            
+            # Doing this in a loop to conserve order
+            for map_name in maps_names:
+                if map_name in map_names_set:
+                    map_id = map_names_set[map_name]
+                    maps_ids.append(map_id)
+                else:
+                    sys.stderr.write("MapsConfig: map name "+map_name+" not found in config.\n")
+        else:
+            maps_ids = self._config_dict.keys()
         
         return maps_ids
     

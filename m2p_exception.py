@@ -6,4 +6,5 @@
 # (terms of use can be found within the distributed LICENSE file).
 
 class m2pException(Exception):
-    pass
+    def __init__(self, msg):
+        self.msg = msg
