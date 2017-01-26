@@ -7,7 +7,7 @@
 
 import sys
 
-from barleymapcore.maps.MapsBase import MapFields
+from barleymapcore.maps.MapsBase import MapPosition
 from GenesBase import GenesFields
 
 def get_sort_pos_genes(sort_param, map_has_cm, map_has_bp):
@@ -61,7 +61,7 @@ class GeneEnricher(object):
         return ret_gene
     
     def _empty_position(self, chrom):
-        return ["extended"]+[str(chrom)]+(MapFields.MAP_FIELDS-2)*["-"]
+        return ["extended"]+[str(chrom)]+(MapPosition.MAP_FIELDS-2)*["-"]
     
     ## This function creates and indexed list of genes
     ## First index is chromosome
@@ -201,7 +201,7 @@ class GenesBetween(GeneEnricher):
         prev_chrom = -1
         prev_genes_pos = -1
         for position in sorted_positions:
-            chrom = position[MapFields.MARKER_CHR_POS]
+            chrom = position.get_chrom()
             genes_pos = float(position[map_sort_by])
             
             if chrom != prev_chrom: # New chromosome
@@ -291,7 +291,7 @@ class GenesOnMarker(GeneEnricher):
         
         for position in sorted_positions:
             #if self._verbose: sys.stderr.write("GenesOnMarker: pos: "+str(position)+"\n")
-            chrom = position[MapFields.MARKER_CHR_POS]
+            chrom = position.get_chrom()
             
             genes_pos = float(position[map_sort_by])
             

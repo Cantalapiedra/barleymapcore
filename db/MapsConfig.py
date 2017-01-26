@@ -6,39 +6,50 @@
 # (terms of use can be found within the distributed LICENSE file).
 
 import sys
+
+from barleymapcore.m2p_exception import m2pException
 from barleymapcore.utils.data_utils import load_conf
-
-MAP_NAME = 0
-MAP_ID = 1
-HAS_CM_POS = 2
-HAS_BP_POS = 3
-AS_PHYSICAL = 4
-IS_HIERARCHICAL = 5
-BEST_SCORE = 6
-DB_LIST = 7
-
-# HAS_CM_POS values
-#HAS_CM_POS_FALSE = "cm_false"
-HAS_CM_POS_TRUE = "cm_true"
-
-# HAS_BP_POS values
-#HAS_BP_POS_FALSE = "bp_false"
-HAS_BP_POS_TRUE = "bp_true"
-
-# AS_PHYSICAL values
-AS_PHYSICAL_TRUE = "physical"
-#AS_PHYSICAL_FALSE = "genetic"
-
-# IS_HIERARCHICAL values
-IS_HIERARCHICAL_TRUE = "hierarchical"
-#IS_HIERARCHICAL_FALSE = "greedy"
-
-# BEST_SCORE values
-BEST_SCORE_YES = "yes"
-#BEST_SCORE_NO = "no"
+from barleymapcore.maps.MapsBase import MapTypes
 
 class MapsConfig(object):
     
+    # Field number (tab delimited)
+    # in configuration file
+    MAP_NAME = 0
+    MAP_ID = 1
+    HAS_CM_POS = 2
+    HAS_BP_POS = 3
+    DEFAULT_SORT_BY = 4 # bp, cm
+    AS_PHYSICAL = 5
+    IS_HIERARCHICAL = 6
+    BEST_SCORE = 7
+    DB_LIST = 8
+    
+    # HAS_CM_POS values
+    #HAS_CM_POS_FALSE = "cm_false"
+    HAS_CM_POS_TRUE = "cm_true"
+    
+    # HAS_BP_POS values
+    #HAS_BP_POS_FALSE = "bp_false"
+    HAS_BP_POS_TRUE = "bp_true"
+    
+    # DEFAULT_SORT_BY values
+    # see
+    # MapTypes.MAP_SORT_PARAM_CM and
+    # MapTypes.MAP_SORT_PARAM_BP
+    
+    # AS_PHYSICAL values
+    AS_PHYSICAL_TRUE = "physical"
+    #AS_PHYSICAL_FALSE = "genetic"
+    
+    # IS_HIERARCHICAL values
+    IS_HIERARCHICAL_TRUE = "hierarchical"
+    #IS_HIERARCHICAL_FALSE = "greedy"
+    
+    # BEST_SCORE values
+    BEST_SCORE_YES = "yes"
+    #BEST_SCORE_NO = "no"
+
     _config_file = ""
     _verbose = False
     _config_dict = {} # dict with data from maps configuration file (default: conf/maps.conf)
@@ -54,36 +65,32 @@ class MapsConfig(object):
         
         for conf_row in conf_rows:
             
-            map_name = conf_row[MAP_NAME]
-            map_id = conf_row[MAP_ID]
+            map_name = conf_row[self.MAP_NAME]
+            map_id = conf_row[self.MAP_ID]
             
-            if conf_row[HAS_CM_POS] == HAS_CM_POS_TRUE: map_cm = True
-            else: map_cm = False
+            if conf_row[self.HAS_CM_POS] == self.HAS_CM_POS_TRUE: map_has_cm = True
+            else: map_has_cm = False
             
-            if conf_row[HAS_BP_POS] == HAS_BP_POS_TRUE: map_bp = True
-            else: map_bp = False
+            if conf_row[self.HAS_BP_POS] == self.HAS_BP_POS_TRUE: map_has_bp = True
+            else: map_has_bp = False
             
-            if conf_row[AS_PHYSICAL] == AS_PHYSICAL_TRUE: map_physical = True
+            map_default_sort_by = conf_row[self.DEFAULT_SORT_BY]
+            
+            if conf_row[self.AS_PHYSICAL] == self.AS_PHYSICAL_TRUE: map_physical = True
             else: map_physical = False
             
-            if conf_row[IS_HIERARCHICAL] == IS_HIERARCHICAL_TRUE: map_hierarchical = True
+            if conf_row[self.IS_HIERARCHICAL] == self.IS_HIERARCHICAL_TRUE: map_hierarchical = True
             else: map_hierarchical = False
             
-            if conf_row[BEST_SCORE] == BEST_SCORE_YES: best_score = True
+            if conf_row[self.BEST_SCORE] == self.BEST_SCORE_YES: best_score = True
             else: best_score = False
             
-            map_db_list = conf_row[DB_LIST].split(",")
+            map_db_list = conf_row[self.DB_LIST].split(",")
             
-            map_dict = {MAP_NAME:map_name,
-                        MAP_ID:map_id,
-                        HAS_CM_POS:map_cm,
-                        HAS_BP_POS:map_bp,
-                        AS_PHYSICAL:map_physical,
-                        IS_HIERARCHICAL:map_hierarchical,
-                        BEST_SCORE:best_score,
-                        DB_LIST:map_db_list}
+            map_config = MapConfig(map_name, map_id, map_has_cm, map_has_bp, map_default_sort_by,
+                        map_physical, map_hierarchical, best_score, map_db_list)
             
-            self._config_dict[map_id] = map_dict
+            self._config_dict[map_id] = map_config
     
     def get_config_file(self):
         return self._config_file
@@ -91,49 +98,24 @@ class MapsConfig(object):
     def get_maps(self):
         return self._config_dict
     
-    def get_map(self, genetic_map):        
-        if genetic_map in self._config_dict:#self._config_dict:
-            map_config = self._config_dict[genetic_map]
+    def get_map_config(self, map_id):        
+        if map_id in self._config_dict:#self._config_dict:
+            map_config = self._config_dict[map_id]
         else:
-            raise Exception("Genetic map "+genetic_map+" is not in config file.")
+            raise m2pException("Genetic map "+map_id+" is not in config file.")
         
         return map_config
-    
-    # These are wrappers to use the config_dict fields just within MapsConfig class
-    def get_map_name(self, map_config):
-        return map_config[MAP_NAME]
-    
-    def get_map_id(self, map_config):
-        return map_config[MAP_ID]
-    
-    def get_map_has_cm_pos(self, map_config):
-        return map_config[HAS_CM_POS]
-    
-    def get_map_has_bp_pos(self, map_config):
-        return map_config[HAS_BP_POS]
-    
-    def get_map_as_physical(self, map_config):
-        return map_config[AS_PHYSICAL]
-    
-    def get_map_is_hierarchical(self, map_config):
-        return map_config[IS_HIERARCHICAL]
-    
-    def get_map_is_best_score(self, map_config):
-        return map_config[BEST_SCORE]
-    
-    def get_map_db_list(self, map_config):
-        return map_config[DB_LIST]
     
     def get_maps_names(self, maps_ids):
         maps_names = []
         
         for map_ids in maps_ids:
             if map_ids in self._config_dict:
-                maps_names.append(self.get_map_name(self.get_map(map_id)))
+                map_config = self.get_map_config(map_id)
+                maps_names.append(map_config.get_name())
             else:
                 sys.stderr.write("MapsConfig: map ID "+database+" not found in config.\n")
                 maps_names.append(map_ids)
-        
         
         return maps_names
     
@@ -143,8 +125,9 @@ class MapsConfig(object):
         if maps_names:
             # changing dict[id]-->name to dict[name]-->id
             # This means that both id and name must be unique in configuration
+            
             map_names_set = dict([
-                                (self.get_map_name(self.get_map(map_id)),map_id)
+                                (self.get_map_config(map_id).get_name(),map_id)
                                 for map_id in self.get_maps()
                                 ])
             
@@ -154,10 +137,93 @@ class MapsConfig(object):
                     map_id = map_names_set[map_name]
                     maps_ids.append(map_id)
                 else:
-                    sys.stderr.write("MapsConfig: map name "+map_name+" not found in config.\n")
+                    raise m2pException("MapsConfig: map name "+map_name+" not found in config.")
         else:
             maps_ids = self._config_dict.keys()
         
         return maps_ids
+
+class MapConfig(object):
+    _name = ""
+    _id = ""
+    _has_cm_pos = False
+    _has_bp_pos = False
+    _default_sort_by = ""
+    _as_physical = False
+    _is_hierarchical = False
+    _best_score = False
+    _db_list = None
+    
+    def __init__(self, name, map_id, has_cm_pos, has_bp_pos, default_sort_by,
+                 as_physical, is_hierarchical, best_score, db_list):
+        
+        self._name = name
+        self._id = map_id
+        self._has_cm_pos = has_cm_pos
+        self._has_bp_pos = has_bp_pos
+        self._default_sort_by = default_sort_by
+        self._as_physical = as_physical
+        self._is_hierarchical = is_hierarchical
+        self._best_score = best_score
+        self._db_list = db_list
+        
+        return
+    
+    # These are wrappers to use the config_dict fields just within MapsConfig class
+    def get_name(self):
+        return self._name
+    
+    def get_id(self):
+        return self._id
+    
+    def has_cm_pos(self):
+        return self._has_cm_pos
+    
+    def has_bp_pos(self):
+        return self._has_bp_pos
+    
+    def get_default_sort_by(self):
+        return self._default_sort_by
+    
+    def as_physical(self):
+        return self._as_physical
+    
+    def is_hierarchical(self):
+        return self._is_hierarchical
+    
+    def is_best_score(self):
+        return self._best_score
+    
+    def get_db_list(self):
+        return self._db_list
+    
+    def check_sort_param(self, map_config, sort_param, DEFAULT_SORT_PARAM):
+        sort_by = ""
+        
+        map_name = map_config.get_name()
+        map_has_cm_pos = map_config.has_cm_pos()
+        map_has_bp_pos = map_config.has_bp_pos()
+        map_default_sort_by = map_config.get_default_sort_by()
+        
+        if sort_param == map_default_sort_by:
+            sort_by = sort_param
+        else:
+            # sort_param has priority
+            if sort_param == MapTypes.MAP_SORT_PARAM_CM and map_has_cm_pos:
+                sort_by = sort_param
+            elif sort_param == MapTypes.MAP_SORT_PARAM_BP and map_has_bp_pos:
+                sort_by = sort_param
+            # else, check map_default_sort_by
+            else:
+                if sort_param != DEFAULT_SORT_PARAM:
+                    sys.stderr.write("WARNING: the sort parameter "+sort_param+" is not compatible with map "+map_name+". Using default map sort parameter...\n")
+                if map_default_sort_by == MapTypes.MAP_SORT_PARAM_CM and map_has_cm_pos:
+                    sort_by = map_default_sort_by
+                elif map_default_sort_by == MapTypes.MAP_SORT_PARAM_BP and map_has_bp_pos:
+                    sort_by = map_default_sort_by
+                else:
+                    raise m2pException("Map default sort configure as \""+map_default_sort_by+"\" assigned to a map which has not such kind of position.")
+        
+        return sort_by
     
 ## END

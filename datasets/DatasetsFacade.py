@@ -7,8 +7,10 @@
 
 import sys, os
 
-import barleymapcore.db.DatasetsConfig
+from barleymapcore.db.DatasetsConfig import DatasetsConfig
 from barleymapcore.alignment.AlignmentResult import *
+from barleymapcore.maps.MapInterval import MapInterval
+from barleymapcore.maps.MarkersBase import MarkerMapping
 
 class DatasetsFacade(object):
     
@@ -16,6 +18,7 @@ class DatasetsFacade(object):
     _datasets_config = None
     _datasets_path = ""
     _results = {}
+    _mapping_results = None
     _query_ids_path = ""
     _unmapped = []
     _verbose = False
@@ -28,6 +31,373 @@ class DatasetsFacade(object):
         self._datasets_path = datasets_path
         self._verbose = verbose
     
+    def get_mapping_results(self):
+        return self._mapping_results
+    
+    def get_alignment_results(sel):
+        return self._results
+    
+    def get_alignment_unmapped(self):
+        return self._unmapped
+    
+    #####################################################
+    # Obtain the mapping results from a dataset in a given map
+    #
+    def retrieve_mapping_results(self, query_ids_path, dataset_list, map_id, best_score_filter = False):
+        results = None
+        
+        self._query_ids_path = query_ids_path
+        
+        sys.stderr.write("DatasetsFacade: searching "+query_ids_path+"...\n")
+        
+        # Load list of queries to search for
+        initial_num_queries = 0
+        query_ids_dict = {}
+        for query_ids in open(query_ids_path, 'r'):
+            query_ids_dict[query_ids.strip()] = 0
+            initial_num_queries += 1
+        
+        map_results = []
+        num_queries_left = initial_num_queries
+        for dataset in dataset_list:
+            sys.stderr.write("\t dataset: "+dataset+"\n")
+            
+            # This is hierarchical or not,
+            # it is done because each marker has to have a uniq identifier
+            # so doing this we expect to do the search faster
+            temp_query_dict = dict([(query, 0) for query in query_ids_dict if query_ids_dict[query] == 0])
+            num_queries_left = len(temp_query_dict)
+            
+            if num_queries_left == 0:
+                if self._verbose: sys.stderr.write("\t\t All queries found.\n")
+                break
+            
+            data_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(map_id)+".hits"
+            
+            if self._verbose:
+                sys.stderr.write("\t\t MAP: "+map_id+"\n")
+                sys.stderr.write("\t\t\t queries to search for: "+str(num_queries_left)+"\n")
+                sys.stderr.write("\t\t\t path: "+data_path+"\n")
+                
+            test_set = set(query for query in temp_query_dict)
+            
+            #map_results = []
+            map_results = self._get_hits(temp_query_dict, data_path, test_set)
+            
+            num_of_results += len(map_results)
+            if self._verbose:
+                num_queries = len(set([result.get_query_id() for result in map_results]))
+                sys.stderr.write("\t\t\t hits found: "+str(len(map_results))+" for "+str(num_queries)+" queries.\n")
+            
+            query_ids_dict.update(temp_query_dict)
+        
+        queries_found = initial_num_queries - num_queries_left
+        
+        if best_score_filter:
+            results = self._best_score(results)
+        
+        if self._verbose: sys.stderr.write("DatasetsFacade: final number of results "+str(num_of_results)+"\n")
+        sys.stderr.write("DatasetsFacade: found "+str(queries_found)+" out of "+str(initial_num_queries)+"\n")
+        
+        self._results = results
+        self._unmapped = [query for query in query_ids_dict.keys() if query_ids_dict[query] == 0]
+        
+        return results
+    
+    
+    #####################################################
+    # Obtain the alignments results from a dataset in a given Map
+    #
+    def retrieve_ids_map(self, query_ids_path, dataset_list, map_id,
+                         best_score_filter = False):
+        results = {}
+        num_of_results = 0
+        
+        self._query_ids_path = query_ids_path
+        
+        sys.stderr.write("DatasetsFacade: searching "+query_ids_path+"...\n")
+        
+        # Load list of queries to search for
+        initial_num_queries = 0
+        query_ids_dict = {}
+        for query_ids in open(query_ids_path, 'r'):
+            query_ids_dict[query_ids.strip()] = 0
+            initial_num_queries += 1
+        
+        map_results = []
+        num_queries_left = initial_num_queries
+        for dataset in dataset_list:
+            sys.stderr.write("\t dataset: "+dataset+"\n")
+            
+            # This is hierarchical or not,
+            # it is done because each marker has to have a uniq identifier
+            # so doing this we expect to do the search faster
+            temp_query_dict = dict([(query, 0) for query in query_ids_dict if query_ids_dict[query] == 0])
+            num_queries_left = len(temp_query_dict)
+            
+            if num_queries_left == 0:
+                if self._verbose: sys.stderr.write("\t\t All queries found.\n")
+                break
+            
+            data_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(map_id)+".hits"
+            
+            if self._verbose:
+                sys.stderr.write("\t\t MAP: "+map_id+"\n")
+                sys.stderr.write("\t\t\t queries to search for: "+str(num_queries_left)+"\n")
+                sys.stderr.write("\t\t\t path: "+data_path+"\n")
+            
+            test_set = set(query for query in temp_query_dict)
+            
+            #map_results = []
+            map_results = self._get_hits(temp_query_dict, data_path, test_set)
+            
+            num_of_results += len(map_results)
+            if self._verbose:
+                num_queries = len(set([result.get_query_id() for result in map_results]))
+                sys.stderr.write("\t\t\t hits found: "+str(len(map_results))+" for "+str(num_queries)+" queries.\n")
+            
+            for result in map_results:
+                #sys.stderr.write("DatasetsFacade.py results "+str(result)+"\n")
+                db_result = result.get_db_name() #[AlignmentResults.DB_NAME]
+                if db_result in results:
+                    results[db_result].append(result)
+                else:
+                    results[db_result] = [result]
+            
+            # end for db_list
+            
+            query_ids_dict.update(temp_query_dict)
+        
+        queries_found = initial_num_queries - num_queries_left
+        
+        if best_score_filter:
+            results = self._best_score(results)
+        
+        if self._verbose: sys.stderr.write("DatasetsFacade: final number of results "+str(num_of_results)+"\n")
+        sys.stderr.write("DatasetsFacade: found "+str(queries_found)+" out of "+str(initial_num_queries)+"\n")
+        
+        self._results = results
+        self._unmapped = [query for query in query_ids_dict.keys() if query_ids_dict[query] == 0]
+        
+        return results
+    
+    def _get_hits(self, query_ids_dict, data_path, test_set):
+        hits = []
+        
+        for hit in open(data_path, 'r'):
+            #sys.stderr.write(str(hit)+"\n")
+            hit_data = hit.strip().split("\t")
+            alignment_result = AlignmentResult(hit_data)
+            hit_query = alignment_result.get_query_id()#[AlignmentResults.QUERY_ID]
+            
+            if hit_query in test_set:
+                #sys.stderr.write(str(hit_query)+"\n")
+                hits.append(alignment_result)
+                query_ids_dict[hit_query] = 1 # found
+                #if hierarchical: query_ids_dict[hit_query] = 1
+        
+        return hits
+    
+    def _best_score(self, results):
+        best_score_filtering = {}
+        
+        for db in results:
+            for result in results[db]:
+                query_id = result.get_query_id()#[0]
+                align_score = float(result.get_align_score())#[4])
+                
+                if query_id in best_score_filtering:
+                    query_best_score = best_score_filtering[query_id]["best_score"]
+                    if align_score < query_best_score:
+                        continue
+                    elif align_score == query_best_score:
+                        best_score_filtering[query_id]["results"].append(result)
+                    else: # align_score > query_best_score
+                        best_score_filtering[query_id]["results"] = [result]
+                        best_score_filtering[query_id]["best_score"] = align_score
+                else:
+                    best_score_filtering[query_id] = {"results":[result], "best_score":align_score}
+            
+            results[db] = []
+        
+        for query_id in best_score_filtering:
+            for result in best_score_filtering[query_id]["results"]:
+                db = result.get_db_name()#[AlignmentResults.DB_NAME]
+                results[db].append(result)
+        # else: # NO FILTERING
+        
+        return results
+    ###############################################
+    
+    ### Obtain markers aligned to a list of contigs
+    ### and adds them to the field "markers" of each contig in contig_list
+    def retrieve_markers_by_anchor(self, contig_list, map_id):
+        
+        if self._verbose: sys.stderr.write("DatasetsFacade: loading markers associated to contigs...\n")
+        
+        ## Prepare a list of contig identifiers
+        ##
+        contigs_dict = dict([(contig_dict["map_file_contig"],contig_dict) for contig_dict in contig_list])
+        
+        ## Search datasets for markers
+        ## associated to those contigs
+        dataset_list = self._datasets_config.get_datasets().keys()
+        
+        # Look for markers for each dataset
+        for dataset in dataset_list:
+            
+            dataset_config = self._datasets_config.get_dataset(dataset)
+            dataset_name = self._datasets_config.get_dataset_name(dataset_config)#datasets_dict[dataset]["dataset_name"]
+            dataset_type = self._datasets_config.get_dataset_type(dataset_config)
+            
+            ####### IF DATASET IS NOT OF GENETIC MARKERS: EXCLUDE flcDNAs, ESTs, ...
+            if dataset_type != DatasetsConfig.DATASET_TYPE_GENETIC_MARKER:
+                if self._verbose: sys.stderr.write("\t No markers dataset: "+dataset+"\n")
+                continue
+            
+            if self._verbose: sys.stderr.write("\t dataset: "+dataset+"\n")
+            
+            ########## Using the dataset generated for the whole map
+            ##########
+            dataset_map_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(map_id)+".hits"
+            if os.path.exists(dataset_map_path) and os.path.isfile(dataset_map_path):
+                if self._verbose: sys.stderr.write("DatasetsFacade: loading from map data\n")
+                
+                self.__retrieve_markers_by_anchor(dataset_map_path, dataset_name, contigs_dict)
+            
+            ### The next will be deprecated. Generate always a dataset.map file during barleymap setup
+            ########## In case that the positions were not precalculated for the map as a whole
+            ########## but for individual DBs
+            #else:
+            #    if self._verbose: sys.stderr.write("DatasetsFacade: loading from DBs data\n")
+            #    
+            #    self.__retrieve_markers_from_db_files(markers, map_db_list, map_is_hierarchical)
+        
+        return
+    
+    # Obtain alignment results from a dataset.map file
+    # and add them both to a list (markers) and to a dict of contigs (contigs_dict)
+    def __retrieve_markers_by_anchor(self, data_path, dataset_name, contigs_dict):
+        
+        contigs_set = set(contigs_dict.keys())
+        
+        # Find all the hits for this map
+        for hit in open(data_path, 'r'):
+            
+            hit_data = hit.strip().split("\t")
+            alignment_result = AlignmentResult(hit_data)
+            contig = alignment_result.get_subject_id()
+            
+            if contig in contigs_set:
+                query_data = {"alignment_result":alignment_result,
+                              "dataset_name":dataset_name,
+                              "hit_genes":[],
+                              "dataset_genes_configured":False}
+                
+                contigs_dict[contig]["markers"].append(query_data)
+        
+        return
+    
+    ### Obtain markers aligned to a series of alignment intervals
+    ###
+    def retrieve_markers_by_pos(self, map_intervals, map_id, chrom_dict):
+        if self._verbose: sys.stderr.write("DatasetsFacade: loading markers associated to physical positions...\n")
+        
+        markers = []
+        
+        ## Search datasets for markers
+        ## associated to those contigs
+        dataset_list = self._datasets_config.get_datasets().keys()
+        
+        # Look for markers for each dataset
+        for dataset in dataset_list:
+            
+            dataset_config = self._datasets_config.get_dataset(dataset)
+            dataset_name = self._datasets_config.get_dataset_name(dataset_config)#datasets_dict[dataset]["dataset_name"]
+            dataset_type = self._datasets_config.get_dataset_type(dataset_config)
+            
+            ####### IF DATASET IS NOT OF GENETIC MARKERS: EXCLUDE flcDNAs, ESTs, ...
+            if dataset_type != DatasetsConfig.DATASET_TYPE_GENETIC_MARKER:
+                if self._verbose: sys.stderr.write("\t No markers dataset: "+dataset+"\n")
+                continue
+            
+            if self._verbose: sys.stderr.write("\t dataset: "+dataset+"\n")
+            
+            ########## Using the dataset generated for the whole map
+            ##########
+            dataset_map_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(map_id)+".hits"
+            if os.path.exists(dataset_map_path) and os.path.isfile(dataset_map_path):
+                if self._verbose: sys.stderr.write("DatasetsFacade: loading from map data: "+dataset_map_path+"\n")
+                
+                dataset_markers = self.__retrieve_markers_by_pos(dataset_map_path, dataset_name, map_intervals, chrom_dict)
+                markers.extend(dataset_markers)
+        
+        return markers
+    
+    # Obtain alignment results from a dataset.map file
+    # and add them both to a list (markers) and to a dict of contigs (contigs_dict)
+    def __retrieve_markers_by_pos(self, data_path, dataset_name, map_intervals, chrom_dict):
+        
+        #contigs_set = set(contigs_dict.keys())
+        markers = []
+        # Find all the hits for this map
+        for hit in open(data_path, 'r'):
+            
+            hit_data = hit.strip().split("\t")
+            alignment_result = AlignmentResult(hit_data)
+            query_id = alignment_result.get_query_id()
+            subject_id = alignment_result.get_subject_id()
+            chrom_order = int(chrom_dict[subject_id])
+            ini_pos = long(alignment_result.get_local_position())
+            end_pos = long(alignment_result.get_end_position())
+            
+            interval = MapInterval(subject_id, ini_pos, end_pos)
+            
+            for map_interval in map_intervals:
+                
+                does_overlap = MapInterval.intervals_overlap(interval, map_interval)
+                
+                # Check if alignment overlaps with some mapping interval
+                if does_overlap:
+                    marker_mapping = MarkerMapping(query_id, dataset_name, subject_id, chrom_order, ini_pos)
+                    
+                    markers.append(marker_mapping)
+                    break # skip intervals, continue with next dataset record
+        
+        return markers
+    
+    ## Obtain alignment results from dataset.db files associated to a map configuration
+    #def __retrieve_markers_from_db_files(self, markers, map_db_list, map_is_hierarchical):
+    #    
+    #    for db in map_db_list:
+    #        
+    #        if hierarchical: markers_list_set = set(markers)
+    #        
+    #        if self._verbose: sys.stderr.write("\t\t db: "+db+"\n")
+    #        
+    #        data_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(db)+".hits"
+    #        
+    #        # Find all the hits for this database
+    #        for hit in open(data_path, 'r'):
+    #            
+    #            hit_data = hit.strip().split("\t")
+    #            alignment_result = AlignmentResult(hit_data)
+    #            
+    #            hit_query = alignment_result.get_query_id()
+    #            
+    #            if hierarchical and hit_query in markers_list_set:
+    #                continue
+    #            
+    #            query_data = {"alignment_result":alignment_result,
+    #                          "dataset_name":dataset_name,
+    #                          "hit_genes":[],
+    #                          "dataset_genes_configured":False}
+    #            
+    #            markers.append(query_data)
+    #    
+    #    return
+    
+    ###############################################
     # Obtains the marker-->genes hits for a dataset
     def load_dataset_genes_hit(self, dataset):
         
@@ -66,15 +436,20 @@ class DatasetsFacade(object):
         
         return
     
+    
+    
     # Creates an index [contig] --> list of []
-    def load_index_by_contig(self, dataset_list, db_list, hierarchical = True):
+    def load_index_by_contig(self, map_config):
         
         contig_index = {}
         
+        map_id = map_config[MapsConfig.MAP_ID]
+        map_db_list = map_config[MapsConfig.DB_LIST]
+        map_is_hierarchical = map_config[MapsConfig.IS_HIERARCHICAL]
+        
         if self._verbose: sys.stderr.write("DatasetsFacade: loading contig's index with markers data...\n")
         
-        #datasets_config = DatasetsConfig(self._datasets_conf_file, self._verbose)
-        datasets_dict = self._datasets_config.get_datasets()
+        dataset_list = self._datasets_config.get_datasets().keys()
         
         if not self._genes_hit_dict_loaded:
             self._load_genes_hit_dict(dataset_list)
@@ -87,7 +462,7 @@ class DatasetsFacade(object):
             dataset_name = self._datasets_config.get_dataset_name(dataset_config)#datasets_dict[dataset]["dataset_name"]
             dataset_type = self._datasets_config.get_dataset_type(dataset_config)
             
-            ####### IF DATASET IS OF GENETIC MARKERS: EXCLUDE flcDNAs, HarvEST, ...
+            ####### IF DATASET IS NOT OF GENETIC MARKERS: EXCLUDE flcDNAs, ESTs, ...
             if dataset_type != DatasetsConfig.DATASET_TYPE_GENETIC_MARKER:
                 if self._verbose: sys.stderr.write("\t No markers dataset: "+dataset+"\n")
                 continue
@@ -98,177 +473,90 @@ class DatasetsFacade(object):
             dataset_genes_configured = dataset_genes_hit_dict["configured"]
             dataset_genes_hit_queries = dataset_genes_hit_dict["genes_hit"]
             
-            # Reset the list of markers for hierarchical mode (applied over databases)
-            markers_list = [] # For use in hierarchical mode
-            
-            for db in db_list:
-                if hierarchical: markers_list_set = set(markers_list)
-                if self._verbose: sys.stderr.write("\t\t db: "+db+"\n")
+            ########## Using the dataset generated for the whole map
+            ##########
+            data_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(map_id)+".hits"
+            if os.path.exists(data_path) and os.path.isfile(data_path):
                 
-                data_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(db)+".hits"
-                
-                tmp_markers_list = []
-                
-                # Find all the hits for this database
+                if self._verbose: sys.stderr.write("DatasetsFacade: loading from map data\n")
+                # Find all the hits for this map
                 for hit in open(data_path, 'r'):
+                    
                     hit_data = hit.strip().split("\t")
-                    hit_query = hit_data[0]
+                    alignment_result = AlignmentResult(hit_data)
                     
-                    if hierarchical and hit_query in markers_list_set:
-                        continue
-                    
-                    hit_contig = hit_data[1]
+                    hit_query = alignment_result.get_query_id()
                     
                     if hit_query in dataset_genes_hit_queries:
                         hit_genes = sorted(dataset_genes_hit_queries[hit_query])
                     else:
                         hit_genes = []
                     
-                    query_data = [hit_query, dataset_name, hit_genes, dataset_genes_configured]
+                    query_data = {"alignment_result":alignment_result,
+                                  "dataset_name":dataset_name,
+                                  "hit_genes":hit_genes,
+                                  "dataset_genes_configured":dataset_genes_configured}
+                    
+                    hit_contig = alignment_result.get_subject_id()#hit_data[1]
                     
                     if hit_contig in contig_index:
                         contig_index[hit_contig].append(query_data)
-                        tmp_markers_list.append(hit_query)
                     else:
                         contig_index[hit_contig] = [query_data]
-                        tmp_markers_list.append(hit_query)
+                        
+            ########## In case that the positions were not precalculated for the map as a whole
+            ########## but for individual DBs
+            else:
                 
-                # Update markers found for hierarchical mode
-                if hierarchical: markers_list.extend(tmp_markers_list)
+                # Reset the list of markers for hierarchical mode (applied over databases)
+                markers_list = [] # For use in hierarchical mode
+                
+                if self._verbose: sys.stderr.write("DatasetsFacade: loading from DBs data\n")
+                for db in map_db_list:
+                    if hierarchical: markers_list_set = set(markers_list)
+                    if self._verbose: sys.stderr.write("\t\t db: "+db+"\n")
+                    
+                    data_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(db)+".hits"
+                    
+                    tmp_markers_list = []
+                    
+                    # Find all the hits for this database
+                    for hit in open(data_path, 'r'):
+                        
+                        hit_data = hit.strip().split("\t")
+                        alignment_result = AlignmentResult(hit_data)
+                        
+                        hit_query = alignment_result.get_query_id()
+                        
+                        if hierarchical and hit_query in markers_list_set:
+                            continue
+                        
+                        if hit_query in dataset_genes_hit_queries:
+                            hit_genes = sorted(dataset_genes_hit_queries[hit_query])
+                        else:
+                            hit_genes = []
+                        
+                        query_data = {"alignment_result":alignment_result,
+                                      "dataset_name":dataset_name,
+                                      "hit_genes":hit_genes,
+                                      "dataset_genes_configured":dataset_genes_configured}
+                        
+                        hit_contig = alignment_result.get_subject_id()#hit_data[1]
+                        
+                        if hit_contig in contig_index:
+                            contig_index[hit_contig].append(query_data)
+                            tmp_markers_list.append(hit_query)
+                        else:
+                            contig_index[hit_contig] = [query_data]
+                            tmp_markers_list.append(hit_query)
+                    
+                    # Update markers found for hierarchical mode
+                    if hierarchical: markers_list.extend(tmp_markers_list)
         
         if self._verbose: sys.stderr.write("DatasetsFacade: contig's index with markers data loaded.\n")
         
         #sys.stderr.write("DatasetsFacade: "+str(contig_index.keys()[0])+" - "+str(contig_index.values()[0])+".\n")
         
         return contig_index
-    
-    def retrieve_markers(self, contigs_dict):
-        pass
-    
-    # Obtain the alignments from a dataset in a given Map
-    def retrieve_ids_map(self, query_ids_path, dataset_list, map_id,
-                         best_score_filter = False):
-        results = {}
-        num_of_results = 0
-        
-        self._query_ids_path = query_ids_path
-        
-        sys.stderr.write("DatasetsFacade: searching...\n")
-        
-        # Load list of queries to search for
-        initial_num_queries = 0
-        query_ids_dict = {}
-        for query_ids in open(query_ids_path, 'r'):
-            query_ids_dict[query_ids.strip()] = 0
-            initial_num_queries += 1
-        
-        map_results = []
-        num_queries_left = initial_num_queries
-        for dataset in dataset_list:
-            sys.stderr.write("\t dataset: "+dataset+"\n")
-            
-            # This is hierarchical or not,
-            # it is done because each marker has to have a uniq identifier
-            # so doing this we expect to do the search faster
-            temp_query_dict = dict([(query, 0) for query in query_ids_dict if query_ids_dict[query] == 0])
-            num_queries_left = len(temp_query_dict)
-            
-            #for db in db_list: --> map_id
-            if num_queries_left == 0:
-                if self._verbose: sys.stderr.write("\t\t All queries found.\n")
-                break
-            
-            data_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(map_id)+".hits"
-            
-            if self._verbose:
-                sys.stderr.write("\t\t MAP: "+map_id+"\n")
-                sys.stderr.write("\t\t\t queries to search for: "+str(num_queries_left)+"\n")
-                sys.stderr.write("\t\t\t path: "+data_path+"\n")
-            
-            test_set = set(query for query in temp_query_dict)
-            
-            #map_results = []
-            map_results = self._get_hits(temp_query_dict, data_path, test_set)
-            
-            num_of_results += len(map_results)
-            if self._verbose: sys.stderr.write("\t\t\t hits found: "+str(len(map_results))+"\n")
-            
-            for result in map_results:
-                #sys.stderr.write("DatasetsFacade.py results "+str(result)+"\n")
-                db_result = result.get_db_name() #[AlignmentResults.DB_NAME]
-                if db_result in results:
-                    results[db_result].append(result)
-                else:
-                    results[db_result] = [result]
-            
-            # end for db_list
-            
-            query_ids_dict.update(temp_query_dict)
-        
-        queries_found = initial_num_queries - num_queries_left
-        
-        if best_score_filter:
-            results = self._best_score(results)
-        
-        if self._verbose: sys.stderr.write("DatasetsFacade: final number of results "+str(num_of_results)+"\n")
-        sys.stderr.write("DatasetsFacade: found "+str(queries_found)+" out of "+str(initial_num_queries)+"\n")
-        
-        self._results = results
-        self._unmapped = [query for query in query_ids_dict.keys() if query_ids_dict[query] == 0]
-        
-        return results
-    
-    def _best_score(self, results):
-        best_score_filtering = {}
-        
-        for db in results:
-            for result in results[db]:
-                query_id = result.get_query_id()#[0]
-                align_score = float(result.get_align_score())#[4])
-                
-                if query_id in best_score_filtering:
-                    query_best_score = best_score_filtering[query_id]["best_score"]
-                    if align_score < query_best_score:
-                        continue
-                    elif align_score == query_best_score:
-                        best_score_filtering[query_id]["results"].append(result)
-                    else: # align_score > query_best_score
-                        best_score_filtering[query_id]["results"] = [result]
-                        best_score_filtering[query_id]["best_score"] = align_score
-                else:
-                    best_score_filtering[query_id] = {"results":[result], "best_score":align_score}
-            
-            results[db] = []
-        
-        for query_id in best_score_filtering:
-            for result in best_score_filtering[query_id]["results"]:
-                db = result.get_db_name()#[AlignmentResults.DB_NAME]
-                results[db].append(result)
-        # else: # NO FILTERING
-        
-        return results
-    
-    def _get_hits(self, query_ids_dict, data_path, test_set):
-        hits = []
-        
-        for hit in open(data_path, 'r'):
-            #sys.stderr.write(str(hit)+"\n")
-            hit_data = hit.strip().split("\t")
-            hit_query = hit_data[AlignmentResults.QUERY_ID]
-            
-            if hit_query in test_set:
-                #sys.stderr.write(str(hit_query)+"\n")
-                alignment_result = AlignmentResult(hit_data)
-                hits.append(alignment_result)
-                query_ids_dict[hit_query] = 1 # found
-                #if hierarchical: query_ids_dict[hit_query] = 1
-        
-        return hits
-    
-    def get_alignment_results(self,):
-        return self._results
-    
-    def get_alignment_unmapped(self):
-        return self._unmapped
     
 ## END

@@ -6,13 +6,19 @@
 # (terms of use can be found within the distributed LICENSE file).
 
 import sys
-from Mappers import Mappers
-from MapsBase import MapTypes, MapFields
+
+from Mappers import Mapper
 from MarkersBase import MarkersFields, MarkersData
 from MapReader import MapReader
+from MapEnricher import MapEnricher
+from MarkerEnricher import MarkerEnricher
+
 from barleymapcore.genes.GenesFacade import GenesFacade
 from barleymapcore.datasets.DatasetsFacade import DatasetsFacade
-from barleymapcore.alignment.Aligners import AlignmentResults
+from barleymapcore.alignment.AlignmentResult import *
+from barleymapcore.db.MapsConfig import MapsConfig
+from barleymapcore.m2p_exception import m2pException
+#from barleymapcore.maps.MarkerEnricher import MarkerEnricher
 
 ## Read conf file
 ALIGN_ACTION = "align"
@@ -22,206 +28,136 @@ class MapMarkers(object):
     
     #_config_path_dict = {}
     _maps_path = ""
-    _maps_config = None
-    _genetic_map_dict = {}
+    _map_config = None
     _verbose = False
-    _maps_data = {}
     _mapReader = None
     
-    def __init__(self, maps_path, maps_config, genetic_map, verbose = False):
+    _mapping_results = None
+    _maps_data = {}
+    
+    def __init__(self, maps_path, map_config, verbose = False):
         self._maps_path = maps_path
-        self._maps_config = maps_config
-        self._genetic_map = genetic_map
+        self._map_config = map_config
         self._verbose = verbose
-    
-    def get_genetic_maps(self):
-        return self._genetic_map_dict
-    
-    def create_genetic_maps(self, markers_alignment, unmapped_list, dbs_list,
-                            sort_param, multiple_param):
-        
-        sys.stderr.write("MapMarkers: creating maps...\n")
-        
         # Load MapReader
-        self._mapReader = MapReader(self._maps_path, self._maps_config, self._verbose)
+        self._mapReader = MapReader(self._maps_path, map_config, self._verbose)
+    
+    def get_mapping_results(self):
+        return self._mapping_results
+    
+    def get_map_config(self):
+        return self._map_config
+    
+    def create_map(self, alignment_results, unaligned, sort_param, multiple_param):
         
-        # Obtain Mapper
-        mapper = Mappers().get_mapper(self._mapReader, enrich = False, verbose = self._verbose)
+        map_config = self.get_map_config()
         
-        # Indexes the alignments by marker_id
-        markers_dict = self._get_markers_dict(markers_alignment, dbs_list)
+        sys.stderr.write("MapMarkers: creating map: "+map_config.get_name()+"\n")
         
-        # This is a temporal list of all the contigs in the alignments
-        contig_set = markers_dict["contig_set"]
-        del markers_dict["contig_set"]
+        map_as_physical = map_config.as_physical()
         
-        # Create the genetic maps from the alignments
-        self._genetic_map_dict[self._genetic_map] = mapper.get_genetic_map(markers_dict, contig_set,
-                                                                    self._genetic_map, dbs_list, unmapped_list,
-                                                                    sort_param, multiple_param)
+        ### For physical maps, just re-format alignments to map format
+        ###
+        if map_as_physical:
+            sys.stderr.write("\t"+map_config.get_name()+" is physical.\n")
+            
+            # Indexes the alignments by marker_id
+            #markers_dict = self._get_markers_dict(alignment_results)
+            
+            # Obtain Mapper without MapReader
+            mapper = Mapper(self._mapReader, self._verbose)
+            
+            # Translate from alignment format to map format
+            #self._map = mapper.create_physical_map(markers_dict, unaligned, self._map_config, sort_param, multiple_param)
+            self._mapping_results = mapper.create_physical_map(alignment_results, unaligned, map_config, sort_param, multiple_param)
         
-        sys.stderr.write("MapMarkers: Maps created.\n")
+        ### For anchored maps, translate positions (from alignment to anchored contigs)
+        ### to map positions
+        else:
+            sys.stderr.write("\t"+map_config.get_name()+" is anchored.\n")
+            # Indexes the alignments by marker_id
+            markers_dict = self._get_markers_dict(alignment_results)
+            
+            # Obtain Mapper with MapReader
+            mapper = Mapper(self._mapReader, self._verbose)
+            
+            # Create the map from the alignments
+            self._mapping_results = mapper.create_anchored_map(markers_dict, unaligned, map_config, sort_param, multiple_param)
+        
+        sys.stderr.write("MapMarkers: Map "+map_config.get_name()+" created.\n")
+        sys.stderr.write("\n")
         
         return
     
-    def _get_markers_dict(self, markers_alignment, dbs_list):
+    def _get_markers_dict(self, alignment_results):
         markers_dict = {}
-        # [marker_id] = {"contigs_set":{[(contig_id, local_position)]}
-        # ["contig_set"] = {[contig_id]}
+        # [marker_id] = set([(contig_id, local_position),...])
+        # ["contig_set"] = {[contig_id,...]}
         
-        # Extract alignments from databases
-        alignments_list = []
-        for db in dbs_list:
-            if db in markers_alignment:
-                for alignment in markers_alignment[db]:
-                    alignments_list.append(alignment)
+        # This is a temporal list of all the contigs in the alignments
+        markers_dict["contig_list"] = []
         
-        # Extract contigs set and marker positions dict
-        contig_set = set()
-        for marker_alignment in alignments_list:
-            #sys.stderr.write("MapMarkers.py "+str(marker_alignment)+"\n")
-            marker_id = marker_alignment[AlignmentResults.QUERY_ID]
-            contig_id = marker_alignment[AlignmentResults.SUBJECT_ID]
-            local_position = marker_alignment[AlignmentResults.START_POSITION]
-            
-            # Markers dict
-            if marker_id in markers_dict:
-                marker_dict = markers_dict[marker_id]
-                if contig_id not in marker_dict["contigs_set"]:
-                    marker_dict["contigs_set"].add((contig_id, local_position))
-            else:
-                markers_dict[marker_id] = {"contigs_set":set([(contig_id, local_position)])}
-            
-            # contigs set
-            if contig_id not in contig_set:
-                contig_set.add(contig_id)
-        
-        markers_dict["contig_set"] = contig_set
+        # Extract alignments from databases of this map
+        for db in self.get_map_config().get_db_list():#dbs_list:
+            if db in alignment_results:
+                #alignments_list.extend(alignment_results[db])
+                for alignment in alignment_results[db]:
+                    # Obtain alignment data
+                    marker_id = alignment.get_query_id()
+                    contig_id = alignment.get_subject_id()
+                    local_position = alignment.get_local_position()
+                    
+                    contig_tuple = (contig_id, local_position)
+                    
+                    # Add hit (contig, position) to list of hits of this marker
+                    if marker_id in markers_dict:
+                        marker_contig_list = markers_dict[marker_id]
+                        marker_contig_set = set(marker_contig_list)
+                        if contig_tuple not in marker_contig_set:
+                            marker_contig_list.append(contig_tuple)
+                    else:
+                        markers_dict[marker_id] = [contig_tuple]
+                    
+                    # Add contig to the general list of contigs found in the alignments
+                    if contig_id not in set(markers_dict["contig_list"]):
+                        markers_dict["contig_list"].append(contig_id)
         
         return markers_dict
     
-    def enrich_with_markers(self, genes_extend, genes_window_cm, genes_window_bp, sort_param, \
-                            dbs_list, datasets_ids, datasets_conf_file, hierarchical, merge_maps,
+    def enrich_with_markers(self, datasets_facade, extend, extend_window, \
                             constrain_fine_mapping = True):
         
         sys.stderr.write("MapMarkers: adding other markers...\n")
         
-        if len(self._genetic_map_dict)<=0: raise Exception("Genetic maps have not been initiallized.")
+        mapping_results = self.get_mapping_results()
         
-        # Load DatasetsFacade and datasets data indexed by contig
-        datasets_path = self._config_path_dict["app_path"]+self._config_path_dict["datasets_path"]
-        facade = DatasetsFacade(datasets_conf_file, datasets_path, verbose = self._verbose)
-        datasets_contig_index_loaded = False
-        datasets_contig_index = {}
+        if not mapping_results: raise m2pException("MapMarkers: Map has not been initiallized.")
         
-        # Load Mapper
-        #maps_path = self._config_path_dict["app_path"]+self._config_path_dict["maps_path"]
-        maps_config_file = self._config_path_dict["app_path"]+"conf/maps.conf"
-        #mapReader = MapReader(maps_path, maps_config_file, self._verbose)
-        mapper = Mappers().get_mapper(self._mapReader, enrich = True, merge_maps = merge_maps, verbose = self._verbose)
-            
-        if self._verbose: sys.stderr.write("\tMap : "+self._genetic_map+"\n")
+        sys.stderr.write("\tMap : "+self.get_map_config().get_name()+"\n")
         
-        genetic_map_data = self._genetic_map_dict[self._genetic_map]
-        
+        # Markers enrichment is limited to results from a single chromosome
+        # for example, in the web app
         if constrain_fine_mapping:
-            fine_mapping = genetic_map_data[MapTypes.FINE_MAPPING]
-            
+            fine_mapping = mapping_results.is_fine_mapping() # boolean: results from a single chromosome
             if self._verbose: sys.stderr.write("\tFine mapping: "+str(fine_mapping)+"\n")
-            
             if not fine_mapping: return
         
-        genetic_map_has_cm_pos = genetic_map_data[MapTypes.MAP_HAS_CM_POS]
-        genetic_map_has_bp_pos = genetic_map_data[MapTypes.MAP_HAS_BP_POS] # "has_bp_pos"
-        genetic_map_mapped = genetic_map_data[MapTypes.MAP_MAPPED]
+        ########## 1) Load Map Data and translate it to intervals
+        ##########
+        map_enricher = MapEnricher(mapping_results, self._verbose)
         
-        genes_window = self._get_genes_window(genes_extend, sort_param, genes_window_cm, genes_window_bp, \
-                                              genetic_map_has_cm_pos, genetic_map_has_bp_pos)
+        map_intervals = map_enricher.map_to_intervals(extend, extend_window)
         
-        map_sort_by = genetic_map_data[MapTypes.MAP_SORT_BY]
+        ########## 2) Use those intervals to
+        ##########      obtain markers within those positions (map.as_physical)
+        ##########      obtain contigs within those positions and, afterwards, markers anchored to them (not map.as_physical)
+        ########## and add markers to the map
         
-        #sys.stderr.write(str(genetic_map_mapped[0])+"\n")
+        map_enricher.enrich_with_markers(map_intervals, datasets_facade, self._mapReader)
         
-        # Contigs index is only loaded once, and only if there is a genetic_map ready for fine mapping
-        # Contains the relation of contigs with markers, so it loads only contigs with markers aligned to them
-        if not datasets_contig_index_loaded:
-            datasets_contig_index = facade.load_index_by_contig(datasets_ids, dbs_list, hierarchical)
-        
-        # Obtain the contigs with positions in the interval between each pair of markers
-        new_positions = mapper.get_contigs(self._genetic_map, genetic_map_has_cm_pos, genetic_map_has_bp_pos, genetic_map_mapped, \
-                                           dbs_list, datasets_contig_index, map_sort_by, sort_param, genes_extend, genes_window)
-        
-        # MapFields.MAP_FIELDS points out that the contig_ID, to be replaced by marker information
-        # is the first field after the marker map regular information
-        translated_positions = self._translate_contigs_to_markers(new_positions, MapFields.MAP_FIELDS, datasets_contig_index)
-        
-        genetic_map_data[MapTypes.MAP_WITH_MARKERS] = translated_positions
-            
         sys.stderr.write("MapMarkers: added other markers.\n")
         
         return
-    
-    def _get_genes_window(self, genes_extend, sort_param, genes_window_cm, genes_window_bp,
-                          genetic_map_has_cm_pos, genetic_map_has_bp_pos):
-        
-        genes_window = 0
-        
-        if genes_extend:
-            if sort_param == "cm":
-                if genetic_map_has_cm_pos:
-                    genes_window = genes_window_cm
-                else:
-                    genes_window = genes_window_bp
-                
-            elif sort_param == "bp":
-                if genetic_map_has_bp_pos:
-                    genes_window = genes_window_bp
-                else:
-                    genes_window = genes_window_cm
-            else:
-                Exception("find_other_markers: Wrong field for sorting "+str(sort_param))
-            
-        return genes_window
-    
-    # Replaces each contig for its corresponding markers
-    # contigs_dict contains the contigs and their positions
-    # contigs_index relates each contigs with markers
-    def _translate_contigs_to_markers(self, positions_list, contig_id_pos, contigs_index):
-        
-        translated_positions = []
-        
-        if self._verbose: sys.stderr.write("Replacing "+str(len(positions_list))+" contigs...\n")
-        
-        num_not_found = 0
-        
-        for position in positions_list:
-            
-            marker_id = position[MapFields.MARKER_NAME_POS]
-            contig_id = position[contig_id_pos]
-            
-            if contig_id in contigs_index:
-                markers_list = contigs_index[contig_id] # Retrieve data by contig_id
-                
-                # For each marker associated to this contig a new line is added
-                for marker_data in markers_list:
-                    
-                    marker_new_id = marker_data[MarkersFields.MARKER_ID_POS]
-                    
-                    #if marker_id == marker_new_id: continue
-                    
-                    marker_position = position[:contig_id_pos]+\
-                    marker_data[MarkersData.MARKER_ID_POS:MarkersData.MARKER_DATASET_POS+1]+\
-                    position[contig_id_pos+1:]+\
-                    marker_data[MarkersData.MARKER_GENES_POS:MarkersData.MARKER_GENES_CONFIGURED_POS+1]
-                    
-                    translated_positions.append(marker_position)
-            else:
-                num_not_found += 1
-            
-        
-        if self._verbose: sys.stderr.write("Contigs not found "+str(num_not_found)+"\n")
-        
-        return translated_positions
     
     def enrich_with_genes(self, show_genes_option, load_annot, genes_extend,
                           genes_window_cm, genes_window_bp, sort_param, constrain_fine_mapping = True):
@@ -239,7 +175,7 @@ class MapMarkers(object):
         genetic_map_data = self._genetic_map_dict[self._genetic_map]
         
         if constrain_fine_mapping:
-            fine_mapping = genetic_map_data[MapTypes.FINE_MAPPING]
+            fine_mapping = genetic_map_data.is_fine_mapping() #[MapTypes.FINE_MAPPING]
             
             if self._verbose: sys.stderr.write("\tFine mapping: "+str(fine_mapping)+"\n")
             
@@ -248,21 +184,21 @@ class MapMarkers(object):
         # Load genes and annotation
         genesManager.load_data(self._genetic_map, load_annot)
         
-        genetic_map_has_cm_pos = genetic_map_data[MapTypes.MAP_HAS_CM_POS] # "has_cm_pos"
-        genetic_map_has_bp_pos = genetic_map_data[MapTypes.MAP_HAS_BP_POS] # "has_bp_pos"
+        genetic_map_has_cm_pos = self.get_map_config().has_cm_pos() # "has_cm_pos"
+        genetic_map_has_bp_pos = self.get_map_config().has_bp_pos() # "has_bp_pos"
         genes_window = self._get_genes_window(genes_extend, sort_param, genes_window_cm, genes_window_bp, \
                                               genetic_map_has_cm_pos, genetic_map_has_bp_pos)
         
-        sort_by = genetic_map_data[MapTypes.MAP_SORT_BY]
+        sort_by = genetic_map_data.get_sort_by() #[MapTypes.MAP_SORT_BY]
         
-        genetic_map_positions = genetic_map_data[MapTypes.MAP_MAPPED]
+        genetic_map_positions = genetic_map_data.get_mapped() #[MapTypes.MAP_MAPPED]
         
         enriched_positions = genesManager.enrich_by_pos(self._genetic_map, genetic_map_positions, \
                                                         genes_extend, genes_window, \
                                                         sort_by, sort_param, load_annot, \
                                                         genetic_map_has_cm_pos, genetic_map_has_bp_pos)
         
-        genetic_map_data[MapTypes.MAP_WITH_GENES] = enriched_positions
+        genetic_map_data.get_map_with_genes() #[MapTypes.MAP_WITH_GENES] = enriched_positions
         
         sys.stderr.write("MapMarkers: Genes added.\n")
         

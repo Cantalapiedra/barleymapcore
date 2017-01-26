@@ -6,18 +6,6 @@
 # (terms of use can be found within the distributed LICENSE file).
 
 class AlignmentResult(object):
-    #QUERY_ID = 0
-    #SUBJECT_ID = 1
-    #ALIGN_IDENTITY = 2
-    #QUERY_COVERAGE = 3
-    #ALIGNMENT_SCORE = 4
-    #STRAND = 5
-    #QSTART_POS = 6
-    #QEND_POS = 7
-    #START_POSITION = 8
-    #END_POSITION = 9
-    #DB_NAME = 10
-    #ALGORITHM = 11
     
     _query_id = ""
     _subject_id = ""
@@ -85,5 +73,11 @@ class AlignmentResult(object):
     
     def get_algorithm(self):
         return self._algorithm
+    
+    def __str__(self):
+        return " - ".join([self._query_id, self._subject_id, self._align_ident, self._query_cov, self._align_score,
+                          self._strand, self._local_position, self._end_position, self._qstart_pos, self._qend_pos,
+                          self._db_name, self._algorithm])
+    
     
 ## END

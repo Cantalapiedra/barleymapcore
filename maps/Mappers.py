@@ -7,118 +7,110 @@
 
 import sys
 
-from barleymapcore.maps.MarkerEnricher import MarkerEnricher
-from MapsBase import MapTypes, MapFields
+from MapsBase import MapPosition, MappingResults
+from barleymapcore.db.MapsConfig import MapsConfig
 
 NUM_FIELDS = 7
-
-class Mappers(object):
-    
-    def __init__(self):
-        return
-    
-    # Factory
-    def get_mapper(self, mapReader, enrich = False, verbose = False):
-        mapper = None
-        
-        mapper = Mapper(mapReader, enrich, verbose)
-        
-        return mapper
 
 class Mapper(object):
     
     _mapReader = None
-    _markerEnricher = None
     _verbose = False
     
-    def __init__(self, mapReader, enrich, verbose = False):
+    def __init__(self, mapReader, verbose = False):
         self._mapReader = mapReader
-        if enrich:
-            self._markerEnricher = MarkerEnricher()
         self._verbose = verbose
     
-    ## Returns a list of [contig_id, contig_chr, contig_pos] between each two consecutive positions in map
-    def get_contigs(self, genetic_map, genetic_map_has_cm_pos, genetic_map_has_bp_pos, sorted_positions, \
-                    dbs_list, datasets_contig_index, map_sort_by, sort_param, genes_extend, genes_window):
+    ## Obtain a finished map of markers from alignments to physical map sequences (genome)
+    def create_physical_map(self, alignment_results, unaligned_markers, map_config, sort_param, multiple_param):
         
-        new_positions = []
+        # Re-format positions of aligned markers to map positions
+        #
+        markers_positions = self._reformatPositions(alignment_results, map_config)
         
-        # Obtain a double index of contigs with keys [chromosome][position] --> list of [contig_id, contig_chr, contig_pos]
-        positions_index = self._mapReader.get_positions_index(genetic_map, dbs_list, datasets_contig_index, sort_param)
-        
-        new_positions = self._markerEnricher.enrich(positions_index, genetic_map_has_cm_pos, genetic_map_has_bp_pos, \
-                                                    sorted_positions, map_sort_by, sort_param, genes_extend, genes_window)
-        
-        return new_positions
-    
-    ## Obtain a finished genetic map of markers
-    def get_genetic_map(self, markers_dict, contig_set, genetic_maps, dbs_list,
-                        unmapped_list, sort_param, multiple_param):
-        return self._get_genetic_maps(markers_dict, contig_set, genetic_maps, dbs_list,
-                                      unmapped_list, sort_param, multiple_param)
-    
-    def _get_genetic_maps(self, markers_dict, contig_set, genetic_map, dbs_list,
-                                unmapped_list, sort_param, multiple_param):
-        genetic_map_dict = {}
-        
-        maps_data = self._mapReader.get_maps_config()
-        map_config = maps_data.get_map(genetic_map)
-        
-        # Get full configuration for genetic map
-        genetic_map_name = maps_data.get_map_name(map_config)
-        genetic_map_as_physical = maps_data.get_map_as_physical(map_config)
-        genetic_map_has_cm_pos = maps_data.get_map_has_cm_pos(map_config)
-        genetic_map_has_bp_pos = maps_data.get_map_has_bp_pos(map_config)
-        (sort_by, sort_sec_pos) = self._get_sort_pos_map(sort_param, genetic_map_has_cm_pos, genetic_map_has_bp_pos)
-        
-        if self._verbose: sys.stderr.write("Genetic map: "+str(genetic_map)+"\n")
-        if self._verbose: sys.stderr.write("\t parameters: total contigs --> "+str(len(contig_set))+\
-                                           "; genetic_map --> "+genetic_map+"; databases --> "+str(dbs_list)+"\n")
-        
-        # Obtain the positions of contigs: contig_id --> chr, cM, bp
-        positions_dict = self._mapReader.obtain_positions(contig_set, genetic_map, dbs_list)
-        
-        if self._verbose: sys.stderr.write("\t positions: "+str(len(positions_dict))+"\n")
-        
-        # Associates positions to markers, detects contigs without map position and resolves redundancy
-        markers_positions = self._resolvePositions(positions_dict, markers_dict, genetic_map_name, genetic_map_as_physical)
-        
-        #sys.stderr.write(str(markers_positions)+"\n")
-        
-        finished_map = self._finish_map(markers_positions, unmapped_list, sort_by, sort_sec_pos, multiple_param, genetic_map_name, \
-                                        genetic_map_as_physical, genetic_map_has_cm_pos, genetic_map_has_bp_pos)
+        finished_map = self._finish_map(markers_positions, unaligned_markers, \
+                                        sort_param, multiple_param, map_config)
         
         return finished_map
     
-    # This function exists in GeneEnricher
-    def _get_sort_pos_map(self, sort_param, map_has_cm, map_has_bp):
-        sort_by = -1
-        sec_pos = -1
+    # Translates positions of alignments to map format
+    def _reformatPositions(self, alignment_results, map_config):
         
-        # sort type
-        if sort_param == "cm":
-            if map_has_cm:
-                sort_by = MapFields.MARKER_CM_POS
-                sec_pos = MapFields.MARKER_BP_POS
-            else:
-                sort_by = MapFields.MARKER_BP_POS
-                sec_pos = MapFields.MARKER_CM_POS
-                
-        elif sort_param == "bp":
-            if map_has_bp:
-                sort_by = MapFields.MARKER_BP_POS
-                sec_pos = MapFields.MARKER_CM_POS
-            else:
-                sort_by = MapFields.MARKER_CM_POS
-                sec_pos = MapFields.MARKER_BP_POS
-        else:
-            raise Exception("Mapper: Wrong field for sorting "+str(sort_param))
+        # Get full configuration for genetic map
+        map_name = map_config.get_name()
         
-        return (sort_by, sec_pos)
-    
-    # Associates positions to markers, detects contigs without map position and resolves redundancy
-    def _resolvePositions(self, positions_dict, markers_dict, genetic_map_name, genetic_map_as_physical):
         markers_positions = {}
+        # marker_id --> {"positions":[], "hits_no_position":[], "genetic_map":map_name}
+        
+        # Extract alignments from databases of this map
+        for db in map_config.get_db_list():
+            if db in alignment_results:
+                
+                ## Read the alignment
+                for alignment in alignment_results[db]:
+                    # Obtain alignment data
+                    marker_id = alignment.get_query_id()
+                    
+                    if marker_id in markers_positions:
+                        marker_pos = markers_positions[marker_id]["positions"]
+                    else:
+                        marker_pos = []
+                        markers_positions[marker_id] = {"positions":marker_pos, "hits_no_position":[],
+                                                        "genetic_map":map_name}
+                    
+                    contig_id = alignment.get_subject_id()
+                    local_position = alignment.get_local_position()
+                    
+                    new_pos = {"chr":contig_id, "cm_pos":-1, "bp_pos":local_position}
+                    
+                    if not self._existPosition(marker_pos, new_pos):
+                        marker_pos.append(new_pos)
+        
+        return markers_positions
+    
+    ## Obtain a finished map of markers from alignments to anchored sequences
+    def create_anchored_map(self, markers_dict, unaligned_markers, map_config, sort_param, multiple_param):
+        
+        # get the full list of contigs found in the alignments
+        contig_list = markers_dict["contig_list"]
+        del markers_dict["contig_list"] # This is essential to avoid this key to be used as a marker_id
+        
+        # Get full configuration for genetic map
+        map_name = map_config.get_name()
+        
+        if self._verbose:
+            sys.stderr.write("Mapper: Map: "+str(map_name)+"\n")
+            sys.stderr.write("\t total contigs --> "+str(len(contig_list))+"\n")
+        
+        # Obtain the positions of contigs in the map: contig_id --> chr, cM, bp
+        map_contigs_positions = self._mapReader.obtain_map_positions(contig_list)
+        
+        if self._verbose: sys.stderr.write("\t positions: "+str(len(map_contigs_positions))+"\n")
+        
+        # Translate positions of aligned markers to map positions,
+        # and detect markers which hit to contigs without map position
+        markers_positions = self._resolvePositions(map_contigs_positions, markers_dict, map_name)
+        
+        #sys.stderr.write(str(markers_positions)+"\n")
+        
+        finished_map = self._finish_map(markers_positions, unaligned_markers, \
+                                        sort_param, multiple_param, map_config)
+        
+        return finished_map
+    
+    # Obtain a double index of contigs with keys [chromosome][position] --> list of [contig_id, contig_chr, contig_pos]
+    def get_positions_index(self, datasets_contig_index, sort_param):
+        
+        positions_index = self._mapReader.get_positions_index(datasets_contig_index, sort_param)
+        
+        return positions_index
+    
+    # Translates positions of aligned markers to map positions,
+    # and detects markers which hit to contigs without map position
+    def _resolvePositions(self, map_contigs_positions, markers_dict, map_name):
+        
+        markers_positions = {}
+        # marker_id --> {"positions":[], "hits_no_position":[], "genetic_map":map_name}
         
         # For each marker in the alignment results
         for marker_id in markers_dict:
@@ -128,27 +120,23 @@ class Mapper(object):
             else:
                 marker_pos = []
                 markers_positions[marker_id] = {"positions":marker_pos, "hits_no_position":[],
-                                                "genetic_map":genetic_map_name}
+                                                "genetic_map":map_name}
             
             #sys.stderr.write("Current "+str(marker_pos)+"\n")
             
             # Associate contigs positions on the map, to the markers
-            for contig_data in markers_dict[marker_id]["contigs_set"]:
-                contig_id = contig_data[0]
-                local_position = contig_data[1]
+            for contig_tuple in markers_dict[marker_id]:
+                
+                contig_id = contig_tuple[0]
+                local_position = contig_tuple[1]
                 #sys.stderr.write("Local position: "+str(local_position)+"\n")
-                if contig_id in positions_dict:
-                    contig_pos = positions_dict[contig_id]
+                
+                if contig_id in map_contigs_positions:
+                    contig_pos = map_contigs_positions[contig_id]
+                    
                     #sys.stderr.write("Contig pos: "+str(contig_pos["bp_pos"])+"\n")
                     
-                    final_contig_pos = self._get_new_contig_pos(contig_pos["chr"], contig_pos["cm_pos"],
-                                           contig_pos["bp_pos"])
-                    
-                    if genetic_map_as_physical:
-                        #sys.stderr.write("LOCAL POS\n")
-                        #sys.stderr.write(str(local_position)+"\n")
-                        #sys.stderr.write(str(contig_pos["bp_pos"])+"\n")
-                        final_contig_pos["bp_pos"] = contig_pos["bp_pos"] + long(local_position) # physical map
+                    final_contig_pos = self._clone_contig_pos(contig_pos)
                     
                     #sys.stderr.write("Final position: "+str(final_contig_pos["bp_pos"])+"\n")
                     
@@ -161,8 +149,14 @@ class Mapper(object):
             
         return markers_positions
     
-    def _get_new_contig_pos(self, chrom, cm_pos, bp_pos):
-        new_contig_pos = {"chr":chrom, "cm_pos":cm_pos, "bp_pos":bp_pos}
+    def _clone_contig_pos(self, contig_pos):
+        
+        contig_chr = contig_pos["chr"]
+        contig_cm_pos = contig_pos["cm_pos"]
+        contig_bp_pos = contig_pos["bp_pos"]
+        
+        new_contig_pos = {"chr":contig_chr, "cm_pos":contig_cm_pos, "bp_pos":contig_bp_pos}
+        
         return new_contig_pos
     
     def _existPosition(self, pos_list, test_pos):
@@ -183,41 +177,41 @@ class Mapper(object):
             
         return retValue
     
-    def _finish_map(self, markers_positions, unmapped_list, sort_by, sort_sec_pos, multiple_param, genetic_map_name, \
-                    genetic_map_as_physical, genetic_map_has_cm_pos, genetic_map_has_bp_pos):
-        genetic_map = {}
+    # Creates the final dictionary of markers with map positions
+    # including sorting the map, and creating lists of unaligned and unmapped markers
+    def _finish_map(self, markers_positions, unaligned_markers, \
+                    sort_param, multiple_param, map_config):
         
-        # Create a list of positions from the dictionary of positions of markers (markers_positions)
+        ### Create a list of positions from the dictionary of positions of markers (markers_positions)
         # (creates the structure of each position (marker_id, chr, cM, ...))
-        positions_list = self._splitPositions(markers_positions, multiple_param)
+        chrom_dict = self._mapReader.get_chromosomes_dict()
+        positions_list = self._createPositions(markers_positions, multiple_param, chrom_dict)
         
-        # Sort the list of positions
-        sorted_positions = self._sort_positions_list(positions_list, sort_by, sort_sec_pos)
+        # Sort the list
+        sorted_positions = self._sort_positions_list(positions_list, sort_param)
         
-        # Create a list of markers with alignments but NO map position (unmapped markers),
+        ### Create a list of markers with alignments but NO map position (unmapped markers),
         # with the final format to display
-        marker_no_pos_list = self._get_no_pos_list(markers_positions)
+        unmapped_markers = self._get_unmapped_markers(markers_positions)
         
-        # This is the list of markers without alignment at all
-        unmapped_list = sorted(unmapped_list, key=lambda sorting: sorting)
+        ### This is the list of markers without alignment at all
+        #
+        unaligned_markers = sorted(unaligned_markers, key=lambda sorting: sorting)
         
         # Creates the data structure for the genetic map results
-        genetic_map[MapTypes.MAP_MAPPED] = sorted_positions
-        genetic_map[MapTypes.FINE_MAPPING] = self._single_chromosome(sorted_positions)
-        genetic_map[MapTypes.MAP_UNMAPPED] = marker_no_pos_list
-        genetic_map[MapTypes.MAP_UNALIGNED] = unmapped_list
-        genetic_map[MapTypes.MAP_NAME] = genetic_map_name
-        genetic_map[MapTypes.MAP_AS_PHYSICAL] = genetic_map_as_physical
-        genetic_map[MapTypes.MAP_HAS_CM_POS] = genetic_map_has_cm_pos
-        genetic_map[MapTypes.MAP_HAS_BP_POS] = genetic_map_has_bp_pos
-        genetic_map[MapTypes.MAP_SORT_BY] = sort_by
-        genetic_map[MapTypes.MAP_SORT_SEC_POS] = sort_sec_pos
+        mapping_results = MappingResults()
+        mapping_results.set_mapped(sorted_positions)
+        mapping_results.set_fine_mapping(self._single_chromosome(sorted_positions))
+        mapping_results.set_unmapped(unmapped_markers)
+        mapping_results.set_unaligned(unaligned_markers)
+        mapping_results.set_sort_by(sort_param)
+        mapping_results.set_map_config(map_config)
         
         # MAP_WITH_GENES and MAP_WITH_MARKERS are assigned in other procedures
         
-        return genetic_map
+        return mapping_results
     
-    def _splitPositions(self, markers_positions, multiple_param):
+    def _createPositions(self, markers_positions, multiple_param, chrom_dict):
         positions_list = []
         
         for marker_id in markers_positions:
@@ -236,20 +230,24 @@ class Mapper(object):
             
             for pos in positions:
                 # marker - chr - cm_pos - bp_pos - multiple - has_contigs_with_no_pos - map_name
-                positions_list.append([marker_id, pos["chr"], pos["cm_pos"], pos["bp_pos"],
-                                       num_marker_pos > 1, num_contig_no_pos > 0, genetic_map_name])
+                chrom_order = chrom_dict[pos["chr"]] # Numeric value of chromsome (for sorting purposes)
+                
+                map_position = MapPosition(marker_id, pos["chr"], chrom_order, pos["cm_pos"], pos["bp_pos"],
+                                       num_marker_pos > 1, num_contig_no_pos > 0, genetic_map_name)
+                positions_list.append(map_position)
         
         return positions_list
     
-    def _sort_positions_list(self, positions_list, sort_by, sort_sec_pos):
+    def _sort_positions_list(self, positions_list, sort_param):
         sorted_list = []
         
-        sorted_list = sorted(positions_list, key=lambda sorting: \
-                             (sorting[MapFields.MARKER_CHR_POS], sorting[sort_by], sorting[sort_sec_pos], sorting[MapFields.MARKER_NAME_POS]))
+        sorted_list = sorted(positions_list, key=lambda map_position: \
+                             (map_position.get_chrom_order(), map_position.get_sort_pos(sort_param),
+                              map_position.get_sort_sec_pos(sort_param), map_position.get_marker_id()))
         
         return sorted_list
     
-    def _get_no_pos_list(self, markers_positions):
+    def _get_unmapped_markers(self, markers_positions):
         positions_list = []
         
         for marker_id in markers_positions:
@@ -270,14 +268,14 @@ class Mapper(object):
         return positions_list
     
     # Returns True if only one chromosome found in results
-    def _single_chromosome(self, positions):
+    def _single_chromosome(self, map_positions):
         retValue = True
         
-        prev_chr = -1
-        for position in positions:
-            pos_chr = position[MapFields.MARKER_CHR_POS]
+        prev_chr = ""
+        for position in map_positions:
+            pos_chr = position.get_chrom_name() 
             
-            if prev_chr != -1:
+            if prev_chr != "":
                 if pos_chr != prev_chr:
                     retValue = False
                     break

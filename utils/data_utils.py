@@ -30,6 +30,7 @@ def load_conf(conf_file, verbose = False):
     
     try:
         for line in open(conf_file, 'r'):
+            if line.startswith("#"): continue
             if verbose: sys.stderr.write("\t conf line: "+line.strip()+"\n")
             
             line_data = line.strip().split(" ")

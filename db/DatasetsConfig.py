@@ -8,16 +8,67 @@
 import sys
 from barleymapcore.utils.data_utils import load_conf
 
-DATASET_NAME = 0
-DATASET_ID = 1
-DATASET_TYPE = 2
-FASTA_PATH = 3
-
-# DATASET_TYPE values
-DATASET_TYPE_GENETIC_MARKER = "genetic_marker"
-DATASET_TYPE_RNA = "RNA"
-
+class DatasetConfig(object):
+    
+    _dataset_name = ""
+    _dataset_id = ""
+    _dataset_type = ""
+    _file_path = ""
+    _file_type = ""
+    _db_list = []
+    
+    def __init__(self, dataset_name, dataset_id, dataset_type, file_path, file_type, db_list):
+        self._dataset_name = dataset_name
+        self._dataset_id = dataset_id
+        self._dataset_type = dataset_type
+        self._file_path = file_path
+        self._file_type = file_type
+        self._db_list = db_list
+    
+    def get_dataset_name(self):
+        return self._dataset_name
+    
+    def get_dataset_id(self):
+        return self._dataset_id
+    
+    def get_dataset_type(self):
+        return self._dataset_type
+    
+    def get_file_path(self):
+        return self._file_path
+    
+    def get_file_type(self):
+        return self._file_type
+    
+    def get_db_list(self):
+        return self._db_list
+    
+    def __str__(self):
+        return self._dataset_name+" - "+self._dataset_id+" - "+self._dataset_type+" - "+self._file_path+" - "+self._file_type+" - "+",".join(self._db_list)
+    
 class DatasetsConfig(object):
+    
+    # Tab separated fields in configuration file
+    DATASET_NAME = 0
+    DATASET_ID = 1
+    DATASET_TYPE = 2 # genetic_markers, genes, other
+    FILE_PATH = 3
+    FILE_TYPE = 4 # fna, gtf, other
+    DATABASES = 5 # ANY, db,...
+    
+    # DATASET_TYPE values
+    DATASET_TYPE_GENETIC_MARKER = "genetic_markers"
+    DATASET_TYPE_GENES = "genes"
+    #DATASET_TYPE_OTHER = "other"
+    
+    # FILE_TYPE values
+    FILE_TYPE_FNA = "fna"
+    FILE_TYPE_GTF = "gtf"
+    #FILE_TYPE_OTHER = "other"
+    
+    # DATABASES values
+    DATABASES_ANY = "ANY"
+    #DATABASES --> list of "," separated db identifiers
     
     _config_file = ""
     _verbose = False
@@ -35,48 +86,45 @@ class DatasetsConfig(object):
         #self._config_dict = load_maps(self._config_file, self._verbose) # data_utils.load_maps
         for conf_row in conf_rows:
             
-            dataset_name = conf_row[DATASET_NAME]
-            dataset_id = conf_row[DATASET_ID]
-            dataset_type = conf_row[DATASET_TYPE]
-            dataset_fasta_path = conf_row[FASTA_PATH]
+            dataset_name = conf_row[DatasetsConfig.DATASET_NAME]
+            dataset_id = conf_row[DatasetsConfig.DATASET_ID]
+            dataset_type = conf_row[DatasetsConfig.DATASET_TYPE]
+            file_path = conf_row[DatasetsConfig.FILE_PATH]
+            file_type = conf_row[DatasetsConfig.FILE_TYPE]
+            databases = conf_row[DatasetsConfig.DATABASES].strip().split(",")
             
-            dataset_dict = {DATASET_NAME:dataset_name,
-                        DATASET_ID:dataset_id,
-                        DATASET_TYPE:dataset_type,
-                        FASTA_PATH:dataset_fasta_path}
+            dataset = DatasetConfig(dataset_name, dataset_id, dataset_type, file_path, file_type, databases)
             
-            self._config_dict[dataset_id] = dataset_dict
+            self._config_dict[dataset_id] = dataset
     
     def get_datasets(self):
         return self._config_dict
     
-    def get_dataset(self, dataset):
-        return self._config_dict[dataset]
-    
-    def get_dataset_name(self, dataset_config):
-        return dataset_config[DATASET_NAME]
-    
-    def get_dataset_type(self, dataset_config):
-        return dataset_config[DATASET_TYPE]
+    def get_dataset_config(self, dataset_id):
+        return self._config_dict[dataset_id]
     
     def get_datasets_ids(self):
         return self._config_dict.keys()
+    
+    def get_datasets_configs(self):
+        return self._config_dict.values()
     
     def get_datasets_names(self, datasets_ids = None):
         datasets_names = []
         
         if datasets_ids:
-            for dataset in datasets_ids:
+            for dataset_id in datasets_ids:
                 found = False
-                if dataset in self._config_dict:
-                    datasets_names.append(self._config_dict[dataset][DATASET_NAME])
+                if dataset_id in self.get_datasets():
+                    dataset_name = self.get_dataset_config(dataset_id).get_dataset_name()
+                    datasets_names.append(dataset_name)
                     found = True
                 
                 if not found:
                     sys.stderr.write("DatasetsConfig: dataset ID "+dataset+" not found in config.\n")
                     datasets_names.append(dataset)
         else:
-            datasets_names = [value[DATASET_NAME] for value in self._config_dict.values()]
+            datasets_names = [dataset_config.get_dataset_name() for dataset_config in self.get_datasets_configs()]
         
         return datasets_names
 
