@@ -7,9 +7,12 @@
 
 import sys
 
-from MapsBase import MapFile, MapTypes, MapPosition
-from MarkersBase import MarkerMapping
 from barleymapcore.db.MapsConfig import MapsConfig
+
+from MapsBase import MapTypes
+from MappingResults import MappingResult
+from MapFiles import MapFile
+from MarkersBase import MarkerMapping
 
 ROW_TYPE_POSITION = "pos"
 ROW_TYPE_MARKER = "marker"
