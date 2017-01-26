@@ -6,7 +6,9 @@
 # (terms of use can be found within the distributed LICENSE file).
 
 import sys
-from MapsBase import MapFile, PhysicalMapFile, MapTypes
+
+from MapsBase import MapTypes
+from MapFiles import MapFile, ChromosomesFile
 from barleymapcore.db.MapsConfig import MapsConfig
 
 class MapReader(object):
@@ -14,16 +16,21 @@ class MapReader(object):
     _maps_path = ""
     _map_config = None
     _verbose = False
+    _chrom_dict = None
     
     def __init__(self, maps_path, map_config, verbose = True):
         self._maps_path = maps_path
         self._map_config = map_config
         self._verbose = verbose
+        self._chrom_dict = self._load_chrom_dict()
     
     def get_map_config(self):
         return self._map_config
     
-    def get_chromosomes_dict(self):#, filter_results = True):
+    def get_chrom_dict(self, ):
+        return self._chrom_dict
+    
+    def _load_chrom_dict(self):#, filter_results = True):
         #
         chrom_dict = {}
         # [chrom_name] = {"chrom_order"}
@@ -32,15 +39,15 @@ class MapReader(object):
         map_id = map_config.get_id()
         
         # File with map-DB positions
-        map_path = self._maps_path+map_id+"/"+map_id+PhysicalMapFile.FILE_EXT
+        map_path = self._maps_path+map_id+"/"+map_id+ChromosomesFile.FILE_EXT
         if self._verbose: sys.stderr.write("\tMapReader: reading chromosome order from "+map_path+"\n")
         
         # Map data for this database
         for map_line in open(map_path, 'r'):
             map_data = map_line.strip().split("\t")
             
-            chrom_name = map_data[PhysicalMapFile.CHROM_NAME]
-            chrom_order = int(map_data[PhysicalMapFile.CHROM_ORDER])
+            chrom_name = map_data[ChromosomesFile.CHROM_NAME]
+            chrom_order = int(map_data[ChromosomesFile.CHROM_ORDER])
             
             if chrom_name in chrom_dict:
                 raise m2pException("Duplicated chromosome name "+chrom_name+" in "+map_path+".")

@@ -7,12 +7,7 @@
 
 import sys
 
-from barleymapcore.db.MapsConfig import MapsConfig
-
-from MapsBase import MapTypes
-from MappingResults import MappingResult
-from MapFiles import MapFile
-from MarkersBase import MarkerMapping
+from barleymapcore.maps.MarkersBase import MarkerMapping
 
 ROW_TYPE_POSITION = "pos"
 ROW_TYPE_MARKER = "marker"
@@ -178,7 +173,7 @@ class PhysicalMarkerEnricher(MarkerEnricher):
         
         # 1) Obtain the translation to numeric chromosome (for sorting purposes)
         # of chromosome names
-        chrom_dict = self._mapReader.get_chromosomes_dict()
+        chrom_dict = self._mapReader.get_chrom_dict()
         
         # 2) Obtain the markers in the intervals
         #
@@ -205,7 +200,7 @@ class AnchoredMarkerEnricher(MarkerEnricher):
         # of chromosome names
         contig_list = self._mapReader.retrieve_contigs(map_intervals, map_sort_by)
         
-        chrom_dict = self._mapReader.get_chromosomes_dict()
+        chrom_dict = self._mapReader.get_chrom_dict()
         
         # 2) Obtain the markers which hit to those contigs and add them to each contig
         #   in contig_list (field "markers" of each contig)

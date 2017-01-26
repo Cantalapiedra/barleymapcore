@@ -54,11 +54,11 @@ class MarkersFields(object):
     
     MARKERS_FIELDS = 7
     
-class MarkersData(object):
-    
-    MARKER_ID_POS = 0
-    MARKER_DATASET_POS = 1
-    MARKER_GENES_POS = 2
-    MARKER_GENES_CONFIGURED_POS = 3
+#class MarkersData(object):
+#    
+#    MARKER_ID_POS = 0
+#    MARKER_DATASET_POS = 1
+#    MARKER_GENES_POS = 2
+#    MARKER_GENES_CONFIGURED_POS = 3
     
 ## END

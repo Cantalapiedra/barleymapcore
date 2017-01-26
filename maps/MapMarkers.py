@@ -7,18 +7,17 @@
 
 import sys
 
-from Mappers import Mapper
-from MarkersBase import MarkersFields, MarkersData
 from MapReader import MapReader
-from MapEnricher import MapEnricher
-from MarkerEnricher import MarkerEnricher
+
+from mappers.Mappers import Mappers
+
+from enrichment.MapEnricher import MapEnricher
 
 from barleymapcore.genes.GenesFacade import GenesFacade
 from barleymapcore.datasets.DatasetsFacade import DatasetsFacade
 from barleymapcore.alignment.AlignmentResult import *
 from barleymapcore.db.MapsConfig import MapsConfig
 from barleymapcore.m2p_exception import m2pException
-#from barleymapcore.maps.MarkerEnricher import MarkerEnricher
 
 ## Read conf file
 ALIGN_ACTION = "align"
@@ -31,6 +30,7 @@ class MapMarkers(object):
     _map_config = None
     _verbose = False
     _mapReader = None
+    _chrom_dict = None
     
     _mapping_results = None
     _maps_data = {}
@@ -48,6 +48,33 @@ class MapMarkers(object):
     def get_map_config(self):
         return self._map_config
     
+    def get_chrom_dict(self):
+        return self._mapReader.get_chrom_dict()
+    
+    def setup_map(self, query_ids_path, datasets_ids, datasets_facade, best_score_filter, sort_param, multiple_param):
+        
+        map_config = self.get_map_config()
+        
+        sys.stderr.write("MapMarkers: setting up map: "+map_config.get_name()+"\n")
+        
+        map_as_physical = map_config.as_physical()
+        chrom_dict = self.get_chrom_dict()
+        
+        ############ Retrieve pre-computed alignments
+        datasets_facade.retrieve_mapping_results(query_ids_path, datasets_ids, map_config, chrom_dict, best_score_filter, multiple_param)
+        
+        mapping_results = datasets_facade.get_mapping_results()
+        mapping_unmapped = datasets_facade.get_mapping_unmapped()
+        
+        # Obtain Mapper without MapReader
+        mapper = Mappers.get_mappings_mapper(self._mapReader, self._verbose)
+        
+        # Translate from alignment format to map format
+        #self._map = mapper.create_physical_map(markers_dict, unaligned, self._map_config, sort_param, multiple_param)
+        self._mapping_results = mapper.create_map(mapping_results, mapping_unmapped, map_config, sort_param)
+        
+        return
+    
     def create_map(self, alignment_results, unaligned, sort_param, multiple_param):
         
         map_config = self.get_map_config()
@@ -56,73 +83,14 @@ class MapMarkers(object):
         
         map_as_physical = map_config.as_physical()
         
-        ### For physical maps, just re-format alignments to map format
-        ###
-        if map_as_physical:
-            sys.stderr.write("\t"+map_config.get_name()+" is physical.\n")
-            
-            # Indexes the alignments by marker_id
-            #markers_dict = self._get_markers_dict(alignment_results)
-            
-            # Obtain Mapper without MapReader
-            mapper = Mapper(self._mapReader, self._verbose)
-            
-            # Translate from alignment format to map format
-            #self._map = mapper.create_physical_map(markers_dict, unaligned, self._map_config, sort_param, multiple_param)
-            self._mapping_results = mapper.create_physical_map(alignment_results, unaligned, map_config, sort_param, multiple_param)
+        mapper = Mappers.get_alignments_mapper(map_as_physical, self._mapReader, self._verbose)
         
-        ### For anchored maps, translate positions (from alignment to anchored contigs)
-        ### to map positions
-        else:
-            sys.stderr.write("\t"+map_config.get_name()+" is anchored.\n")
-            # Indexes the alignments by marker_id
-            markers_dict = self._get_markers_dict(alignment_results)
-            
-            # Obtain Mapper with MapReader
-            mapper = Mapper(self._mapReader, self._verbose)
-            
-            # Create the map from the alignments
-            self._mapping_results = mapper.create_anchored_map(markers_dict, unaligned, map_config, sort_param, multiple_param)
+        self._mapping_results = mapper.create_map(alignment_results, unaligned, map_config, sort_param, multiple_param)
         
         sys.stderr.write("MapMarkers: Map "+map_config.get_name()+" created.\n")
         sys.stderr.write("\n")
         
         return
-    
-    def _get_markers_dict(self, alignment_results):
-        markers_dict = {}
-        # [marker_id] = set([(contig_id, local_position),...])
-        # ["contig_set"] = {[contig_id,...]}
-        
-        # This is a temporal list of all the contigs in the alignments
-        markers_dict["contig_list"] = []
-        
-        # Extract alignments from databases of this map
-        for db in self.get_map_config().get_db_list():#dbs_list:
-            if db in alignment_results:
-                #alignments_list.extend(alignment_results[db])
-                for alignment in alignment_results[db]:
-                    # Obtain alignment data
-                    marker_id = alignment.get_query_id()
-                    contig_id = alignment.get_subject_id()
-                    local_position = alignment.get_local_position()
-                    
-                    contig_tuple = (contig_id, local_position)
-                    
-                    # Add hit (contig, position) to list of hits of this marker
-                    if marker_id in markers_dict:
-                        marker_contig_list = markers_dict[marker_id]
-                        marker_contig_set = set(marker_contig_list)
-                        if contig_tuple not in marker_contig_set:
-                            marker_contig_list.append(contig_tuple)
-                    else:
-                        markers_dict[marker_id] = [contig_tuple]
-                    
-                    # Add contig to the general list of contigs found in the alignments
-                    if contig_id not in set(markers_dict["contig_list"]):
-                        markers_dict["contig_list"].append(contig_id)
-        
-        return markers_dict
     
     def enrich_with_markers(self, datasets_facade, extend, extend_window, \
                             constrain_fine_mapping = True):
@@ -142,9 +110,10 @@ class MapMarkers(object):
             if self._verbose: sys.stderr.write("\tFine mapping: "+str(fine_mapping)+"\n")
             if not fine_mapping: return
         
+        map_enricher = MapEnricher(mapping_results, self._verbose)
+        
         ########## 1) Load Map Data and translate it to intervals
         ##########
-        map_enricher = MapEnricher(mapping_results, self._verbose)
         
         map_intervals = map_enricher.map_to_intervals(extend, extend_window)
         

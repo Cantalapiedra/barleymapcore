@@ -6,51 +6,6 @@
 # Copyright (C)  2017  Carlos P Cantalapiedra.
 # (terms of use can be found within the distributed LICENSE file).
 
-# MapFile: fields of original maps of contigs (IBSC2012 Morex contigs, IBSC2016 chromosomes, ...)
-class MapFile(object):
-    
-    # Tab separated fields in the map config files
-    MAP_FILE_CONTIG = 0
-    MAP_FILE_CHR = 1
-    MAP_FILE_CM = 2
-    MAP_FILE_BP = 3
-    
-    @staticmethod
-    def get_sort_pos_contigs(sort_param, map_has_cm, map_has_bp):
-        sort_by = -1 # 1st sorting pos
-        sec_pos = -1 # 2nd sorting pos
-        
-        # sort type
-        if sort_param == MapTypes.MAP_SORT_PARAM_CM:
-            if map_has_cm:
-                sort_by = MapFile.MAP_FILE_CM
-                sec_pos = MapFile.MAP_FILE_BP
-            else:
-                sort_by = MapFile.MAP_FILE_BP
-                sec_pos = MapFile.MAP_FILE_CM
-        elif sort_param == MapTypes.MAP_SORT_PARAM_BP:
-            if map_has_bp:
-                sort_by = MapFile.MAP_FILE_BP
-                sec_pos = MapFile.MAP_FILE_CM
-            else:
-                sort_by = MapFile.MAP_FILE_CM
-                sec_pos = MapFile.MAP_FILE_BP
-        else:
-            raise Exception("get_sort_pos_contigs: Wrong field for sorting "+str(sort_param))
-        
-        return (sort_by, sec_pos)
-    
-# Like MapFile but for physical maps.
-# In this case, there is a single file (no database files)
-# which has just the numeric ordering of the chromosomes of this map
-class PhysicalMapFile(object):
-    
-    FILE_EXT = ".chrom"
-    # Tab separated fields in the map config files
-    CHROM_NAME = 0
-    CHROM_ORDER = 1
-    
-#
 class MapTypes(object):
     MAP_SORT_PARAM_CM = "cm"
     MAP_SORT_PARAM_BP = "bp"

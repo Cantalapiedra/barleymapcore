@@ -7,8 +7,9 @@
 
 import sys
 
-from barleymapcore.maps.MapsBase import MapPosition
-from GenesBase import GenesFields
+from barleymapcore.genes.GenesBase import GenesFields
+
+from barleymapcore.maps.MappingResults import MappingResult
 
 def get_sort_pos_genes(sort_param, map_has_cm, map_has_bp):
     sort_by = -1
@@ -61,7 +62,7 @@ class GeneEnricher(object):
         return ret_gene
     
     def _empty_position(self, chrom):
-        return ["extended"]+[str(chrom)]+(MapPosition.MAP_FIELDS-2)*["-"]
+        return None#["extended"]+[str(chrom)]+(MapPosition.MAP_FIELDS-2)*["-"]
     
     ## This function creates and indexed list of genes
     ## First index is chromosome

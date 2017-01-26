@@ -6,6 +6,8 @@
 # Copyright (C)  2017  Carlos P Cantalapiedra.
 # (terms of use can be found within the distributed LICENSE file).
 
+from MapsBase import MapTypes
+
 ## This class represents the map position of a marker which has been aligned first to a DB
 ##
 class MappingResult(object):
@@ -21,7 +23,7 @@ class MappingResult(object):
     
     MAP_FIELDS = 7
     
-    def __init__(self, marker_id, chrom_name, chrom_order, cm_pos, bp_pos, has_multiple_pos, has_other_alignments, _map_name):
+    def __init__(self, marker_id, chrom_name, chrom_order, cm_pos, bp_pos, has_multiple_pos, has_other_alignments, map_name):
         self._marker_id = marker_id
         self._chrom_name = chrom_name
         self._chrom_order = chrom_order
@@ -29,7 +31,34 @@ class MappingResult(object):
         self._bp_pos = bp_pos
         self._multiple_pos = has_multiple_pos
         self._other_alignments = has_other_alignments
-        self._map_name = _map_name
+        self._map_name = map_name
+    
+    @staticmethod
+    def init_from_data(mapping_data, map_name, chrom_dict, map_has_cm_pos, map_has_bp_pos):
+        
+        marker_id = mapping_data[0]
+        chrom_name = mapping_data[1]
+        chrom_order = chrom_dict[chrom_name]
+        if map_has_cm_pos and map_has_bp_pos:
+            cm_pos = float(mapping_data[2])
+            bp_pos = long(mapping_data[3])
+            pos_shift = 4
+        elif map_has_cm_pos:
+            cm_pos = float(mapping_data[2])
+            bp_pos = -1
+            pos_shift = 3
+        elif map_has_bp_pos:
+            cm_pos = -1.0
+            bp_pos = long(mapping_data[2])
+            pos_shift = 3
+        else:
+            raise m2pException("Map configuration is wrong: has not cm nor bp positions.")
+        
+        has_multiple_pos = mapping_data[pos_shift]
+        has_other_alignments = mapping_data[pos_shift + 1]
+        
+        return MappingResult(marker_id, chrom_name, chrom_order, cm_pos, bp_pos, has_multiple_pos, has_other_alignments, map_name)
+    
     
     @staticmethod
     def get_empty():

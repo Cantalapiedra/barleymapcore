@@ -7,10 +7,11 @@
 
 import sys
 
-from MapsBase import MapTypes
-from MapInterval import MapInterval
-from barleymapcore.db.MapsConfig import MapsConfig
 from MarkerEnricher import *
+
+from barleymapcore.maps.MapInterval import MapInterval
+from barleymapcore.maps.MapsBase import MapTypes
+
 from barleymapcore.m2p_exception import m2pException
 
 ## Main class to enrich a regular map from barleymap

@@ -7,7 +7,7 @@
 
 import sys
 from GeneAnnotator import GeneAnnotator
-from GeneEnricher import GeneEnricher, get_sort_pos_genes
+from barleymapcore.maps.enrichment.GeneEnricher import GeneEnricher, get_sort_pos_genes
 
 from barleymapcore.maps.MapsBase import MapTypes
 from GenesBase import AnnotFile
