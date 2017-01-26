@@ -62,7 +62,7 @@ class MappingResult(object):
     
     @staticmethod
     def get_empty():
-        return MapPosition("-", "-", -1, -1.0, -1, False, False, "")
+        return MappingResult("-", "-", -1, -1.0, -1, False, False, "")
     
     def get_marker_id(self):
         return self._marker_id

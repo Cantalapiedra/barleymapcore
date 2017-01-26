@@ -150,7 +150,7 @@ class DatasetsFacade(object):
     
     ### Obtain markers aligned to a series of alignment intervals
     ###
-    def retrieve_markers_by_pos(self, map_intervals, map_id, chrom_dict):
+    def retrieve_markers_by_pos(self, map_intervals, map_config, chrom_dict, map_sort_by):
         if self._verbose: sys.stderr.write("DatasetsFacade: loading markers associated to physical positions...\n")
         
         markers = []
@@ -173,35 +173,44 @@ class DatasetsFacade(object):
             
             if self._verbose: sys.stderr.write("\t dataset: "+dataset+"\n")
             
-            ########## Using the dataset generated for the whole map
+            ########## Retrieve markers within intervals
             ##########
+            map_id = map_config.get_id()
             dataset_map_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(map_id)
+            
             if os.path.exists(dataset_map_path) and os.path.isfile(dataset_map_path):
                 if self._verbose: sys.stderr.write("DatasetsFacade: loading from map data: "+dataset_map_path+"\n")
                 
-                dataset_markers = self.__retrieve_markers_by_pos(dataset_map_path, dataset_name, map_intervals, chrom_dict)
+                dataset_markers = self.__retrieve_markers_by_pos(dataset_map_path, dataset_name, map_intervals,
+                                                                 chrom_dict, map_config, map_sort_by)
                 markers.extend(dataset_markers)
         
         return markers
     
     # Obtain alignment results from a dataset.map file
     # and add them both to a list (markers) and to a dict of contigs (contigs_dict)
-    def __retrieve_markers_by_pos(self, data_path, dataset_name, map_intervals, chrom_dict):
+    def __retrieve_markers_by_pos(self, data_path, dataset_name, map_intervals, chrom_dict, map_config, map_sort_by):
+        
+        map_name = map_config.get_name()
+        map_has_cm_pos = map_config.has_cm_pos()
+        map_has_bp_pos = map_config.has_bp_pos()
         
         #contigs_set = set(contigs_dict.keys())
         markers = []
         # Find all the hits for this map
         for hit in open(data_path, 'r'):
             
-            hit_data = hit.strip().split("\t")
-            alignment_result = MappingResult(hit_data)
-            query_id = alignment_result.get_query_id()
-            subject_id = alignment_result.get_subject_id()
-            chrom_order = int(chrom_dict[subject_id])
-            ini_pos = long(alignment_result.get_local_position())
-            end_pos = long(alignment_result.get_end_position())
+            if hit.startswith(">") or hit.startswith("#"): continue
             
-            interval = MapInterval(subject_id, ini_pos, end_pos)
+            hit_data = hit.strip().split("\t")
+            
+            mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_has_cm_pos, map_has_bp_pos)
+            marker_id = mapping_result.get_marker_id()
+            chrom_name = mapping_result.get_chrom_name()
+            chrom_order = mapping_result.get_chrom_order()
+            map_pos = mapping_result.get_sort_pos(map_sort_by)
+            
+            interval = MapInterval(chrom_name, map_pos, map_pos)
             
             for map_interval in map_intervals:
                 
@@ -209,7 +218,7 @@ class DatasetsFacade(object):
                 
                 # Check if alignment overlaps with some mapping interval
                 if does_overlap:
-                    marker_mapping = MarkerMapping(query_id, dataset_name, subject_id, chrom_order, ini_pos)
+                    marker_mapping = MarkerMapping(marker_id, dataset_name, chrom_name, chrom_order, map_pos)
                     
                     markers.append(marker_mapping)
                     break # skip intervals, continue with next dataset record
