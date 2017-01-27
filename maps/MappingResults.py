@@ -67,6 +67,9 @@ class MappingResult(object):
     def get_marker_id(self):
         return self._marker_id
     
+    def set_marker_id(self, marker_id):
+        self._marker_id = marker_id
+    
     def get_chrom_name(self):
         return self._chrom_name
     

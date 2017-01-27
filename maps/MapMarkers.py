@@ -61,10 +61,10 @@ class MapMarkers(object):
         chrom_dict = self.get_chrom_dict()
         
         ############ Retrieve pre-computed alignments
-        datasets_facade.retrieve_mapping_results(query_ids_path, datasets_ids, map_config, chrom_dict, best_score_filter, multiple_param)
+        datasets_facade.retrieve_datasets(query_ids_path, datasets_ids, map_config, chrom_dict, best_score_filter, multiple_param)
         
-        mapping_results = datasets_facade.get_mapping_results()
-        mapping_unmapped = datasets_facade.get_mapping_unmapped()
+        mapping_results = datasets_facade.get_results()
+        mapping_unmapped = datasets_facade.get_unmapped()
         
         # Obtain Mapper without MapReader
         mapper = Mappers.get_mappings_mapper(self._mapReader, self._verbose)

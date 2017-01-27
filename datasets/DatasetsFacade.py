@@ -7,8 +7,7 @@
 
 import sys, os
 
-from MappingsRetriever import MappingsRetriever
-from AlignmentsRetriever import AlignmentsRetriever
+from DatasetsRetriever import DatasetsRetriever
 
 from barleymapcore.db.DatasetsConfig import DatasetsConfig
 from barleymapcore.alignment.AlignmentResult import *
@@ -16,7 +15,7 @@ from barleymapcore.maps.MapInterval import MapInterval
 from barleymapcore.maps.MarkersBase import MarkerMapping
 from barleymapcore.maps.MappingResults import MappingResult
 
-class DatasetsFacade(object):
+class DatasetsFacade(DatasetsRetriever):
     
     #_datasets_conf_file = ""
     _datasets_config = None
@@ -26,56 +25,59 @@ class DatasetsFacade(object):
     _genes_hit_dict = {}
     _genes_hit_dict_loaded = False
     
-    _mappings_retriever = None
-    _alignments_retriever = None
+    _datasets_retriever = None
     
     def __init__(self, datasets_config, datasets_path, verbose = True):
         #self._datasets_conf_file = datasets_conf_file
         self._datasets_config = datasets_config
         self._datasets_path = datasets_path
         self._verbose = verbose
-        self._mappings_retriever = MappingsRetriever(datasets_path, verbose)
-        self._alignments_retriever = AlignmentsRetriever(verbose)
+        self._datasets_retriever = DatasetsRetriever(datasets_config, datasets_path, verbose)
     
-    def get_mapping_results(self):
-        return self._mappings_retriever.get_mapping_results()
+    def get_results(self):
+        return self._datasets_retriever.get_results()
     
-    def get_mapping_unmapped(self):
-        return self._mappings_retriever.get_mapping_unmapped()
-    
-    def get_alignment_results(sel):
-        return self._alignments_retriever.get_results()
-    
-    def get_alignment_unmapped(self):
-        return self._alignments_retriever.get_unmapped()
+    def get_unmapped(self):
+        return self._datasets_retriever.get_unmapped()
     
     #####################################################
     # Obtain the mapping results from a dataset in a given map
     #
-    def retrieve_mapping_results(self, query_ids_path, dataset_list, map_config, chrom_dict,
+    def retrieve_datasets(self, query_ids_path, dataset_list, map_config, chrom_dict,
                                  best_score_filter = False, multiple_param = True):
         
-        results = self._mappings_retriever.retrieve_mapping_results(query_ids_path, dataset_list, map_config, chrom_dict,
+        results = self._datasets_retriever.retrieve_datasets(query_ids_path, dataset_list, map_config, chrom_dict,
                                                                    best_score_filter, multiple_param)
         
         return results
     
-    def parse_mapping_file(self, query_ids_dict, data_path, map_config, chrom_dict, multiple_param, test_set = None):
-        
-        hits = self._mappings_retriever.parse_mapping_file(query_ids_dict, data_path, map_config, chrom_dict, multiple_param, test_set)
-        
-        return hits
-    
-    #####################################################
-    # Obtain the alignments results from a dataset in a given Map
+    ######################################################
+    ## Obtain the mapping results from a dataset in a given map
+    ##
+    #def retrieve_mapping_results(self, query_ids_path, dataset_list, map_config, chrom_dict,
+    #                             best_score_filter = False, multiple_param = True):
+    #    
+    #    results = self._datasets_retriever.retrieve_datasets(query_ids_path, dataset_list, map_config, chrom_dict,
+    #                                                               best_score_filter, multiple_param)
+    #    
+    #    return results
     #
-    def retrieve_alignment_results(self, query_ids_path, dataset_list, map_id,
-                         best_score_filter = False):
-        
-        results = self._alignments_retriever.retrieve_alignment_results(query_ids_path, dataset_list, map_id,
-                                                                        best_score_filter)
-        
-        return results
+    #def parse_datasets_file(self, query_ids_dict, data_path, map_config, chrom_dict, multiple_param, test_set = None):
+    #    
+    #    hits = self._datasets_retriever.parse_datasets(query_ids_dict, data_path, map_config, chrom_dict, multiple_param, test_set)
+    #    
+    #    return hits
+    #
+    ######################################################
+    ## Obtain the alignments results from a dataset in a given Map
+    ##
+    #def retrieve_alignment_results(self, query_ids_path, dataset_list, map_config, chrom_dict,
+    #                             best_score_filter = False, multiple_param = True):
+    #    
+    #    results = self._datasets_retriever.retrieve_datasets(query_ids_path, dataset_list, map_config,chrom_dict,
+    #                                                               best_score_filter, multiple_param)
+    #    
+    #    return results
     
     ###############################################
     

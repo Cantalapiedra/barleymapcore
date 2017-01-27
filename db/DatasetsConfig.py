@@ -16,14 +16,16 @@ class DatasetConfig(object):
     _file_path = ""
     _file_type = ""
     _db_list = []
+    _synonyms = ""
     
-    def __init__(self, dataset_name, dataset_id, dataset_type, file_path, file_type, db_list):
+    def __init__(self, dataset_name, dataset_id, dataset_type, file_path, file_type, db_list, synonyms):
         self._dataset_name = dataset_name
         self._dataset_id = dataset_id
         self._dataset_type = dataset_type
         self._file_path = file_path
         self._file_type = file_type
         self._db_list = db_list
+        self._synonyms = synonyms
     
     def get_dataset_name(self):
         return self._dataset_name
@@ -43,8 +45,13 @@ class DatasetConfig(object):
     def get_db_list(self):
         return self._db_list
     
+    def get_synonyms(self):
+        return self._synonyms
+    
     def __str__(self):
-        return self._dataset_name+" - "+self._dataset_id+" - "+self._dataset_type+" - "+self._file_path+" - "+self._file_type+" - "+",".join(self._db_list)
+        return self._dataset_name+" - "+self._dataset_id+" - "+self._dataset_type+" - "+\
+                self._file_path+" - "+self._file_type+" - "+",".join(self._db_list)+\
+                self._synonyms
     
 class DatasetsConfig(object):
     
@@ -54,7 +61,8 @@ class DatasetsConfig(object):
     DATASET_TYPE = 2 # genetic_markers, genes, other
     FILE_PATH = 3
     FILE_TYPE = 4 # fna, gtf, other
-    DATABASES = 5 # ANY, db,...
+    DATABASES = 5 # ANY, [db,...]
+    SYNONYMS = 6 # no, file path
     
     # DATASET_TYPE values
     DATASET_TYPE_GENETIC_MARKER = "genetic_markers"
@@ -69,6 +77,10 @@ class DatasetsConfig(object):
     # DATABASES values
     DATABASES_ANY = "ANY"
     #DATABASES --> list of "," separated db identifiers
+    
+    # SYNONYMS values
+    SYNONYMS_NO = "no"
+    #SYNONYMS --> file path with text tabular data, each row: 1st column is marker id, 2nd and next columns are synonyms
     
     _config_file = ""
     _verbose = False
@@ -91,9 +103,10 @@ class DatasetsConfig(object):
             dataset_type = conf_row[DatasetsConfig.DATASET_TYPE]
             file_path = conf_row[DatasetsConfig.FILE_PATH]
             file_type = conf_row[DatasetsConfig.FILE_TYPE]
-            databases = conf_row[DatasetsConfig.DATABASES].strip().split(",")
+            databases = conf_row[DatasetsConfig.DATABASES].strip().split
+            synonyms = conf_row[DatasetsConfig.SYNONYMS]
             
-            dataset = DatasetConfig(dataset_name, dataset_id, dataset_type, file_path, file_type, databases)
+            dataset = DatasetConfig(dataset_name, dataset_id, dataset_type, file_path, file_type, databases, synonyms)
             
             self._config_dict[dataset_id] = dataset
     

@@ -41,6 +41,9 @@ class AlignmentResult(object):
     def get_query_id(self):
         return self._query_id
     
+    def set_query_id(self, query_id):
+        self._query_id = query_id
+    
     def get_subject_id(self):
         return self._subject_id
     
