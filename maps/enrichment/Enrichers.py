@@ -8,11 +8,11 @@
 import sys
 
 from barleymapcore.db.DatasetsConfig import DatasetsConfig
-from barleymapcore.maps.MarkerMapping import MarkerMapping
+from barleymapcore.maps.enrichment.FeatureMapping import FeatureMapping
 from barleymapcore.maps.MappingResults import MappingResult
 
 ROW_TYPE_POSITION = "pos"
-ROW_TYPE_MARKER = "marker"
+ROW_TYPE_FEATURE = "feature"
 ROW_TYPE_BOTH = "both"
 
 ## Factory
@@ -22,8 +22,8 @@ class EnricherFactory(object):
         return MarkerEnricher(mapReader, verbose)
     
     @staticmethod
-    def get_gene_enricher(self, mapReader, load_annot, verbose = False):
-        return GeneEnricher(mapreader, load_annot, verbose)
+    def get_gene_enricher(mapReader, load_annot, verbose = False):
+        return GeneEnricher(mapReader, load_annot, verbose)
     
 
 class Enricher(object):
@@ -37,12 +37,12 @@ class Enricher(object):
     def retrieve_features(self, map_config, map_intervals, datasets_facade, map_sort_by):
         raise m2pException("Method 'retrieve_features' should be implemented in a class inheriting Enricher.")
     
-    def sort_markers(self, markers):
-        markers = sorted(markers, key=lambda marker_mapping: \
-                        (int(marker_mapping.get_chrom_order()), float(marker_mapping.get_pos()),
-                        marker_mapping.get_dataset_name(), marker_mapping.get_marker_id()))
+    def sort_features(self, features):
+        features = sorted(features, key=lambda feature_mapping: \
+                        (int(feature_mapping.get_chrom_order()), float(feature_mapping.get_pos()),
+                        feature_mapping.get_dataset_name(), feature_mapping.get_feature_id()))
         
-        return markers
+        return features
     
     def enrich(self, mapping_results, features):
         enriched_map = []
@@ -53,9 +53,9 @@ class Enricher(object):
         p = 0
         num_pos = len(mapped)
         m = 0
-        num_markers = len(features)
+        num_features = len(features)
         
-        while (p<num_pos and m<num_markers):
+        while (p<num_pos and m<num_features):
             
             # Load position data
             #if p<num_pos:
@@ -65,46 +65,46 @@ class Enricher(object):
             map_pos = float(map_position.get_sort_pos(map_sort_by))
             #print map_position
             
-            #if m<num_markers:
-            marker_mapping = features[m]
-            marker_chrom = marker_mapping.get_chrom_name()
-            marker_chrom_order = marker_mapping.get_chrom_order()
-            marker_pos = float(marker_mapping.get_pos())
-            #print marker_mapping
+            #if m<num_features:
+            feature_mapping = features[m]
+            feature_chrom = feature_mapping.get_chrom_name()
+            feature_chrom_order = feature_mapping.get_chrom_order()
+            feature_pos = float(feature_mapping.get_pos())
+            #print feature_mapping
             
             # Create rows of enriched map
-            if map_chrom_order < marker_chrom_order:
+            if map_chrom_order < feature_chrom_order:
                 # create position
                 row_type = ROW_TYPE_POSITION
                 p+=1
                 
-            elif marker_chrom_order < map_chrom_order:
-                # create marker
-                row_type = ROW_TYPE_MARKER
+            elif feature_chrom_order < map_chrom_order:
+                # create feature
+                row_type = ROW_TYPE_FEATURE
                 m+=1
                 
-            else: # marker_chrom_order == map_chrom_order
+            else: # feature_chrom_order == map_chrom_order
                 #print "SAME CHROM"
-                #print str(map_pos)+"\t"+str(marker_pos)
-                if map_pos < marker_pos:
+                #print str(map_pos)+"\t"+str(feature_pos)
+                if map_pos < feature_pos:
                     # create position
                     row_type = ROW_TYPE_POSITION
                     p+=1
                     
-                elif marker_pos < map_pos:
-                    # create marker
-                    row_type = ROW_TYPE_MARKER
+                elif feature_pos < map_pos:
+                    # create feature
+                    row_type = ROW_TYPE_FEATURE
                     m+=1
                     
-                else: # marker_pos == map_pos
+                else: # feature_pos == map_pos
                     #print "SAME POS"
-                    # create position-marker
+                    # create position-feature
                     row_type = ROW_TYPE_BOTH
                     p+=1
                     m+=1
                 #print str(row_type)+"\n"
             
-            row = self._create_row(map_position, marker_mapping, row_type=row_type)
+            row = self._create_row(map_position, feature_mapping, row_type=row_type)
             
             enriched_map.append(row)
         
@@ -115,28 +115,26 @@ class Enricher(object):
             enriched_map.append(row)
             p+=1
         
-        while (m<num_markers):
-            # create marker
-            marker_mapping = features[m]
-            row = self._create_row(None, marker_mapping, row_type=ROW_TYPE_MARKER)
+        while (m<num_features):
+            # create feature
+            feature_mapping = features[m]
+            row = self._create_row(None, feature_mapping, row_type=ROW_TYPE_FEATURE)
             enriched_map.append(row)
             m+=1
         
-        mapping_results.set_map_with_markers(enriched_map)
-        
-        return
+        return enriched_map
     
-    def _create_row(self, map_position, marker_mapping, row_type):
+    def _create_row(self, map_position, feature_mapping, row_type):
         row = None
         
         if row_type == ROW_TYPE_POSITION:
             row = self._create_row_position(map_position)
             
-        elif row_type == ROW_TYPE_MARKER:
-            row = self._create_row_marker(marker_mapping)
+        elif row_type == ROW_TYPE_FEATURE:
+            row = self._create_row_feature(feature_mapping)
             
         elif row_type == ROW_TYPE_BOTH:
-            row = self._create_row_position_marker(map_position, marker_mapping)
+            row = self._create_row_position_feature(map_position, feature_mapping)
             
         else:
             raise m2pException("Enricher: unrecognized row type "+str(row_type)+".")
@@ -146,25 +144,25 @@ class Enricher(object):
         return row
     
     def _create_row_position(self, map_position):
-        marker_mapping = MarkerMapping.get_empty()
+        feature_mapping = FeatureMapping.get_empty()
         
         new_map_position = map_position.clone()
-        new_map_position.set_feature(marker_mapping)
+        new_map_position.set_feature(feature_mapping)
         
         return new_map_position
     
-    def _create_row_marker(self, marker_mapping):
+    def _create_row_feature(self, feature_mapping):
         map_position = MappingResult.get_empty()
         
         new_map_position = map_position.clone()
-        new_map_position.set_feature(marker_mapping)
+        new_map_position.set_feature(feature_mapping)
         
         return new_map_position
     
-    def _create_row_position_marker(self, map_position, marker_mapping):
+    def _create_row_position_feature(self, map_position, feature_mapping):
         
         new_map_position = map_position.clone()
-        new_map_position.set_feature(marker_mapping)
+        new_map_position.set_feature(feature_mapping)
         
         return new_map_position
 
@@ -176,7 +174,7 @@ class MarkerEnricher(Enricher):
         return
     
     def retrieve_features(self, map_config, map_intervals, datasets_facade, map_sort_by):
-        markers = []
+        features = []
         
         sys.stderr.write("MarkerEnricher: retrieve markers...\n")
         
@@ -186,15 +184,15 @@ class MarkerEnricher(Enricher):
         
         # 2) Obtain the markers in the intervals
         #
-        markers = datasets_facade.retrieve_features_by_pos(map_intervals, map_config, chrom_dict, map_sort_by,
+        features = datasets_facade.retrieve_features_by_pos(map_intervals, map_config, chrom_dict, map_sort_by,
                                                            DatasetsConfig.DATASET_TYPE_GENETIC_MARKER)
         
         # 3) Sort the list by chrom and position
-        markers = self.sort_markers(markers)
+        features = self.sort_features(features)
         
-        return markers
+        return features
     
-class GenesEnricher(Enricher):
+class GeneEnricher(Enricher):
     
     _load_annot = False
     
@@ -205,23 +203,23 @@ class GenesEnricher(Enricher):
         return
     
     def retrieve_features(self, map_config, map_intervals, datasets_facade, map_sort_by):
-        markers = []
+        features = []
         
-        sys.stderr.write("PhysicalEnricher: retrieve markers...\n")
+        sys.stderr.write("GeneEnricher: retrieve genes...\n")
         
         # 1) Obtain the translation to numeric chromosome (for sorting purposes)
         # of chromosome names
         chrom_dict = self._mapReader.get_chrom_dict()
         
-        # 2) Obtain the markers in the intervals
+        # 2) Obtain the genes in the intervals
         #
-        markers = datasets_facade.retrieve_features_by_pos(map_intervals, map_config, chrom_dict, map_sort_by,
+        features = datasets_facade.retrieve_features_by_pos(map_intervals, map_config, chrom_dict, map_sort_by,
                                                            DatasetsConfig.DATASET_TYPE_GENE)
         
         # 3) Sort the list by chrom and position
-        markers = self.sort_markers(markers)
+        features = self.sort_features(features)
         
-        return markers
+        return features
 
 
 ######## ContigsMarkerEnricher will be useful when we want to show
@@ -257,7 +255,7 @@ class ContigsMarkerEnricher(MarkerEnricher):
         # and sort the list by chrom and position
         markers = self.__get_list_of_markers(contig_list, chrom_dict)
         
-        markers = self.sort_markers(markers)
+        markers = self.sort_features(markers)
         
         return markers
     

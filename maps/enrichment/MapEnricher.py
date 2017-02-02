@@ -7,7 +7,7 @@
 
 import sys
 
-from MarkerEnricher import *
+from Enrichers import *
 
 from barleymapcore.maps.MapInterval import MapInterval
 from barleymapcore.maps.MapsBase import MapTypes
@@ -41,19 +41,45 @@ class MapEnricher(object):
         map_config = mapping_results.get_map_config()
         
         # Obtain a physical- or anchored-map enricher
-        marker_enricher = MarkerEnricherFactory.get_marker_enricher(mapReader)
+        enricher = EnricherFactory.get_marker_enricher(mapReader)
         
         map_id = map_config.get_id()
         map_sort_by = mapping_results.get_sort_by()
         
         ### Retrieve markers
         sys.stderr.write("MapEnricher: retrieve markers...\n")
-        markers = marker_enricher.retrieve_markers(map_config, map_intervals, datasets_facade, map_sort_by)
-        if self._verbose: sys.stderr.write("\tmarkers retrieved: "+str(len(markers))+"\n")
+        features = enricher.retrieve_features(map_config, map_intervals, datasets_facade, map_sort_by)
+        if self._verbose: sys.stderr.write("\tmarkers retrieved: "+str(len(features))+"\n")
         
         ## Enrich map
         sys.stderr.write("MapEnricher: enrich map...\n")
-        marker_enricher.enrich_with_markers(mapping_results, markers)
+        enriched_map = enricher.enrich(mapping_results, features)
+        
+        mapping_results.set_map_with_markers(enriched_map)
+        
+        return
+    
+    def enrich_with_genes(self, map_intervals, datasets_facade, mapReader, load_annot):
+        
+        mapping_results = self.get_mapping_results()
+        map_config = mapping_results.get_map_config()
+        
+        # Obtain a physical- or anchored-map enricher
+        enricher = EnricherFactory.get_gene_enricher(mapReader, load_annot)
+        
+        map_id = map_config.get_id()
+        map_sort_by = mapping_results.get_sort_by()
+        
+        ### Retrieve markers
+        sys.stderr.write("MapEnricher: retrieve markers...\n")
+        features = enricher.retrieve_features(map_config, map_intervals, datasets_facade, map_sort_by)
+        if self._verbose: sys.stderr.write("\tmarkers retrieved: "+str(len(features))+"\n")
+        
+        ## Enrich map
+        sys.stderr.write("MapEnricher: enrich map...\n")
+        enriched_map = enricher.enrich(mapping_results, features)
+        
+        mapping_results.set_map_with_genes(enriched_map)
         
         return
     

@@ -12,7 +12,7 @@ from DatasetsRetriever import DatasetsRetriever
 from barleymapcore.db.DatasetsConfig import DatasetsConfig
 from barleymapcore.alignment.AlignmentResult import *
 from barleymapcore.maps.MapInterval import MapInterval
-from barleymapcore.maps.MarkerMapping import MarkerMapping
+from barleymapcore.maps.enrichment.FeatureMapping import FeatureMapping
 from barleymapcore.maps.MappingResults import MappingResult
 
 class DatasetsFacade(DatasetsRetriever):
@@ -51,6 +51,82 @@ class DatasetsFacade(DatasetsRetriever):
         
         return results
     
+    ### Obtain markers aligned to a series of alignment intervals
+    ###
+    def retrieve_features_by_pos(self, map_intervals, map_config, chrom_dict, map_sort_by, feature_type = DatasetsConfig.DATASET_TYPE_GENETIC_MARKER):
+        if self._verbose: sys.stderr.write("DatasetsFacade: loading markers associated to physical positions...\n")
+        
+        features = []
+        
+        ## Search datasets for markers
+        ## associated to those contigs
+        dataset_list = self._datasets_config.get_datasets().keys()
+        
+        # Look for markers for each dataset
+        for dataset in dataset_list:
+            
+            dataset_config = self._datasets_config.get_dataset_config(dataset)
+            dataset_name = dataset_config.get_dataset_name()#datasets_dict[dataset]["dataset_name"]
+            dataset_type = dataset_config.get_dataset_type()
+            
+            ####### IF DATASET IS NOT OF type "feature_type" (genetic_marker, gene, ...): EXCLUDE it
+            if dataset_type != feature_type:#DatasetsConfig.DATASET_TYPE_GENETIC_MARKER:
+                continue
+            
+            if self._verbose: sys.stderr.write("\t dataset: "+dataset+"\n")
+            
+            ########## Retrieve markers within intervals
+            ##########
+            map_id = map_config.get_id()
+            dataset_map_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(map_id)
+            
+            if os.path.exists(dataset_map_path) and os.path.isfile(dataset_map_path):
+                if self._verbose: sys.stderr.write("DatasetsFacade: loading features from map data: "+dataset_map_path+"\n")
+                
+                dataset_features = self.__retrieve_features_by_pos(dataset_map_path, dataset_name, map_intervals,
+                                                                 chrom_dict, map_config, map_sort_by)
+                features.extend(dataset_features)
+        
+        return features
+    
+    # Obtain alignment results from a dataset.map file
+    # and add them both to a list (features) and to a dict of contigs (contigs_dict)
+    def __retrieve_features_by_pos(self, data_path, dataset_name, map_intervals, chrom_dict, map_config, map_sort_by):
+        
+        map_name = map_config.get_name()
+        map_has_cm_pos = map_config.has_cm_pos()
+        map_has_bp_pos = map_config.has_bp_pos()
+        
+        #contigs_set = set(contigs_dict.keys())
+        features = []
+        # Find all the hits for this map
+        for hit in open(data_path, 'r'):
+            
+            if hit.startswith(">") or hit.startswith("#"): continue
+            
+            hit_data = hit.strip().split("\t")
+            
+            mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_has_cm_pos, map_has_bp_pos)
+            marker_id = mapping_result.get_marker_id()
+            chrom_name = mapping_result.get_chrom_name()
+            chrom_order = mapping_result.get_chrom_order()
+            map_pos = mapping_result.get_sort_pos(map_sort_by)#float(mapping_result.get_sort_pos(map_sort_by))
+            
+            interval = MapInterval(chrom_name, map_pos, map_pos)
+            
+            for map_interval in map_intervals:
+                
+                does_overlap = MapInterval.intervals_overlap(interval, map_interval)
+                
+                # Check if alignment overlaps with some mapping interval
+                if does_overlap:
+                    marker_mapping = FeatureMapping(marker_id, dataset_name, chrom_name, chrom_order, map_pos)
+                    
+                    features.append(marker_mapping)
+                    break # skip intervals, continue with next dataset record
+        
+        return features
+    
     ######################################################
     ## Obtain the mapping results from a dataset in a given map
     ##
@@ -83,7 +159,7 @@ class DatasetsFacade(DatasetsRetriever):
     
     ### Obtain markers aligned to a list of contigs
     ### and adds them to the field "markers" of each contig in contig_list
-    def retrieve_markers_by_anchor(self, contig_list, map_id):
+    def retrieve_markers_by_anchor(self, contig_list, map_id, feature_type = DatasetsConfig.DATASET_TYPE_GENETIC_MARKER):
         
         if self._verbose: sys.stderr.write("DatasetsFacade: loading markers associated to contigs...\n")
         
@@ -103,7 +179,7 @@ class DatasetsFacade(DatasetsRetriever):
             dataset_type = dataset_config.get_dataset_type()
             
             ####### IF DATASET IS NOT OF GENETIC MARKERS: EXCLUDE flcDNAs, ESTs, ...
-            if dataset_type != DatasetsConfig.DATASET_TYPE_GENETIC_MARKER:
+            if dataset_type != feature_type:#DatasetsConfig.DATASET_TYPE_GENETIC_MARKER:
                 if self._verbose: sys.stderr.write("\t No markers dataset: "+dataset+"\n")
                 continue
             
@@ -150,82 +226,7 @@ class DatasetsFacade(DatasetsRetriever):
         
         return
     
-    ### Obtain markers aligned to a series of alignment intervals
-    ###
-    def retrieve_markers_by_pos(self, map_intervals, map_config, chrom_dict, map_sort_by):
-        if self._verbose: sys.stderr.write("DatasetsFacade: loading markers associated to physical positions...\n")
-        
-        markers = []
-        
-        ## Search datasets for markers
-        ## associated to those contigs
-        dataset_list = self._datasets_config.get_datasets().keys()
-        
-        # Look for markers for each dataset
-        for dataset in dataset_list:
-            
-            dataset_config = self._datasets_config.get_dataset_config(dataset)
-            dataset_name = dataset_config.get_dataset_name()#datasets_dict[dataset]["dataset_name"]
-            dataset_type = dataset_config.get_dataset_type()
-            
-            ####### IF DATASET IS NOT OF GENETIC MARKERS: EXCLUDE flcDNAs, ESTs, ...
-            if dataset_type != DatasetsConfig.DATASET_TYPE_GENETIC_MARKER:
-                if self._verbose: sys.stderr.write("\t No markers dataset: "+dataset+"\n")
-                continue
-            
-            if self._verbose: sys.stderr.write("\t dataset: "+dataset+"\n")
-            
-            ########## Retrieve markers within intervals
-            ##########
-            map_id = map_config.get_id()
-            dataset_map_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(map_id)
-            
-            if os.path.exists(dataset_map_path) and os.path.isfile(dataset_map_path):
-                if self._verbose: sys.stderr.write("DatasetsFacade: loading from map data: "+dataset_map_path+"\n")
-                
-                dataset_markers = self.__retrieve_markers_by_pos(dataset_map_path, dataset_name, map_intervals,
-                                                                 chrom_dict, map_config, map_sort_by)
-                markers.extend(dataset_markers)
-        
-        return markers
     
-    # Obtain alignment results from a dataset.map file
-    # and add them both to a list (markers) and to a dict of contigs (contigs_dict)
-    def __retrieve_markers_by_pos(self, data_path, dataset_name, map_intervals, chrom_dict, map_config, map_sort_by):
-        
-        map_name = map_config.get_name()
-        map_has_cm_pos = map_config.has_cm_pos()
-        map_has_bp_pos = map_config.has_bp_pos()
-        
-        #contigs_set = set(contigs_dict.keys())
-        markers = []
-        # Find all the hits for this map
-        for hit in open(data_path, 'r'):
-            
-            if hit.startswith(">") or hit.startswith("#"): continue
-            
-            hit_data = hit.strip().split("\t")
-            
-            mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_has_cm_pos, map_has_bp_pos)
-            marker_id = mapping_result.get_marker_id()
-            chrom_name = mapping_result.get_chrom_name()
-            chrom_order = mapping_result.get_chrom_order()
-            map_pos = mapping_result.get_sort_pos(map_sort_by)#float(mapping_result.get_sort_pos(map_sort_by))
-            
-            interval = MapInterval(chrom_name, map_pos, map_pos)
-            
-            for map_interval in map_intervals:
-                
-                does_overlap = MapInterval.intervals_overlap(interval, map_interval)
-                
-                # Check if alignment overlaps with some mapping interval
-                if does_overlap:
-                    marker_mapping = MarkerMapping(marker_id, dataset_name, chrom_name, chrom_order, map_pos)
-                    
-                    markers.append(marker_mapping)
-                    break # skip intervals, continue with next dataset record
-        
-        return markers
     
     ## Obtain alignment results from dataset.db files associated to a map configuration
     #def __retrieve_markers_from_db_files(self, markers, map_db_list, map_is_hierarchical):
