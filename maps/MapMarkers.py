@@ -7,10 +7,8 @@
 
 import sys
 
-from MapReader import MapReader
-
+from reader.MapReader import MapReader
 from mappers.Mappers import Mappers
-
 from enrichment.MapEnricher import MapEnricher
 
 from barleymapcore.genes.GenesFacade import GenesFacade

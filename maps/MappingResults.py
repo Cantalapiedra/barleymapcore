@@ -13,17 +13,19 @@ from MapsBase import MapTypes
 class MappingResult(object):
     _marker_id = ""
     _chrom_name = ""
-    _chrom_order = -1
-    _cm_pos = -1.0
-    _bp_pos = -1
+    _chrom_order = "-1"
+    _cm_pos = "-1.0"
+    _bp_pos = "-1"
     _multiple_pos = False
     _other_alignments = False
     _map_name = ""
     _feature = None
     
+    _empty = False
+    
     MAP_FIELDS = 7
     
-    def __init__(self, marker_id, chrom_name, chrom_order, cm_pos, bp_pos, has_multiple_pos, has_other_alignments, map_name):
+    def __init__(self, marker_id, chrom_name, chrom_order, cm_pos, bp_pos, has_multiple_pos, has_other_alignments, map_name, empty = False):
         self._marker_id = marker_id
         self._chrom_name = chrom_name
         self._chrom_order = chrom_order
@@ -32,6 +34,23 @@ class MappingResult(object):
         self._multiple_pos = has_multiple_pos
         self._other_alignments = has_other_alignments
         self._map_name = map_name
+        self._empty = empty
+    
+    def clone(self):
+        new_mapping_result = MappingResult(self.get_marker_id(),
+                                           self.get_chrom_name(),
+                                           self.get_chrom_order(),
+                                           self.get_cm_pos(),
+                                           self.get_bp_pos(),
+                                           self.has_multiple_pos(),
+                                           self.has_other_alignments(),
+                                           self.get_map_name(),
+                                           self.is_empty())
+        
+        new_mapping_result.set_feature(self.get_feature())
+        
+        return new_mapping_result
+    
     
     @staticmethod
     def init_from_data(mapping_data, map_name, chrom_dict, map_has_cm_pos, map_has_bp_pos):
@@ -40,29 +59,49 @@ class MappingResult(object):
         chrom_name = mapping_data[1]
         chrom_order = chrom_dict[chrom_name]
         if map_has_cm_pos and map_has_bp_pos:
-            cm_pos = float(mapping_data[2])
-            bp_pos = long(mapping_data[3])
+            cm_pos = mapping_data[2]#float(mapping_data[2])
+            bp_pos = mapping_data[3]#long(mapping_data[3])
             pos_shift = 4
         elif map_has_cm_pos:
-            cm_pos = float(mapping_data[2])
+            cm_pos = mapping_data[2]#float(mapping_data[2])
             bp_pos = -1
             pos_shift = 3
         elif map_has_bp_pos:
             cm_pos = -1.0
-            bp_pos = long(mapping_data[2])
+            bp_pos = mapping_data[2]#long(mapping_data[2])
             pos_shift = 3
         else:
             raise m2pException("Map configuration is wrong: has not cm nor bp positions.")
         
         has_multiple_pos = mapping_data[pos_shift]
         has_other_alignments = mapping_data[pos_shift + 1]
+        empty = False # a mapping result with data is not empty by definition
         
-        return MappingResult(marker_id, chrom_name, chrom_order, cm_pos, bp_pos, has_multiple_pos, has_other_alignments, map_name)
+        return MappingResult(marker_id, chrom_name, chrom_order, cm_pos, bp_pos, has_multiple_pos, has_other_alignments, map_name, empty)
     
-    
+    # An empty MappingResult can be created for several reasons,
+    # including creating an empty mapping result which has features associated
     @staticmethod
     def get_empty():
-        return MappingResult("-", "-", -1, -1.0, -1, False, False, "")
+        mapping_result = MappingResult("-", "-", "-", "-", "-", False, False, "")
+        mapping_result.set_empty(True)
+        return mapping_result
+    
+    def is_empty(self):
+        return self._empty
+    
+    def set_empty(self, empty):
+        self._empty = empty
+    
+    # A feature is an attachment or additional information
+    # associated to this mapping result. For example,
+    # markers or genes around the mapping result
+    # used in enrichment procedures
+    def set_feature(self, feature):
+        self._feature = feature
+    
+    def get_feature(self):
+        return self._feature
     
     def get_marker_id(self):
         return self._marker_id
@@ -95,9 +134,9 @@ class MappingResult(object):
         ret_value = -1
         
         if sort_by == MapTypes.MAP_SORT_PARAM_CM:
-            ret_value = float(self._cm_pos)
+            ret_value = self._cm_pos#float(self._cm_pos)
         elif sort_by == MapTypes.MAP_SORT_PARAM_BP:
-            ret_value = long(self._bp_pos)
+            ret_value = self._bp_pos#long(self._bp_pos)
         else:
             raise m2pException("Unrecognized sort field "+str(sort_by)+".")
         
@@ -116,13 +155,8 @@ class MappingResult(object):
         return ret_value
     
     def __str__(self):
-        return " - ".join([self._marker_id, str(self._chrom_name)+"/"+str(self._chrom_order), str(self._cm_pos), str(self._bp_pos), str(self._feature)])
-    
-    def set_feature(self, feature):
-        self._feature = feature
-    
-    def get_feature(self):
-        return self._feature
+        return " - ".join([self._marker_id, str(self._chrom_name)+"/"+str(self._chrom_order),
+                           str(self._cm_pos), str(self._bp_pos), str(self._feature), str(self._empty)])
     
 ##############################
 ## A class with the results of barleymap

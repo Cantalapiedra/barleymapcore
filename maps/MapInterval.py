@@ -55,11 +55,11 @@ class MapInterval(object):
     
     @staticmethod
     def contains(int1, int2):
-        return (int1.get_ini_pos()<=int2.get_ini_pos() and int1.get_end_pos()>=int2.get_end_pos())
+        return (float(int1.get_ini_pos())<=float(int2.get_ini_pos()) and float(int1.get_end_pos())>=float(int2.get_end_pos()))
     
     @staticmethod
     def overlaps(int1, int2):
-        return (int1.get_ini_pos()>=int2.get_ini_pos() and int1.get_ini_pos()<=int2.get_end_pos())
+        return (float(int1.get_ini_pos())>=float(int2.get_ini_pos()) and float(int1.get_ini_pos())<=float(int2.get_end_pos()))
     
     
     
