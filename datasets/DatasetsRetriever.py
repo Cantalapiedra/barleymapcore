@@ -7,7 +7,6 @@
 
 import sys, os
 
-#from AlignmentsRetriever import AlignmentsParser
 from MappingsRetriever import MappingsParser
 
 from barleymapcore.db.DatasetsConfig import DatasetsConfig
@@ -54,7 +53,7 @@ class DatasetsRetriever(object):
     def get_unmapped(self):
         retvalue = None
         
-        if self._unmapped:
+        if self._unmapped != None:
             retvalue = self._unmapped
         else:
             raise m2pException("DatasetsRetriever: error obtaining unloaded list of unmapped markers. Call a retrieve method first.")
@@ -68,6 +67,7 @@ class DatasetsRetriever(object):
         self._query_ids_path = query_ids_path
         
         map_id = map_config.get_id()
+        map_db_list = map_config.get_db_list()
         
         sys.stderr.write("MappingsRetriever: searching "+query_ids_path+"...\n")
         
@@ -85,6 +85,13 @@ class DatasetsRetriever(object):
             sys.stderr.write("\t dataset: "+dataset+"\n")
             
             dataset_config = self._datasets_config.get_dataset_config(dataset)
+            dataset_db_list = dataset_config.get_db_list()
+            
+            common_dbs = set(dataset_db_list).intersection(set(map_db_list))
+            
+            if (DatasetsConfig.DATABASES_ANY not in dataset_db_list) and (len(common_dbs)<1):
+                continue
+            
             synonyms_path = dataset_config.get_synonyms()
             dataset_synonyms = self.load_synonyms(synonyms_path)
             

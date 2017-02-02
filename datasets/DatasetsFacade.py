@@ -12,7 +12,7 @@ from DatasetsRetriever import DatasetsRetriever
 from barleymapcore.db.DatasetsConfig import DatasetsConfig
 from barleymapcore.alignment.AlignmentResult import *
 from barleymapcore.maps.MapInterval import MapInterval
-from barleymapcore.maps.MarkersBase import MarkerMapping
+from barleymapcore.maps.MarkerMapping import MarkerMapping
 from barleymapcore.maps.MappingResults import MappingResult
 
 class DatasetsFacade(DatasetsRetriever):
@@ -210,7 +210,7 @@ class DatasetsFacade(DatasetsRetriever):
             marker_id = mapping_result.get_marker_id()
             chrom_name = mapping_result.get_chrom_name()
             chrom_order = mapping_result.get_chrom_order()
-            map_pos = mapping_result.get_sort_pos(map_sort_by)
+            map_pos = mapping_result.get_sort_pos(map_sort_by)#float(mapping_result.get_sort_pos(map_sort_by))
             
             interval = MapInterval(chrom_name, map_pos, map_pos)
             

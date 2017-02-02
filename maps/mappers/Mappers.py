@@ -133,8 +133,8 @@ class Mapper(object):
         sorted_list = []
         
         sorted_list = sorted(positions_list, key=lambda mapping_result: \
-                             (mapping_result.get_chrom_order(), mapping_result.get_sort_pos(sort_param),
-                              mapping_result.get_sort_sec_pos(sort_param), mapping_result.get_marker_id()))
+                             (int(mapping_result.get_chrom_order()), float(mapping_result.get_sort_pos(sort_param)),
+                              float(mapping_result.get_sort_sec_pos(sort_param)), mapping_result.get_marker_id()))
         
         return sorted_list
     
@@ -186,13 +186,18 @@ class PhysicalMapper(Mapper):
         
         # Re-format positions of aligned markers to map positions
         #
-        markers_positions = self._reformatPositions(alignment_results, map_config)
+        markers_positions = self._reformatPositions(alignment_results)
         
         ### Create a list of positions from the dictionary of positions of markers (markers_positions)
         # (creates the structure of each position (marker_id, chr, cM, ...))
         chrom_dict = self._mapReader.get_chrom_dict()
         map_name = map_config.get_name()
+        
         positions_list = self._createPositions(markers_positions, multiple_param, chrom_dict, map_name)
+        
+        if self._verbose:
+            sys.stderr.write("PhysicalMapper: Map: "+str(map_name)+"\n")
+            sys.stderr.write("\t total positions --> "+str(len(positions_list))+"\n")
         
         # Sort the list
         sorted_positions = self._sort_positions_list(positions_list, sort_param)
@@ -207,33 +212,33 @@ class PhysicalMapper(Mapper):
         return finished_map
     
     # Translates positions of alignments to map format
-    def _reformatPositions(self, alignment_results, map_config):
+    def _reformatPositions(self, alignment_results):
         
         markers_positions = {}
         # marker_id --> {"positions":[], "hits_no_position":[]}
         
         # Extract alignments from databases of this map
-        for db in map_config.get_db_list():
-            if db in alignment_results:
-                
-                ## Read the alignment
-                for alignment in alignment_results[db]:
-                    # Obtain alignment data
-                    marker_id = alignment.get_query_id()
-                    
-                    if marker_id in markers_positions:
-                        marker_pos = markers_positions[marker_id]["positions"]
-                    else:
-                        marker_pos = []
-                        markers_positions[marker_id] = {"positions":marker_pos, "hits_no_position":[]}
-                    
-                    contig_id = alignment.get_subject_id()
-                    local_position = alignment.get_local_position()
-                    
-                    new_pos = {"chr":contig_id, "cm_pos":-1, "bp_pos":local_position}
-                    
-                    if not self._existPosition(marker_pos, new_pos):
-                        marker_pos.append(new_pos)
+        #for db in map_config.get_db_list():
+        #    if db in alignment_results:
+        #        
+        #        ## Read the alignment
+        for alignment in alignment_results: #[db]:
+            # Obtain alignment data
+            marker_id = alignment.get_query_id()
+            
+            if marker_id in markers_positions:
+                marker_pos = markers_positions[marker_id]["positions"]
+            else:
+                marker_pos = []
+                markers_positions[marker_id] = {"positions":marker_pos, "hits_no_position":[]}
+            
+            contig_id = alignment.get_subject_id()
+            local_position = alignment.get_local_position()
+            
+            new_pos = {"chr":contig_id, "cm_pos":-1, "bp_pos":local_position}
+            
+            if not self._existPosition(marker_pos, new_pos):
+                marker_pos.append(new_pos)
         
         return markers_positions
     
@@ -245,21 +250,21 @@ class AnchoredMapper(Mapper):
     def create_map(self, alignment_results, unaligned_markers, map_config, sort_param, multiple_param):
         
         # Indexes the alignments by marker_id
-        markers_dict = self._get_markers_dict(alignment_results, map_config)
+        markers_dict = self._get_markers_dict(alignment_results)
         
         # get the full list of contigs found in the alignments
-        contig_list = markers_dict["contig_list"]
-        del markers_dict["contig_list"] # This is essential to avoid this key to be used as a marker_id
+        contig_set = markers_dict["contig_set"]
+        del markers_dict["contig_set"] # This is essential to avoid this key to be used as a marker_id
         
         # Get full configuration for genetic map
         map_name = map_config.get_name()
         
         if self._verbose:
-            sys.stderr.write("Mapper: Map: "+str(map_name)+"\n")
-            sys.stderr.write("\t total contigs --> "+str(len(contig_list))+"\n")
+            sys.stderr.write("AnchoredMapper: Map: "+str(map_name)+"\n")
+            sys.stderr.write("\t total contigs --> "+str(len(contig_set))+"\n")
         
         # Obtain the positions of contigs in the map: contig_id --> chr, cM, bp
-        map_contigs_positions = self._mapReader.obtain_map_positions(contig_list)
+        map_contigs_positions = self._mapReader.obtain_map_positions(contig_set)
         
         if self._verbose: sys.stderr.write("\t positions: "+str(len(map_contigs_positions))+"\n")
         
@@ -286,47 +291,45 @@ class AnchoredMapper(Mapper):
         
         return finished_map
     
-    def _get_markers_dict(self, alignment_results, map_config):
+    #def _get_markers_dict(self, alignment_results, map_config):
+    def _get_markers_dict(self, alignment_results):
         markers_dict = {}
         # [marker_id] = set([(contig_id, local_position),...])
         # ["contig_set"] = {[contig_id,...]}
         
         # This is a temporal list of all the contigs in the alignments
-        markers_dict["contig_list"] = []
+        #contig_list = []
+        contig_set = set()
         
         # Extract alignments from databases of this map
-        for db in map_config.get_db_list():#dbs_list:
-            if db in alignment_results:
+        #for db in map_config.get_db_list():#dbs_list:
+        #    if db in alignment_results:
                 #alignments_list.extend(alignment_results[db])
-                for alignment in alignment_results[db]:
-                    # Obtain alignment data
-                    marker_id = alignment.get_query_id()
-                    contig_id = alignment.get_subject_id()
-                    local_position = alignment.get_local_position()
-                    
-                    contig_tuple = (contig_id, local_position)
-                    
-                    # Add hit (contig, position) to list of hits of this marker
-                    if marker_id in markers_dict:
-                        marker_contig_list = markers_dict[marker_id]
-                        marker_contig_set = set(marker_contig_list)
-                        if contig_tuple not in marker_contig_set:
-                            marker_contig_list.append(contig_tuple)
-                    else:
-                        markers_dict[marker_id] = [contig_tuple]
-                    
-                    # Add contig to the general list of contigs found in the alignments
-                    if contig_id not in set(markers_dict["contig_list"]):
-                        markers_dict["contig_list"].append(contig_id)
+        for alignment in alignment_results:
+            # Obtain alignment data
+            
+            marker_id = alignment.get_query_id()
+            contig_id = alignment.get_subject_id()
+            local_position = alignment.get_local_position()
+            
+            contig_tuple = (contig_id, local_position)
+            
+            # Add hit (contig, position) to list of hits of this marker
+            if marker_id in markers_dict:
+                marker_contig_list = markers_dict[marker_id]
+                marker_contig_set = set(marker_contig_list)
+                if contig_tuple not in marker_contig_set:
+                    marker_contig_list.append(contig_tuple)
+            else:
+                markers_dict[marker_id] = [contig_tuple]
+            
+            # Add contig to the general list of contigs found in the alignments
+            if contig_id not in contig_set:#:
+                contig_set.add(contig_id)
+        
+        markers_dict["contig_set"] = contig_set
         
         return markers_dict
-    
-    ## Obtain a double index of contigs with keys [chromosome][position] --> list of [contig_id, contig_chr, contig_pos]
-    #def get_positions_index(self, datasets_contig_index, sort_param):
-    #    
-    #    positions_index = self._mapReader.get_positions_index(datasets_contig_index, sort_param)
-    #    
-    #    return positions_index
     
     # Translates positions of aligned markers to map positions,
     # and detects markers which hit to contigs without map position
@@ -355,8 +358,6 @@ class AnchoredMapper(Mapper):
                 
                 if contig_id in map_contigs_positions:
                     contig_pos = map_contigs_positions[contig_id]
-                    
-                    #sys.stderr.write("Contig pos: "+str(contig_pos["bp_pos"])+"\n")
                     
                     final_contig_pos = self._clone_contig_pos(contig_pos)
                     

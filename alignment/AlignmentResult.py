@@ -9,18 +9,39 @@ class AlignmentResult(object):
     
     _query_id = ""
     _subject_id = ""
-    _align_ident = 0.0
-    _query_cov = 0.0
-    _align_score = 0
+    _align_ident = -1.0
+    _query_cov = -1.0
+    _align_score = -1
     _strand = "+"
-    _local_position = 0
-    _end_position = 0
-    _qstart_pos = 0
-    _qend_pos = 0
+    _local_position = -1
+    _end_position = -1
+    _qstart_pos = -1
+    _qend_pos = -1
     _db_name = ""
     _algorithm = ""
     
-    def __init__(self, alignment_data):
+    def __init__(self):
+        return
+    
+    def create_from_attributes(self, query_id, subject_id, align_ident, query_cov, align_score,
+                        strand, qstart_pos, qend_pos, local_position, end_position,
+                        db_name, algorithm):
+        self.set_query_id(query_id)
+        self.set_subject_id(subject_id)
+        self.set_align_ident(align_ident)
+        self.set_query_cov(query_cov)
+        self.set_align_score(align_score)
+        self.set_strand(strand)
+        self.set_qstart_pos(qstart_pos)
+        self.set_qend_pos(qend_pos)
+        self.set_local_position(local_position)
+        self.set_end_position(end_position)
+        self.set_db_name(db_name)
+        self.set_algorithm(algorithm)
+        
+        return
+    
+    def create_from_alignment_data(self, alignment_data):
         
         self._query_id = alignment_data[0]
         self._subject_id = alignment_data[1]
@@ -37,6 +58,8 @@ class AlignmentResult(object):
         
         self._db_name = alignment_data[10]
         self._algorithm = alignment_data[11]
+        
+        return
     
     def get_query_id(self):
         return self._query_id
@@ -47,39 +70,72 @@ class AlignmentResult(object):
     def get_subject_id(self):
         return self._subject_id
     
+    def set_subject_id(self, subject_id):
+        self._subject_id = subject_id
+    
     def get_align_ident(self):
         return self._align_ident
+    
+    def set_align_ident(self, align_ident):
+        self._align_ident = align_ident
     
     def get_query_cov(self):
         return self._query_cov
     
+    def set_query_cov(self, query_cov):
+        self._query_cov = query_cov
+    
     def get_align_score(self):
         return self._align_score
+    
+    def set_align_score(self, align_score):
+        self._align_score = align_score
     
     def get_strand(self):
         return self._strand
     
+    def set_strand(self, strand):
+        self._strand = strand
+    
     def get_local_position(self):
         return self._local_position
+    
+    def set_local_position(self, local_position):
+        self._local_position = local_position
     
     def get_end_position(self):
         return self._end_position
     
+    def set_end_position(self, end_position):
+        self._end_position = end_position
+    
     def get_qstart_pos(self):
         return self._qstart_pos
+    
+    def set_qstart_pos(self, qstart_pos):
+        self._qstart_pos = qstart_pos
     
     def get_qend_pos(self):
         return self._qend_pos
     
+    def set_qend_pos(self, qend_pos):
+        self._qend_pos = qend_pos
+    
     def get_db_name(self):
         return self._db_name
+    
+    def set_db_name(self, db_name):
+        self._db_name = db_name
     
     def get_algorithm(self):
         return self._algorithm
     
+    def set_algorithm(self, algorithm):
+        self._algorithm = algorithm
+    
     def __str__(self):
-        return " - ".join([self._query_id, self._subject_id, self._align_ident, self._query_cov, self._align_score,
-                          self._strand, self._local_position, self._end_position, self._qstart_pos, self._qend_pos,
+        return " - ".join([self._query_id, self._subject_id, str(self._align_ident), str(self._query_cov), str(self._align_score),
+                          self._strand, str(self._local_position), str(self._end_position), str(self._qstart_pos), str(self._qend_pos),
                           self._db_name, self._algorithm])
     
     

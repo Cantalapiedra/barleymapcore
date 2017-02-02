@@ -40,17 +40,15 @@ class MapEnricher(object):
         mapping_results = self.get_mapping_results()
         map_config = mapping_results.get_map_config()
         
-        map_is_physical = map_config.as_physical()
-        
         # Obtain a physical- or anchored-map enricher
-        marker_enricher = MarkerEnricherFactory.get_marker_enricher(map_is_physical, mapReader)
+        marker_enricher = MarkerEnricherFactory.get_marker_enricher(mapReader)
         
         map_id = map_config.get_id()
         map_sort_by = mapping_results.get_sort_by()
         
         ### Retrieve markers
         sys.stderr.write("MapEnricher: retrieve markers...\n")
-        markers = marker_enricher.retrieve_markers(map_id, map_intervals, datasets_facade, map_sort_by)
+        markers = marker_enricher.retrieve_markers(map_config, map_intervals, datasets_facade, map_sort_by)
         if self._verbose: sys.stderr.write("\tmarkers retrieved: "+str(len(markers))+"\n")
         
         ## Enrich map
@@ -143,11 +141,11 @@ class MapEnricher(object):
     
     def _get_new_interval(self, position, pos_chr, pos_pos, extend_window):
         interval_chr = pos_chr
-        interval_ini_pos = pos_pos - extend_window
+        interval_ini_pos = float(pos_pos) - extend_window
         if interval_ini_pos < 0:
             interval_ini_pos = 0 #self.MAP_UNIT
         
-        interval_end_pos = pos_pos + extend_window
+        interval_end_pos = float(pos_pos) + extend_window
         
         interval = MapInterval(interval_chr, interval_ini_pos, interval_end_pos)
         interval.add_position(position)
@@ -158,7 +156,7 @@ class MapEnricher(object):
     
     def _add_position_to_interval(self, interval, position, pos_pos, extend_window):
         interval.add_position(position)
-        interval.set_end_pos(pos_pos + extend_window)
+        interval.set_end_pos(float(pos_pos) + extend_window)
         
         #if self._verbose: sys.stdout.write("\t\tadded position "+str(position)+"\n")
         

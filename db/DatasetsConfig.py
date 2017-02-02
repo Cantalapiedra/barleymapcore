@@ -65,13 +65,14 @@ class DatasetsConfig(object):
     SYNONYMS = 6 # no, file path
     
     # DATASET_TYPE values
-    DATASET_TYPE_GENETIC_MARKER = "genetic_markers"
-    DATASET_TYPE_GENES = "genes"
+    DATASET_TYPE_GENETIC_MARKER = "genetic_marker"
+    DATASET_TYPE_GENES = "gene"
     #DATASET_TYPE_OTHER = "other"
     
     # FILE_TYPE values
     FILE_TYPE_FNA = "fna"
     FILE_TYPE_GTF = "gtf"
+    FILE_TYPE_GFF3 = "gff3"
     #FILE_TYPE_OTHER = "other"
     
     # DATABASES values
@@ -103,7 +104,7 @@ class DatasetsConfig(object):
             dataset_type = conf_row[DatasetsConfig.DATASET_TYPE]
             file_path = conf_row[DatasetsConfig.FILE_PATH]
             file_type = conf_row[DatasetsConfig.FILE_TYPE]
-            databases = conf_row[DatasetsConfig.DATABASES].strip().split
+            databases = conf_row[DatasetsConfig.DATABASES].strip().split()
             synonyms = conf_row[DatasetsConfig.SYNONYMS]
             
             dataset = DatasetConfig(dataset_name, dataset_id, dataset_type, file_path, file_type, databases, synonyms)

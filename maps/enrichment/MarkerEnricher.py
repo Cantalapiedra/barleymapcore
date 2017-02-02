@@ -7,7 +7,8 @@
 
 import sys
 
-from barleymapcore.maps.MarkersBase import MarkerMapping
+from barleymapcore.maps.MarkerMapping import MarkerMapping
+from barleymapcore.maps.MappingResults import MappingResult
 
 ROW_TYPE_POSITION = "pos"
 ROW_TYPE_MARKER = "marker"
@@ -16,15 +17,10 @@ ROW_TYPE_BOTH = "both"
 ## Factory
 class MarkerEnricherFactory(object):
     @staticmethod
-    def get_marker_enricher(map_is_physical, mapReader, verbose = False):
+    def get_marker_enricher(mapReader, verbose = False):
         retvalue = None
         
-        if map_is_physical:
-            return PhysicalMarkerEnricher(mapReader, verbose)
-        else:
-            return AnchoredMarkerEnricher(mapReader, verbose)
-        
-        return retvalue
+        return PositionsMarkerEnricher(mapReader, verbose)
 
 class MarkerEnricher(object):
     
@@ -34,12 +30,12 @@ class MarkerEnricher(object):
     def get_map_reader(self):
         return self._mapReader
     
-    def retrieve_markers(self, map_intervals, datasets_facade):
-        pass
+    def retrieve_markers(self, map_config, map_intervals, datasets_facade, map_sort_by):
+        raise m2pException("Method 'retrieve_markers' should be implemented in a class inheriting MarkerEnricher.")
     
     def sort_markers(self, markers):
         markers = sorted(markers, key=lambda marker_mapping: \
-                        (marker_mapping.get_chrom_order(), marker_mapping.get_pos(),
+                        (int(marker_mapping.get_chrom_order()), float(marker_mapping.get_pos()),
                         marker_mapping.get_dataset_name(), marker_mapping.get_marker_id()))
         
         return markers
@@ -58,19 +54,19 @@ class MarkerEnricher(object):
         while (p<num_pos and m<num_markers):
             
             # Load position data
-            if p<num_pos:
-                map_position = mapped[p]
-                map_chrom_name = map_position.get_chrom_name()
-                map_chrom_order = map_position.get_chrom_order()
-                map_pos = map_position.get_sort_pos(map_sort_by)
-                #print map_position
+            #if p<num_pos:
+            map_position = mapped[p]
+            map_chrom_name = map_position.get_chrom_name()
+            map_chrom_order = map_position.get_chrom_order()
+            map_pos = float(map_position.get_sort_pos(map_sort_by))
+            #print map_position
             
-            if m<num_markers:
-                marker_mapping = markers[m]
-                marker_chrom = marker_mapping.get_chrom_name()
-                marker_chrom_order = marker_mapping.get_chrom_order()
-                marker_pos = marker_mapping.get_pos()
-                #print marker_mapping
+            #if m<num_markers:
+            marker_mapping = markers[m]
+            marker_chrom = marker_mapping.get_chrom_name()
+            marker_chrom_order = marker_mapping.get_chrom_order()
+            marker_pos = float(marker_mapping.get_pos())
+            #print marker_mapping
             
             # Create rows of enriched map
             if map_chrom_order < marker_chrom_order:
@@ -85,6 +81,7 @@ class MarkerEnricher(object):
                 
             else: # marker_chrom_order == map_chrom_order
                 #print "SAME CHROM"
+                #print str(map_pos)+"\t"+str(marker_pos)
                 if map_pos < marker_pos:
                     # create position
                     row_type = ROW_TYPE_POSITION
@@ -101,8 +98,10 @@ class MarkerEnricher(object):
                     row_type = ROW_TYPE_BOTH
                     p+=1
                     m+=1
+                #print str(row_type)+"\n"
             
             row = self._create_row(map_position, marker_mapping, row_type=row_type)
+            
             enriched_map.append(row)
         
         while (p<num_pos):
@@ -144,29 +143,35 @@ class MarkerEnricher(object):
     
     def _create_row_position(self, map_position):
         marker_mapping = MarkerMapping.get_empty()
-        map_position.set_feature(marker_mapping)
         
-        return map_position
+        new_map_position = map_position.clone()
+        new_map_position.set_feature(marker_mapping)
+        
+        return new_map_position
     
     def _create_row_marker(self, marker_mapping):
-        map_position = MapPosition.get_empty()
-        map_position.set_feature(marker_mapping)
+        map_position = MappingResult.get_empty()
         
-        return map_position
+        new_map_position = map_position.clone()
+        new_map_position.set_feature(marker_mapping)
+        
+        return new_map_position
     
     def _create_row_position_marker(self, map_position, marker_mapping):
-        map_position.set_feature(marker_mapping)
         
-        return map_position
+        new_map_position = map_position.clone()
+        new_map_position.set_feature(marker_mapping)
+        
+        return new_map_position
 
-class PhysicalMarkerEnricher(MarkerEnricher):
+class PositionsMarkerEnricher(MarkerEnricher):
     
     def __init__(self, mapReader, verbose = False):
         self._mapReader = mapReader
         self._verbose = verbose
         return
     
-    def retrieve_markers(self, map_id, map_intervals, datasets_facade, map_sort_by = ""):
+    def retrieve_markers(self, map_config, map_intervals, datasets_facade, map_sort_by):
         markers = []
         
         sys.stderr.write("PhysicalEnricher: retrieve markers...\n")
@@ -177,21 +182,27 @@ class PhysicalMarkerEnricher(MarkerEnricher):
         
         # 2) Obtain the markers in the intervals
         #
-        markers = datasets_facade.retrieve_markers_by_pos(map_intervals, map_id, chrom_dict)
+        markers = datasets_facade.retrieve_markers_by_pos(map_intervals, map_config, chrom_dict, map_sort_by)
         
         # 3) Sort the list by chrom and position
         markers = self.sort_markers(markers)
         
         return markers
-    
-class AnchoredMarkerEnricher(MarkerEnricher):
+
+######## ContigsMarkerEnricher will be useful when we want to show
+######## markers which hit specific Contigs instead of by map positions.
+######## For example, to show the data associated to contigs or to show
+######## the markers from alignment results (which report contigs)
+######## instead of from mapping results (which report map positions)
+
+class ContigsMarkerEnricher(MarkerEnricher):
     
     def __init__(self, mapReader, verbose):
         self._mapReader = mapReader
         self._verbose = verbose
         return
     
-    def retrieve_markers(self, map_id, map_intervals, datasets_facade, map_sort_by):
+    def retrieve_markers(self, map_config, map_intervals, datasets_facade, map_sort_by):
         
         sys.stderr.write("AnchoredEnricher: retrieve markers...\n")
         
@@ -204,7 +215,8 @@ class AnchoredMarkerEnricher(MarkerEnricher):
         
         # 2) Obtain the markers which hit to those contigs and add them to each contig
         #   in contig_list (field "markers" of each contig)
-        datasets_facade.retrieve_markers_by_anchor(contig_list, map_id)
+        
+        datasets_facade.retrieve_markers_by_anchor(contig_list, map_config)
         
         # 3) Reformat to have the markers but with the map positions of the contigs
         # and sort the list by chrom and position

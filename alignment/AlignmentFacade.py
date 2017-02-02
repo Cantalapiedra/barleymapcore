@@ -119,11 +119,11 @@ class AlignmentFacade():
         else:
             fasta_headers = alignment_utils.get_fasta_headers(query_fasta_path)
             no_redundant_results = set()
-            for db in self._alignment_results:
-                for alignment_result in self._alignment_results[db]:
-                    query_id = alignment_result.get_query_id()
-                    if query_id not in no_redundant_results:
-                        no_redundant_results.add(query_id)
+            #for db in self._alignment_results:
+            for alignment_result in self._alignment_results:#self._alignment_results[db]:
+                query_id = alignment_result.get_query_id()
+                if query_id not in no_redundant_results:
+                    no_redundant_results.add(query_id)
                 
             self._alignment_unmapped = alignment_utils.filter_list(fasta_headers, no_redundant_results)
         
@@ -133,6 +133,9 @@ class AlignmentFacade():
         ###### best score filtering
         # chooses the best score from alignments
         # to ALL databases for a given query
+        
+        best_results = []
+        
         if best_score_filter:
             best_score_filtering = {}
             for db in results:
@@ -154,7 +157,7 @@ class AlignmentFacade():
                     else:
                         best_score_filtering[query_id] = {"results":[alignment_result], "best_score":align_score}
                 
-                results[db] = [] # Reset all database results once that have been processed
+                #results[db] = [] # Reset all database results once that have been processed
             
             #results = {}
             #
@@ -165,9 +168,10 @@ class AlignmentFacade():
             for query_id in best_score_filtering:
                 for alignment_result in best_score_filtering[query_id]["results"]:
                     db = alignment_result.get_db_name()#result[AlignmentResults.DB_NAME]
-                    results[db].append(alignment_result)
+                    #results[db].append(alignment_result)
+                    best_results.append(alignment_result)
         
-        return results
+        return best_results
     
     # Returns a new aligner based on the query_type supplied
     def _get_aligner(self, query_type, n_threads, tmp_files_dir = "./", ref_type = REF_TYPE_STD): # This is an AlignerFactory

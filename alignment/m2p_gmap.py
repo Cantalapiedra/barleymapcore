@@ -260,9 +260,11 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, db_name, verbose
         #if query_id == "i_BK_02": debug = True
         #else: debug = False
         
-        result_tuple = (query_id, subject_id, align_ident, query_cov, align_score,
-                        strand, qstart_pos, qend_pos, local_position, end_position,
-                        db_name, algorithm)
+        result_tuple = AlignmentResult()
+        result_tuple.create_from_attributes(query_id, subject_id,
+                                        align_ident, query_cov, align_score,
+                                        strand, qstart_pos, qend_pos, local_position, end_position,
+                                        db_name, algorithm)
         
         # For a given DB, keep always the best score
         #if selection == SELECTION_BEST_SCORE:
@@ -338,10 +340,8 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, db_name, verbose
         
     # Recover filtered results
     for query_id in filter_dict:
-        for alignment_data in filter_dict[query_id]["query_list"]:
-            alignmentResult = AlignmentResult(alignment_data)
-            
-            filtered_results.append(alignmentResult)
+        for alignment_result in filter_dict[query_id]["query_list"]:
+            filtered_results.append(alignment_result)
     
     #sys.stderr.write("m2p_gmap: number of chimeras found: "+str(len(chimera_dict))+"\n")
     
