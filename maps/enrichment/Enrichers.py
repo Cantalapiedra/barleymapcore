@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# MarkerEnricher.py is part of Barleymap.
+# Enrichers.py is part of Barleymap.
 # Copyright (C)  2013-2014  Carlos P Cantalapiedra.
 # (terms of use can be found within the distributed LICENSE file).
 
 import sys
 
+from barleymapcore.db.DatasetsConfig import DatasetsConfig
 from barleymapcore.maps.MarkerMapping import MarkerMapping
 from barleymapcore.maps.MappingResults import MappingResult
 
@@ -15,14 +16,17 @@ ROW_TYPE_MARKER = "marker"
 ROW_TYPE_BOTH = "both"
 
 ## Factory
-class MarkerEnricherFactory(object):
+class EnricherFactory(object):
     @staticmethod
     def get_marker_enricher(mapReader, verbose = False):
-        retvalue = None
-        
-        return PositionsMarkerEnricher(mapReader, verbose)
+        return MarkerEnricher(mapReader, verbose)
+    
+    @staticmethod
+    def get_gene_enricher(self, mapReader, load_annot, verbose = False):
+        return GeneEnricher(mapreader, load_annot, verbose)
+    
 
-class MarkerEnricher(object):
+class Enricher(object):
     
     _mapReader = None
     _verbose = False
@@ -30,8 +34,8 @@ class MarkerEnricher(object):
     def get_map_reader(self):
         return self._mapReader
     
-    def retrieve_markers(self, map_config, map_intervals, datasets_facade, map_sort_by):
-        raise m2pException("Method 'retrieve_markers' should be implemented in a class inheriting MarkerEnricher.")
+    def retrieve_features(self, map_config, map_intervals, datasets_facade, map_sort_by):
+        raise m2pException("Method 'retrieve_features' should be implemented in a class inheriting Enricher.")
     
     def sort_markers(self, markers):
         markers = sorted(markers, key=lambda marker_mapping: \
@@ -40,7 +44,7 @@ class MarkerEnricher(object):
         
         return markers
     
-    def enrich_with_markers(self, mapping_results, markers):
+    def enrich(self, mapping_results, features):
         enriched_map = []
         
         mapped = mapping_results.get_mapped()
@@ -49,7 +53,7 @@ class MarkerEnricher(object):
         p = 0
         num_pos = len(mapped)
         m = 0
-        num_markers = len(markers)
+        num_markers = len(features)
         
         while (p<num_pos and m<num_markers):
             
@@ -62,7 +66,7 @@ class MarkerEnricher(object):
             #print map_position
             
             #if m<num_markers:
-            marker_mapping = markers[m]
+            marker_mapping = features[m]
             marker_chrom = marker_mapping.get_chrom_name()
             marker_chrom_order = marker_mapping.get_chrom_order()
             marker_pos = float(marker_mapping.get_pos())
@@ -113,7 +117,7 @@ class MarkerEnricher(object):
         
         while (m<num_markers):
             # create marker
-            marker_mapping = markers[m]
+            marker_mapping = features[m]
             row = self._create_row(None, marker_mapping, row_type=ROW_TYPE_MARKER)
             enriched_map.append(row)
             m+=1
@@ -135,7 +139,7 @@ class MarkerEnricher(object):
             row = self._create_row_position_marker(map_position, marker_mapping)
             
         else:
-            raise m2pException("MapEnricher: unrecognized row type "+str(row_type)+".")
+            raise m2pException("Enricher: unrecognized row type "+str(row_type)+".")
         
         if self._verbose: sys.stderr.write("MapEnricher: new enriched row created: "+str(row)+"\n")
         
@@ -164,14 +168,43 @@ class MarkerEnricher(object):
         
         return new_map_position
 
-class PositionsMarkerEnricher(MarkerEnricher):
+class MarkerEnricher(Enricher):
     
     def __init__(self, mapReader, verbose = False):
         self._mapReader = mapReader
         self._verbose = verbose
         return
     
-    def retrieve_markers(self, map_config, map_intervals, datasets_facade, map_sort_by):
+    def retrieve_features(self, map_config, map_intervals, datasets_facade, map_sort_by):
+        markers = []
+        
+        sys.stderr.write("MarkerEnricher: retrieve markers...\n")
+        
+        # 1) Obtain the translation to numeric chromosome (for sorting purposes)
+        # of chromosome names
+        chrom_dict = self._mapReader.get_chrom_dict()
+        
+        # 2) Obtain the markers in the intervals
+        #
+        markers = datasets_facade.retrieve_features_by_pos(map_intervals, map_config, chrom_dict, map_sort_by,
+                                                           DatasetsConfig.DATASET_TYPE_GENETIC_MARKER)
+        
+        # 3) Sort the list by chrom and position
+        markers = self.sort_markers(markers)
+        
+        return markers
+    
+class GenesEnricher(Enricher):
+    
+    _load_annot = False
+    
+    def __init__(self, mapReader, load_annot, verbose = False):
+        self._mapReader = mapReader
+        self._load_annot = load_annot
+        self._verbose = verbose
+        return
+    
+    def retrieve_features(self, map_config, map_intervals, datasets_facade, map_sort_by):
         markers = []
         
         sys.stderr.write("PhysicalEnricher: retrieve markers...\n")
@@ -182,12 +215,14 @@ class PositionsMarkerEnricher(MarkerEnricher):
         
         # 2) Obtain the markers in the intervals
         #
-        markers = datasets_facade.retrieve_markers_by_pos(map_intervals, map_config, chrom_dict, map_sort_by)
+        markers = datasets_facade.retrieve_features_by_pos(map_intervals, map_config, chrom_dict, map_sort_by,
+                                                           DatasetsConfig.DATASET_TYPE_GENE)
         
         # 3) Sort the list by chrom and position
         markers = self.sort_markers(markers)
         
         return markers
+
 
 ######## ContigsMarkerEnricher will be useful when we want to show
 ######## markers which hit specific Contigs instead of by map positions.
