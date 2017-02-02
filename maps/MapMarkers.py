@@ -11,7 +11,6 @@ from reader.MapReader import MapReader
 from mappers.Mappers import Mappers
 from enrichment.MapEnricher import MapEnricher
 
-from barleymapcore.genes.GenesFacade import GenesFacade
 from barleymapcore.datasets.DatasetsFacade import DatasetsFacade
 from barleymapcore.alignment.AlignmentResult import *
 from barleymapcore.db.MapsConfig import MapsConfig

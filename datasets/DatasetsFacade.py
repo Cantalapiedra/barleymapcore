@@ -54,6 +54,7 @@ class DatasetsFacade(DatasetsRetriever):
     ### Obtain markers aligned to a series of alignment intervals
     ###
     def retrieve_features_by_pos(self, map_intervals, map_config, chrom_dict, map_sort_by, feature_type = DatasetsConfig.DATASET_TYPE_GENETIC_MARKER):
+        
         if self._verbose: sys.stderr.write("DatasetsFacade: loading markers associated to physical positions...\n")
         
         features = []
@@ -84,14 +85,14 @@ class DatasetsFacade(DatasetsRetriever):
                 if self._verbose: sys.stderr.write("DatasetsFacade: loading features from map data: "+dataset_map_path+"\n")
                 
                 dataset_features = self.__retrieve_features_by_pos(dataset_map_path, dataset_name, map_intervals,
-                                                                 chrom_dict, map_config, map_sort_by)
+                                                                 chrom_dict, map_config, map_sort_by, feature_type)
                 features.extend(dataset_features)
         
         return features
     
     # Obtain alignment results from a dataset.map file
     # and add them both to a list (features) and to a dict of contigs (contigs_dict)
-    def __retrieve_features_by_pos(self, data_path, dataset_name, map_intervals, chrom_dict, map_config, map_sort_by):
+    def __retrieve_features_by_pos(self, data_path, dataset_name, map_intervals, chrom_dict, map_config, map_sort_by, feature_type):
         
         map_name = map_config.get_name()
         map_has_cm_pos = map_config.has_cm_pos()
@@ -120,7 +121,7 @@ class DatasetsFacade(DatasetsRetriever):
                 
                 # Check if alignment overlaps with some mapping interval
                 if does_overlap:
-                    marker_mapping = FeatureMapping(marker_id, dataset_name, chrom_name, chrom_order, map_pos)
+                    marker_mapping = FeatureMapping(marker_id, dataset_name, chrom_name, chrom_order, map_pos, feature_type)
                     
                     features.append(marker_mapping)
                     break # skip intervals, continue with next dataset record
