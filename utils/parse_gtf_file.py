@@ -15,6 +15,11 @@ import gzip
 from barleymapcore.m2p_exception import m2pException
 from barleymapcore.alignment.AlignmentResult import AlignmentResult
 
+BED_SUBJECT_ID_COL = 0
+BED_START_COL = 1
+BED_END_COL = 2
+BED_QUERY_ID_COL = 3
+
 GTF_SUBJECT_ID_COL = 0
 GTF_ORIGIN_COL = 1
 GTF_TYPE_COL = 2
@@ -29,6 +34,41 @@ GTF_TYPE_GENE = "gene"
 
 FILE_TYPE_GTF = "gtf"
 FILE_TYPE_GFF3 = "gff3"
+
+def parse_bed_file(bed_path, db_list):
+    features = {}
+    
+    sys.stderr.write("\t\t\tparse_bed_file: start reading "+bed_path+"\n")
+    
+    fn_open = gzip.open if bed_path.endswith('.gz') else open
+    
+    for bed_line in fn_open(bed_path, 'r'):
+        bed_data = bed_line.strip().split()
+        
+        alignment_result = __bed_create_alignment_result(bed_data, db_list)
+        query_id = alignment_result.get_query_id()
+    
+    return features.values()
+
+# Creates the AlignmentResult objects used in parse_gtf_file
+def __bed_create_alignment_result(bed_data, db_list):
+    
+    alignment_result = AlignmentResult()
+    
+    query_id = bed_data[BED_QUERY_ID_COL]
+    subject_id = bed_data[BED_SUBJECT_ID_COL]
+    start_pos = bed_data[BED_START_COL]
+    end_pos = bed_data[BED_END_COL]
+    
+    alignment_result.set_query_id(query_id)
+    alignment_result.set_subject_id(subject_id)
+    alignment_result.set_local_position(start_pos)
+    alignment_result.set_end_position(end_pos)
+    alignment_result.set_db_name(",".join(db_list))
+    alignment_result.set_algorithm("BEDfile")
+    #alignment_result.set_strand("")
+    
+    return alignment_result
 
 # Returns a list of AlignmentResults
 # created from the positions found in the GTF/GFF file

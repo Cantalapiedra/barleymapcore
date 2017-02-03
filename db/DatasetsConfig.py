@@ -72,6 +72,7 @@ class DatasetsConfig(object):
     # FILE_TYPE values
     FILE_TYPE_FNA = "fna"
     FILE_TYPE_GTF = "gtf"
+    FILE_TYPE_BED = "bed"
     FILE_TYPE_GFF3 = "gff3"
     #FILE_TYPE_OTHER = "other"
     
@@ -98,7 +99,7 @@ class DatasetsConfig(object):
         
         #self._config_dict = load_maps(self._config_file, self._verbose) # data_utils.load_maps
         for conf_row in conf_rows:
-            print conf_row
+            
             dataset_name = conf_row[DatasetsConfig.DATASET_NAME]
             dataset_id = conf_row[DatasetsConfig.DATASET_ID]
             dataset_type = conf_row[DatasetsConfig.DATASET_TYPE]
