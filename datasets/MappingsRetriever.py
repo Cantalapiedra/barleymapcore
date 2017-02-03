@@ -21,13 +21,14 @@ class MappingsParser(object):
         map_name = map_config.get_name()
         map_has_cm_pos = map_config.has_cm_pos()
         map_has_bp_pos = map_config.has_bp_pos()
+        map_is_physical = map_config.as_physical()
         
         for hit in open(data_path, 'r'):
             #sys.stderr.write(str(hit)+"\n")
             if hit.startswith(">") or hit.startswith("#"): continue
             hit_data = hit.strip().split("\t")
             
-            mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_has_cm_pos, map_has_bp_pos)
+            mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_is_physical, map_has_cm_pos, map_has_bp_pos)
             hit_query = mapping_result.get_marker_id()#[AlignmentResults.QUERY_ID]
             has_multiple = mapping_result.has_multiple_pos()
             

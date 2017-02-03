@@ -51,13 +51,15 @@ class Mapper(object):
         test_chr = test_pos["chr"]
         test_cm = test_pos["cm_pos"]
         test_bp = test_pos["bp_pos"]
+        test_bp_end = test_pos["bp_end_pos"]
         
         for pos in pos_list:
             pos_chr = pos["chr"]
             pos_cm = pos["cm_pos"]
             pos_bp = pos["bp_pos"]
+            pos_bp_end = pos["bp_end_pos"]
             
-            if pos_chr == test_chr and pos_cm == test_cm and pos_bp == test_bp:
+            if pos_chr == test_chr and pos_cm == test_cm and pos_bp == test_bp and pos_bp_end == test_bp_end:
                 retValue = True
                 break
             
@@ -123,7 +125,8 @@ class Mapper(object):
                 # marker - chr - cm_pos - bp_pos - multiple - has_contigs_with_no_pos - map_name
                 chrom_order = chrom_dict[pos["chr"]] # Numeric value of chromsome (for sorting purposes)
                 
-                mapping_result = MappingResult(marker_id, pos["chr"], chrom_order, pos["cm_pos"], pos["bp_pos"],
+                mapping_result = MappingResult(marker_id, pos["chr"], chrom_order,
+                                               pos["cm_pos"], pos["cm_end_pos"], pos["bp_pos"], pos["bp_end_pos"], pos["strand"],
                                        num_marker_pos > 1, num_contig_no_pos > 0, map_name)
                 positions_list.append(mapping_result)
         
@@ -234,8 +237,11 @@ class PhysicalMapper(Mapper):
             
             contig_id = alignment.get_subject_id()
             local_position = alignment.get_local_position()
+            end_position = alignment.get_end_position()
+            strand = alignment.get_strand()
             
-            new_pos = {"chr":contig_id, "cm_pos":-1, "bp_pos":local_position}
+            new_pos = {"chr":contig_id, "cm_pos":-1, "cm_end_pos":-1,
+                       "bp_pos":local_position, "bp_end_pos":end_position, "strand":strand}
             
             if not self._existPosition(marker_pos, new_pos):
                 marker_pos.append(new_pos)
@@ -311,8 +317,9 @@ class AnchoredMapper(Mapper):
             marker_id = alignment.get_query_id()
             contig_id = alignment.get_subject_id()
             local_position = alignment.get_local_position()
+            end_position = alignment.get_end_position()
             
-            contig_tuple = (contig_id, local_position)
+            contig_tuple = (contig_id, local_position, end_position)
             
             # Add hit (contig, position) to list of hits of this marker
             if marker_id in markers_dict:
@@ -353,7 +360,6 @@ class AnchoredMapper(Mapper):
             for contig_tuple in markers_dict[marker_id]:
                 
                 contig_id = contig_tuple[0]
-                local_position = contig_tuple[1]
                 #sys.stderr.write("Local position: "+str(local_position)+"\n")
                 
                 if contig_id in map_contigs_positions:
@@ -374,11 +380,17 @@ class AnchoredMapper(Mapper):
     
     def _clone_contig_pos(self, contig_pos):
         
+        # Map files have only 1 position (anchoring)
+        # but MappingResults need 2 positions (alignment type)
         contig_chr = contig_pos["chr"]
         contig_cm_pos = contig_pos["cm_pos"]
+        contig_cm_end_pos = contig_pos["cm_pos"]
         contig_bp_pos = contig_pos["bp_pos"]
+        contig_bp_end_pos = contig_pos["bp_pos"]
+        contig_strand = "-"
         
-        new_contig_pos = {"chr":contig_chr, "cm_pos":contig_cm_pos, "bp_pos":contig_bp_pos}
+        new_contig_pos = {"chr":contig_chr, "cm_pos":contig_cm_pos, "cm_end_pos":contig_cm_end_pos,
+                          "bp_pos":contig_bp_pos, "bp_end_pos":contig_bp_end_pos, "strand":contig_strand}
         
         return new_contig_pos
     

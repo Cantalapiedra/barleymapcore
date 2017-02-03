@@ -43,7 +43,7 @@ class DatasetsRetriever(object):
     def get_results(self):
         retvalue = None
         
-        if self._results:
+        if self._results != None:
             retvalue = self._results
         else:
             raise m2pException("DatasetsRetriever: error obtaining unloaded results. Call a retrieve method first.")
@@ -153,8 +153,8 @@ class DatasetsRetriever(object):
         
         queries_found = initial_num_queries - num_queries_left
         
-        if self._verbose: sys.stderr.write("MappingsRetriever: final number of results "+str(num_results)+"\n")
-        sys.stderr.write("MappingsRetriever: found "+str(queries_found)+" out of "+str(initial_num_queries)+"\n")
+        if self._verbose: sys.stderr.write("DatasetsRetriever: final number of results "+str(num_results)+"\n")
+        sys.stderr.write("DatasetsRetriever: found "+str(queries_found)+" out of "+str(initial_num_queries)+"\n")
         
         self._unmapped = [query for query in query_ids_dict.keys() if query_ids_dict[query] == 0]
         

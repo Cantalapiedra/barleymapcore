@@ -13,15 +13,17 @@ class FeatureMapping(object):
     _chrom_name = ""
     _chrom_order = "-1"
     _pos = "-1"
+    _end_pos = "-1"
     _feature_type = "" # genetic_marker, gene, ... see DatasetsConfig
     _empty = False
     
-    def __init__(self, feature_id, dataset_name, chrom_name, chrom_order, pos, feature_type, empty = False):
+    def __init__(self, feature_id, dataset_name, chrom_name, chrom_order, pos, end_pos, feature_type, empty = False):
         self._feature_id = feature_id
         self._dataset_name = dataset_name
         self._chrom_name = chrom_name
         self._chrom_order = chrom_order
         self._pos = pos
+        self._end_pos = end_pos
         self._feature_type = feature_type
         self._empty = empty
     
@@ -29,7 +31,7 @@ class FeatureMapping(object):
     # for those mapping positions without features associated
     @staticmethod
     def get_empty():
-        return FeatureMapping("-", "-", "-", "", "", "", empty = True)
+        return FeatureMapping("-", "-", "-", "", "", "", "", empty = True)
     
     def is_empty(self):
         return self._empty
@@ -57,8 +59,23 @@ class FeatureMapping(object):
     def get_pos(self):
         return self._pos
     
+    def get_end_pos(self):
+        return self._end_pos
+    
     def get_feature_type(self):
         return self._feature_type
+
+class MarkerMapping(FeatureMapping):
+    _classes = [] # 'T', 'A'
+    _classes_genotypes = {} # 'T':Morex,..., 'A':Barke,...
+    _marker_type = "" # SNP, indel, ...
+    
+    def set_marker_type(self, marker_type):
+        self._marker_type = marker_type
+    
+    def get_marker_type(self):
+        return self._marker_type
+
     
 class GeneMapping(FeatureMapping):
     _annots = {}

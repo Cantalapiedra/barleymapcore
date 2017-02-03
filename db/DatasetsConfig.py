@@ -98,7 +98,7 @@ class DatasetsConfig(object):
         
         #self._config_dict = load_maps(self._config_file, self._verbose) # data_utils.load_maps
         for conf_row in conf_rows:
-            
+            print conf_row
             dataset_name = conf_row[DatasetsConfig.DATASET_NAME]
             dataset_id = conf_row[DatasetsConfig.DATASET_ID]
             dataset_type = conf_row[DatasetsConfig.DATASET_TYPE]
