@@ -71,9 +71,9 @@ class MapEnricher(object):
         map_sort_by = mapping_results.get_sort_by()
         
         ### Retrieve markers
-        sys.stderr.write("MapEnricher: retrieve markers...\n")
+        sys.stderr.write("MapEnricher: retrieve genes...\n")
         features = enricher.retrieve_features(map_config, map_intervals, datasets_facade, map_sort_by)
-        if self._verbose: sys.stderr.write("\tmarkers retrieved: "+str(len(features))+"\n")
+        if self._verbose: sys.stderr.write("\tgenes retrieved: "+str(len(features))+"\n")
         
         ## Enrich map
         sys.stderr.write("MapEnricher: enrich map...\n")
