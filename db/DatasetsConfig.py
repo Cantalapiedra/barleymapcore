@@ -86,7 +86,8 @@ class DatasetsConfig(object):
     
     _config_file = ""
     _verbose = False
-    _config_dict = {} # dict with data from configuration file (default: conf/datasets.conf)
+    _config_dict = {} # dict with data from configuration file (default: conf/datasets.conf
+    _config_list = [] # to store the order of datasets in the config file
     
     def __init__(self, config_file, verbose = True):
         self._config_file = config_file
@@ -95,6 +96,8 @@ class DatasetsConfig(object):
     
     def _load_config(self, config_file):
         self._config_dict = {}
+        self._config_list = []
+        
         conf_rows = load_conf(config_file, self._verbose) # data_utils.load_conf
         
         #self._config_dict = load_maps(self._config_file, self._verbose) # data_utils.load_maps
@@ -111,9 +114,15 @@ class DatasetsConfig(object):
             dataset = DatasetConfig(dataset_name, dataset_id, dataset_type, file_path, file_type, databases, synonyms)
             
             self._config_dict[dataset_id] = dataset
+            self._config_list.append(dataset_id)
+        
+        return
     
     def get_datasets(self):
         return self._config_dict
+    
+    def get_datasets_list(self):
+        return self._config_list
     
     def get_dataset_config(self, dataset_id):
         return self._config_dict[dataset_id]

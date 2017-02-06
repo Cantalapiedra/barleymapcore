@@ -95,6 +95,7 @@ class DatasetsFacade(DatasetsRetriever):
     def __retrieve_features_by_pos(self, data_path, dataset_name, map_intervals, chrom_dict, map_config, map_sort_by, feature_type):
         
         map_name = map_config.get_name()
+        map_is_physical = map_config.as_physical()
         map_has_cm_pos = map_config.has_cm_pos()
         map_has_bp_pos = map_config.has_bp_pos()
         
@@ -107,11 +108,12 @@ class DatasetsFacade(DatasetsRetriever):
             
             hit_data = hit.strip().split("\t")
             
-            mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_has_cm_pos, map_has_bp_pos)
+            mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_is_physical, map_has_cm_pos, map_has_bp_pos)
             marker_id = mapping_result.get_marker_id()
             chrom_name = mapping_result.get_chrom_name()
             chrom_order = mapping_result.get_chrom_order()
             map_pos = mapping_result.get_sort_pos(map_sort_by)#float(mapping_result.get_sort_pos(map_sort_by))
+            map_end_pos = mapping_result.get_sort_end_pos(map_sort_by)
             
             interval = MapInterval(chrom_name, map_pos, map_pos)
             
@@ -121,7 +123,8 @@ class DatasetsFacade(DatasetsRetriever):
                 
                 # Check if alignment overlaps with some mapping interval
                 if does_overlap:
-                    marker_mapping = FeatureMapping(marker_id, dataset_name, chrom_name, chrom_order, map_pos, feature_type)
+                    marker_mapping = FeatureMapping(marker_id, dataset_name,
+                                                    chrom_name, chrom_order, map_pos, map_end_pos, feature_type)
                     
                     features.append(marker_mapping)
                     break # skip intervals, continue with next dataset record

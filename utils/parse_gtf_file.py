@@ -47,6 +47,8 @@ def parse_bed_file(bed_path, db_list):
         
         alignment_result = __bed_create_alignment_result(bed_data, db_list)
         query_id = alignment_result.get_query_id()
+        
+        features[query_id] = alignment_result
     
     return features.values()
 
