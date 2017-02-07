@@ -118,7 +118,7 @@ class DatasetsFacade(DatasetsRetriever):
             map_pos = mapping_result.get_sort_pos(map_sort_by)#float(mapping_result.get_sort_pos(map_sort_by))
             map_end_pos = mapping_result.get_sort_end_pos(map_sort_by)
             
-            interval = MapInterval(chrom_name, map_pos, map_pos)
+            interval = MapInterval(chrom_name, map_pos, map_end_pos)
             
             for map_interval in map_intervals:
                 
