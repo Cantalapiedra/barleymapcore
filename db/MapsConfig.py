@@ -13,7 +13,7 @@ from barleymapcore.maps.MapsBase import MapTypes
 
 class MapsConfig(object):
     
-    # Field number (tab delimited)
+    # Field number (space delimited)
     # in configuration file
     MAP_NAME = 0
     MAP_ID = 1

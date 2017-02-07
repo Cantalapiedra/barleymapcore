@@ -126,7 +126,7 @@ class MapMarkers(object):
         return
     
     def enrich_with_genes(self, datasets_facade, extend, extend_window, \
-                            load_annot, constrain_fine_mapping = True):
+                            annotator, constrain_fine_mapping = True):
         
         sys.stderr.write("MapMarkers: adding other genes...\n")
         
@@ -155,55 +155,10 @@ class MapMarkers(object):
         ##########      obtain contigs within those positions and, afterwards, markers anchored to them (not map.as_physical)
         ########## and add markers to the map
         
-        map_enricher.enrich_with_genes(map_intervals, datasets_facade, self._mapReader, load_annot)
+        map_enricher.enrich_with_genes(map_intervals, datasets_facade, self._mapReader, annotator)
         
         sys.stderr.write("MapMarkers: added other markers.\n")
         
         return
-    
-    #def enrich_with_genes(self, show_genes_option, load_annot, genes_extend,
-    #                      genes_window_cm, genes_window_bp, sort_param, constrain_fine_mapping = True):
-    #    
-    #    sys.stderr.write("MapMarkers: adding genes info...\n")
-    #    if self._verbose: sys.stderr.write("\tMode: "+str(show_genes_option)+"\n")
-    #    
-    #    genesManager = GenesFacade(self._config_path_dict, load_annot, show_genes_option, self._verbose)
-    #    
-    #    # For each map
-    #    #for genetic_map in self._genetic_maps_list:
-    #    
-    #    if self._verbose: sys.stderr.write("\tMap: "+self._genetic_map+"\n")
-    #    
-    #    genetic_map_data = self._genetic_map_dict[self._genetic_map]
-    #    
-    #    if constrain_fine_mapping:
-    #        fine_mapping = genetic_map_data.is_fine_mapping() #[MapTypes.FINE_MAPPING]
-    #        
-    #        if self._verbose: sys.stderr.write("\tFine mapping: "+str(fine_mapping)+"\n")
-    #        
-    #        if not fine_mapping: return
-    #    
-    #    # Load genes and annotation
-    #    genesManager.load_data(self._genetic_map, load_annot)
-    #    
-    #    genetic_map_has_cm_pos = self.get_map_config().has_cm_pos() # "has_cm_pos"
-    #    genetic_map_has_bp_pos = self.get_map_config().has_bp_pos() # "has_bp_pos"
-    #    genes_window = self._get_genes_window(genes_extend, sort_param, genes_window_cm, genes_window_bp, \
-    #                                          genetic_map_has_cm_pos, genetic_map_has_bp_pos)
-    #    
-    #    sort_by = genetic_map_data.get_sort_by() #[MapTypes.MAP_SORT_BY]
-    #    
-    #    genetic_map_positions = genetic_map_data.get_mapped() #[MapTypes.MAP_MAPPED]
-    #    
-    #    enriched_positions = genesManager.enrich_by_pos(self._genetic_map, genetic_map_positions, \
-    #                                                    genes_extend, genes_window, \
-    #                                                    sort_by, sort_param, load_annot, \
-    #                                                    genetic_map_has_cm_pos, genetic_map_has_bp_pos)
-    #    
-    #    genetic_map_data.get_map_with_genes() #[MapTypes.MAP_WITH_GENES] = enriched_positions
-    #    
-    #    sys.stderr.write("MapMarkers: Genes added.\n")
-    #    
-    #    return
 
 ## END

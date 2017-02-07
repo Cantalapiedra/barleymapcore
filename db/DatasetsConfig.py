@@ -55,7 +55,7 @@ class DatasetConfig(object):
     
 class DatasetsConfig(object):
     
-    # Tab separated fields in configuration file
+    # Space separated fields in configuration file
     DATASET_NAME = 0
     DATASET_ID = 1
     DATASET_TYPE = 2 # genetic_markers, genes, other
@@ -108,7 +108,7 @@ class DatasetsConfig(object):
             dataset_type = conf_row[DatasetsConfig.DATASET_TYPE]
             file_path = conf_row[DatasetsConfig.FILE_PATH]
             file_type = conf_row[DatasetsConfig.FILE_TYPE]
-            databases = conf_row[DatasetsConfig.DATABASES].strip().split()
+            databases = conf_row[DatasetsConfig.DATABASES].strip().split(",")
             synonyms = conf_row[DatasetsConfig.SYNONYMS]
             
             dataset = DatasetConfig(dataset_name, dataset_id, dataset_type, file_path, file_type, databases, synonyms)

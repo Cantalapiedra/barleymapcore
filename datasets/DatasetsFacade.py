@@ -3,6 +3,7 @@
 
 # DatasetsFacade.py is part of Barleymap.
 # Copyright (C)  2013-2014  Carlos P Cantalapiedra.
+# Copyright (C)  2016-2017  Carlos P Cantalapiedra.
 # (terms of use can be found within the distributed LICENSE file).
 
 import sys, os
@@ -12,7 +13,7 @@ from DatasetsRetriever import DatasetsRetriever
 from barleymapcore.db.DatasetsConfig import DatasetsConfig
 from barleymapcore.alignment.AlignmentResult import *
 from barleymapcore.maps.MapInterval import MapInterval
-from barleymapcore.maps.enrichment.FeatureMapping import FeatureMapping
+from barleymapcore.maps.enrichment.FeatureMapping import FeaturesFactory
 from barleymapcore.maps.MappingResults import MappingResult
 
 class DatasetsFacade(DatasetsRetriever):
@@ -22,8 +23,8 @@ class DatasetsFacade(DatasetsRetriever):
     _datasets_path = ""
     _query_ids_path = ""
     _verbose = False
-    _genes_hit_dict = {}
-    _genes_hit_dict_loaded = False
+    #_genes_hit_dict = {}
+    #_genes_hit_dict_loaded = False
     
     _datasets_retriever = None
     
@@ -53,7 +54,8 @@ class DatasetsFacade(DatasetsRetriever):
     
     ### Obtain markers aligned to a series of alignment intervals
     ###
-    def retrieve_features_by_pos(self, map_intervals, map_config, chrom_dict, map_sort_by, feature_type = DatasetsConfig.DATASET_TYPE_GENETIC_MARKER):
+    def retrieve_features_by_pos(self, map_intervals, map_config, chrom_dict, map_sort_by,
+                                 feature_type = DatasetsConfig.DATASET_TYPE_GENETIC_MARKER):
         
         if self._verbose: sys.stderr.write("DatasetsFacade: loading markers associated to physical positions...\n")
         
@@ -67,7 +69,6 @@ class DatasetsFacade(DatasetsRetriever):
         for dataset in dataset_list:
             
             dataset_config = self._datasets_config.get_dataset_config(dataset)
-            dataset_name = dataset_config.get_dataset_name()#datasets_dict[dataset]["dataset_name"]
             dataset_type = dataset_config.get_dataset_type()
             
             ####### IF DATASET IS NOT OF type "feature_type" (genetic_marker, gene, ...): EXCLUDE it
@@ -84,7 +85,7 @@ class DatasetsFacade(DatasetsRetriever):
             if os.path.exists(dataset_map_path) and os.path.isfile(dataset_map_path):
                 if self._verbose: sys.stderr.write("DatasetsFacade: loading features from map data: "+dataset_map_path+"\n")
                 
-                dataset_features = self.__retrieve_features_by_pos(dataset_map_path, dataset_name, map_intervals,
+                dataset_features = self.__retrieve_features_by_pos(dataset_map_path, dataset_config, map_intervals,
                                                                  chrom_dict, map_config, map_sort_by, feature_type)
                 features.extend(dataset_features)
         
@@ -92,8 +93,10 @@ class DatasetsFacade(DatasetsRetriever):
     
     # Obtain alignment results from a dataset.map file
     # and add them both to a list (features) and to a dict of contigs (contigs_dict)
-    def __retrieve_features_by_pos(self, data_path, dataset_name, map_intervals, chrom_dict, map_config, map_sort_by, feature_type):
+    def __retrieve_features_by_pos(self, data_path, dataset_config, map_intervals, chrom_dict, map_config, map_sort_by, feature_type):
         
+        dataset_id = dataset_config.get_dataset_id()
+        dataset_name = dataset_config.get_dataset_name()#datasets_dict[dataset]["dataset_name"]
         map_name = map_config.get_name()
         map_is_physical = map_config.as_physical()
         map_has_cm_pos = map_config.has_cm_pos()
@@ -123,10 +126,10 @@ class DatasetsFacade(DatasetsRetriever):
                 
                 # Check if alignment overlaps with some mapping interval
                 if does_overlap:
-                    marker_mapping = FeatureMapping(marker_id, dataset_name,
+                    feature_mapping = FeaturesFactory.get_feature(marker_id, dataset_id, dataset_name,
                                                     chrom_name, chrom_order, map_pos, map_end_pos, feature_type)
                     
-                    features.append(marker_mapping)
+                    features.append(feature_mapping)
                     break # skip intervals, continue with next dataset record
         
         return features
