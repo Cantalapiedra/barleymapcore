@@ -8,7 +8,7 @@
 import sys
 
 from barleymapcore.db.DatasetsConfig import DatasetsConfig
-from barleymapcore.maps.enrichment.FeatureMapping import FeatureMapping
+from barleymapcore.maps.enrichment.FeatureMapping import FeaturesFactory
 from barleymapcore.maps.MappingResults import MappingResult
 
 ROW_TYPE_POSITION = "pos"
@@ -30,6 +30,9 @@ class Enricher(object):
     
     _mapReader = None
     _verbose = False
+    
+    def get_enricher_type(self):
+        raise m2pException("Method 'get_enricher_type' should be implemented in a class inheriting Enricher.")
     
     def get_map_reader(self):
         return self._mapReader
@@ -144,7 +147,8 @@ class Enricher(object):
         return row
     
     def _create_row_position(self, map_position):
-        feature_mapping = FeatureMapping.get_empty()
+        
+        feature_mapping = FeaturesFactory.get_empty_feature(self.get_enricher_type())
         
         new_map_position = map_position.clone()
         new_map_position.set_feature(feature_mapping)
@@ -192,13 +196,16 @@ class MarkerEnricher(Enricher):
         
         return features
     
+    def get_enricher_type(self):
+        return DatasetsConfig.DATASET_TYPE_GENETIC_MARKER
+    
 class GeneEnricher(Enricher):
     
-    _load_annot = False
+    _annotator = None
     
-    def __init__(self, mapReader, load_annot, verbose = False):
+    def __init__(self, mapReader, annotator, verbose = False):
         self._mapReader = mapReader
-        self._load_annot = load_annot
+        self._annotator = annotator
         self._verbose = verbose
         return
     
@@ -219,7 +226,20 @@ class GeneEnricher(Enricher):
         # 3) Sort the list by chrom and position
         features = self.sort_features(features)
         
+        # 4) If required, annotate genes
+        if self._annotator:
+            features = self._annotator.annotate_features(features)
+        
+        #print "ENRICHERS"
+        #for gene_mapping in features:
+        #    print gene_mapping
+        #print ""
+        
         return features
+    
+    def get_enricher_type(self):
+        return DatasetsConfig.DATASET_TYPE_GENE
+    
 
 
 ######## ContigsMarkerEnricher will be useful when we want to show

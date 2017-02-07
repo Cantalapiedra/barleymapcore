@@ -9,19 +9,26 @@ import sys
 from barleymapcore.utils.data_utils import load_conf
 
 class AnnotationType(object):
-    _anntype_name = ""
+    _name = ""
     _anntype_id = ""
     _anntype_type = ""
     _anntype_attr = []
     
-    def __init__(self, anntype_name, anntype_id, anntype_type, anntype_attr):
-        self._anntype_name = anntype_name
+    def __init__(self, name, anntype_id, anntype_type, anntype_attr):
+        self._name = name
         self._anntype_id = anntype_id
         self._anntype_type = anntype_type
         self._anntype_attr = anntype_attr
         
     def __str__(self):
-        return " - ".join([self._anntype_name, self._anntype_id, self._anntype_type, ",".join(self._anntype_attr)])
+        return " - ".join([self._name, self._anntype_id, self._anntype_type, ",".join(self._anntype_attr)])
+    
+    def get_anntype_id(self):
+        return self._anntype_id
+    
+    def get_name(self):
+        return self._name
+    
     
 class AnnotationTypes(object):
     
@@ -69,6 +76,10 @@ class AnnotationTypes(object):
     
     def get_anntype(self, anntype_id):
         return self._config_dict[anntype_id]
+    
+    def get_anntypes_list(self):
+        return self._config_list
+    
     
 
 ## END

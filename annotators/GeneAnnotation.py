@@ -21,5 +21,11 @@ class GeneAnnotation(object):
     def add_feature(self, annot_feature):
         self._annot_data.append(annot_feature)
         return
+    
+    def get_annot_data(self):
+        return self._annot_data
+    
+    def get_anntype(self):
+        return self._anntype
 
 ## END

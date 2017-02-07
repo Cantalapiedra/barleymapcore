@@ -31,7 +31,7 @@ class AnnotationFileReader(object):
         dataset_annot_data = {}
         
         for annot_line in open(self._annot_path+"/"+dsannot_filename, 'r'):
-            annot_data = annot_line.strip().split()
+            annot_data = annot_line.strip().split("\t")
             
             annot_gene_id = annot_data[AnnotationFile.ANNOT_FILE_GENE_ID]
             annot_feature = annot_data[AnnotationFile.ANNOT_FILE_FEATURE]
@@ -48,10 +48,14 @@ class AnnotationFileReader(object):
         
         return
     
-    def get_loaded_annots(self, ):
+    def get_loaded_annots(self):
         return self._loaded_annots
     
     def get_loaded_annot(self, dataset_annot_id):
-        return self._loaded_annots[dataset_annot_id]
+        if dataset_annot_id in self._loaded_annots:
+            retvalue = self._loaded_annots[dataset_annot_id]
+        else:
+            retvalue = None
+        return retvalue
 
 ## END

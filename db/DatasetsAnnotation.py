@@ -9,21 +9,24 @@ import sys
 from barleymapcore.utils.data_utils import load_conf
 
 class DatasetAnnotation(object):
-    _dsann_name = ""
+    _name = ""
     _dsann_id = ""
     _dataset_id = ""
     _filename = None
     _anntype_id = None
     
-    def __init__(self, dsann_name, dsann_id, dataset_id, dsann_filename, anntype_id):
-        self._dsann_name = dsann_name
+    def __init__(self, name, dsann_id, dataset_id, dsann_filename, anntype_id):
+        self._name = name
         self._dsann_id = dsann_id
         self._dataset_id = dataset_id
         self._filename = dsann_filename
         self._anntype_id = anntype_id
     
     def __str__(self, ):
-        return " - ".join([self._dsann_name, self._dsann_id, self._dataset_id, self._filename, self._anntype_id])
+        return " - ".join([self._name, self._dsann_id, self._dataset_id, self._filename, self._anntype_id])
+    
+    def get_name(self):
+        return self._name
     
     def get_dataset_id(self):
         return self._dataset_id
@@ -76,12 +79,14 @@ class DatasetsAnnotation(object):
         
         return
     
-    def get_config_list(self):
+    def get_dsann_list(self):
         return self._config_list
+    
+    def get_dsann(self, dsann_id):
+        return self.get_config_dict()[dsann_id]
     
     def get_config_dict(self):
         return self._config_dict
-    
     
     
 ## END

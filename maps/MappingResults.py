@@ -18,7 +18,7 @@ class MappingResult(object):
     _cm_end_pos = "-1.0"
     _bp_pos = "-1"
     _bp_end_pos = "-1"
-    _strand = ""
+    _strand = "-"
     _multiple_pos = False
     _other_alignments = False
     _map_name = ""
@@ -43,6 +43,20 @@ class MappingResult(object):
         self._multiple_pos = has_multiple_pos
         self._other_alignments = has_other_alignments
         self._map_name = map_name
+        self._empty = empty
+    
+    # An empty MappingResult can be created for several reasons,
+    # including creating an empty mapping result which has features associated
+    @staticmethod
+    def get_empty():
+        mapping_result = MappingResult("-", "-", "-", "-", "-", "-", "-", "-", False, False, "")
+        mapping_result.set_empty(True)
+        return mapping_result
+    
+    def is_empty(self):
+        return self._empty
+    
+    def set_empty(self, empty):
         self._empty = empty
     
     def clone(self):
@@ -110,20 +124,6 @@ class MappingResult(object):
         return MappingResult(marker_id, chrom_name, chrom_order,
                              cm_pos, cm_end_pos, bp_pos, bp_end_pos, strand, 
                              has_multiple_pos, has_other_alignments, map_name, empty)
-    
-    # An empty MappingResult can be created for several reasons,
-    # including creating an empty mapping result which has features associated
-    @staticmethod
-    def get_empty():
-        mapping_result = MappingResult("-", "-", "-", "-", "-", "-", "-", "", False, False, "")
-        mapping_result.set_empty(True)
-        return mapping_result
-    
-    def is_empty(self):
-        return self._empty
-    
-    def set_empty(self, empty):
-        self._empty = empty
     
     # A feature is an attachment or additional information
     # associated to this mapping result. For example,

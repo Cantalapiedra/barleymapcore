@@ -32,13 +32,13 @@ class GenesAnnotator(object):
     _anntypes_config = ""
     
     _annot_reader = None
-    _loaded_anntypes = {}
+    _loaded_anntypes = set()
     
     def __init__(self, dsann_config, anntypes_config, annot_path):
         self._dsann_config = dsann_config
         self._anntypes_config = anntypes_config
         self._annot_reader = AnnotationFileReader(annot_path)
-        self._loaded_anntypes = {}
+        self._loaded_anntypes = set()
     
     ## Filter out the dictionary of annotations (DatasetsAnnotation)
     ## to keep only those from the given dataset
@@ -61,7 +61,9 @@ class GenesAnnotator(object):
             for dataset_annot_id in dataset_annots:
                 
                 dataset_annot = dataset_annots[dataset_annot_id]
-                anntype = self._anntypes_config.get_anntype(dataset_annot.get_anntype_id())
+                
+                anntype_id = dataset_annot.get_anntype_id()
+                anntype = self._anntypes_config.get_anntype(anntype_id)
                 
                 # Load the records of the annotation files
                 if not dataset_annot_id in self._annot_reader.get_loaded_annots():
@@ -79,8 +81,8 @@ class GenesAnnotator(object):
                     # It was not registered previously,
                     # mark that data from this AnnotationType
                     # has been included in results (features)
-                    if anntype not in self._loaded_anntypes:
-                        self._loaded_anntypes[anntype] = 1
+                    if anntype_id not in self._loaded_anntypes:
+                        self._loaded_anntypes.add(anntype_id)
                     
                 #else: continue
         
@@ -88,5 +90,15 @@ class GenesAnnotator(object):
     
     def get_loaded_anntypes(self):
         return self._loaded_anntypes
+    
+    def get_anntypes_config(self):
+        return self._anntypes_config
+    
+    def get_dsann_config(self):
+        return self._dsann_config
+    
+    def get_annot_reader(self):
+        return self._annot_reader
+    
     
 ## END

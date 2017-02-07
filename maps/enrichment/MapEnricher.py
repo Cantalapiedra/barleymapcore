@@ -59,13 +59,13 @@ class MapEnricher(object):
         
         return
     
-    def enrich_with_genes(self, map_intervals, datasets_facade, mapReader, load_annot):
+    def enrich_with_genes(self, map_intervals, datasets_facade, mapReader, annotator):
         
         mapping_results = self.get_mapping_results()
         map_config = mapping_results.get_map_config()
         
         # Obtain a physical- or anchored-map enricher
-        enricher = EnricherFactory.get_gene_enricher(mapReader, load_annot)
+        enricher = EnricherFactory.get_gene_enricher(mapReader, annotator)
         
         map_id = map_config.get_id()
         map_sort_by = mapping_results.get_sort_by()
