@@ -112,7 +112,7 @@ class OutputPrinter(object):
     def output_features_pos(self, pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param, load_annot = False, annotator = None):
         raise m2pException("Method has to be implemented in child class inheriting from OutputPrinter")
     
-    def print_maps(self, maps_dict, show_genes, show_markers, show_unmapped, show_unaligned, multiple_param_text, load_annot, annotator):
+    def print_maps(self, maps_dict, show_genes, show_markers, show_unmapped, show_unaligned, multiple_param, load_annot, annotator):
         
         for map_id in maps_dict:
             mapping_results = maps_dict[map_id]
@@ -121,17 +121,17 @@ class OutputPrinter(object):
             if not (show_genes or show_markers):
                 ########## OUTPUT FOR ONLY MAP
                 
-                self.print_map(mapping_results, map_config, multiple_param_text)
+                self.print_map(mapping_results, map_config, multiple_param)
             
             elif show_genes:
                 ########## OUTPUT FOR MAP WITH GENES IF REQUESTED
                 
-                self.print_map_with_genes(mapping_results, map_config, multiple_param_text, load_annot, annotator)
+                self.print_map_with_genes(mapping_results, map_config, multiple_param, load_annot, annotator)
             
             elif show_markers:
                 ########### OUTPUT FOR MAP WITH MARKERS
                 
-                self.print_map_with_markers(mapping_results, map_config, multiple_param_text)
+                self.print_map_with_markers(mapping_results, map_config, multiple_param)
                 
             # else: this could never happen!?
             
@@ -332,7 +332,7 @@ class OutputPrinter(object):
             current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_END_POS])
             current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_STRAND])
             
-            if multiple_param == "yes":
+            if multiple_param:
                 current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_MULTIPLE_POS])
             
             current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_OTHER_ALIGNMENTS])
@@ -346,7 +346,7 @@ class OutputPrinter(object):
             if map_has_bp_pos:
                 current_row.append(MapHeaders.OUTPUT_HEADERS[MapHeaders.MARKER_BP_POS])
             
-            if multiple_param == "yes":
+            if multiple_param:
                 current_row.append(MapHeaders.OUTPUT_HEADERS[MapHeaders.MULTIPLE_POS])
             
             current_row.append(MapHeaders.OUTPUT_HEADERS[MapHeaders.OTHER_ALIGNMENTS])
@@ -388,12 +388,12 @@ class OutputPrinter(object):
                 current_row.append(str(bp))
         
         if pos.is_empty():
-            if multiple_param == "yes":
+            if multiple_param:
                 current_row.append("-") # multiple positions
             current_row.append("-") # other alignments
         else:
             ## Multiple
-            if multiple_param == "yes":
+            if multiple_param:
                 mult = pos.has_multiple_pos() #[MapFields.MULTIPLE_POS]
                 if mult: current_row.append("Yes")
                 else: current_row.append("No")

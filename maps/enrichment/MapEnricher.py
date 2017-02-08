@@ -85,7 +85,7 @@ class MapEnricher(object):
     
     ## Main public function to transform a map with positions
     ## into a map of intervals
-    def map_to_intervals(self, extend, extend_window):
+    def map_to_intervals(self, extend_window):
         
         map_sort_by = self.get_mapping_results().get_sort_by()
         

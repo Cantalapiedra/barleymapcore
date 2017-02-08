@@ -89,7 +89,7 @@ class MapMarkers(object):
         
         return
     
-    def enrich_with_markers(self, datasets_facade, extend, extend_window, \
+    def enrich_with_markers(self, datasets_facade, extend_window, \
                             collapsed_view = False, constrain_fine_mapping = True):
         
         sys.stderr.write("MapMarkers: adding other markers...\n")
@@ -112,7 +112,7 @@ class MapMarkers(object):
         ########## 1) Load Map Data and translate it to intervals
         ##########
         
-        map_intervals = map_enricher.map_to_intervals(extend, extend_window)
+        map_intervals = map_enricher.map_to_intervals(extend_window)
         
         ########## 2) Use those intervals to
         ##########      obtain markers within those positions (map.as_physical)
@@ -125,7 +125,7 @@ class MapMarkers(object):
         
         return
     
-    def enrich_with_genes(self, datasets_facade, extend, extend_window, \
+    def enrich_with_genes(self, datasets_facade, extend_window, \
                             annotator, collapsed_view = False, constrain_fine_mapping = True):
         
         sys.stderr.write("MapMarkers: adding other genes...\n")
@@ -148,7 +148,7 @@ class MapMarkers(object):
         ########## 1) Load Map Data and translate it to intervals
         ##########
         
-        map_intervals = map_enricher.map_to_intervals(extend, extend_window)
+        map_intervals = map_enricher.map_to_intervals(extend_window)
         
         ########## 2) Use those intervals to
         ##########      obtain markers within those positions (map.as_physical)
