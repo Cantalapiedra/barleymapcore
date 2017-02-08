@@ -35,7 +35,7 @@ class MapEnricher(object):
     def get_mapping_results(self):
         return self._mapping_results
     
-    def enrich_with_markers(self, map_intervals, datasets_facade, mapReader):
+    def enrich_with_markers(self, map_intervals, datasets_facade, mapReader, collapsed_view):
         
         mapping_results = self.get_mapping_results()
         map_config = mapping_results.get_map_config()
@@ -53,13 +53,13 @@ class MapEnricher(object):
         
         ## Enrich map
         sys.stderr.write("MapEnricher: enrich map...\n")
-        enriched_map = enricher.enrich(mapping_results, features)
+        enriched_map = enricher.enrich(mapping_results, features, collapsed_view)
         
         mapping_results.set_map_with_markers(enriched_map)
         
         return
     
-    def enrich_with_genes(self, map_intervals, datasets_facade, mapReader, annotator):
+    def enrich_with_genes(self, map_intervals, datasets_facade, mapReader, annotator, collapsed_view):
         
         mapping_results = self.get_mapping_results()
         map_config = mapping_results.get_map_config()
@@ -77,7 +77,7 @@ class MapEnricher(object):
         
         ## Enrich map
         sys.stderr.write("MapEnricher: enrich map...\n")
-        enriched_map = enricher.enrich(mapping_results, features)
+        enriched_map = enricher.enrich(mapping_results, features, collapsed_view)
         
         mapping_results.set_map_with_genes(enriched_map)
         

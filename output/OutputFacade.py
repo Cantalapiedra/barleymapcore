@@ -7,13 +7,15 @@
 
 import sys
 
+from barleymapcore.db.DatasetsConfig import DatasetsConfig
 from barleymapcore.maps.MapsBase import MapTypes
+from barleymapcore.m2p_exception import m2pException
 
-MAPPED_TITLE = "Map"
-UNMAPPED_TITLE = "Alignments without map position"
-UNALIGNED_TITLE = "Unaligned markers"
-MAP_WITH_GENES_TITLE = "Map with genes"
-MAP_WITH_MARKERS_TITLE = "Map with markers"
+MAPPED_TITLE = ""
+UNMAPPED_TITLE = "_Unmapped"
+UNALIGNED_TITLE = "_Unaligned"
+MAP_WITH_GENES_TITLE = "_with_genes"
+MAP_WITH_MARKERS_TITLE = "_with_markers"
 
 class MapHeaders(object):
     
@@ -75,97 +77,285 @@ class AnnotFields(object):
 
 class OutputFacade(object):
     
+    @staticmethod
+    def get_expanded_printer(output_desc, verbose = False, beauty_nums = False, show_headers = True):
+        output_printer = ExpandedPrinter(output_desc, verbose, beauty_nums, show_headers)
+        
+        return output_printer
+    
+    @staticmethod
+    def get_collapsed_printer(output_desc, verbose = False, beauty_nums = False, show_headers = True):
+        output_printer = CollapsedPrinter(output_desc, verbose, beauty_nums, show_headers)
+        
+        return output_printer
+
+########## OutputPrinter base output printer class
+########## This should be treated as an Abstract class
+########## to be fully implemented in children classes
+class OutputPrinter(object):
+    
     _output_desc = None
     _verbose = False
     _beauty_nums = False
+    _show_headers = True
     
-    def __init__(self):        
-        return
-    
-    def get_plain_printer(self, output_desc, verbose = False, beauty_nums = False):
+    def __init__(self, output_desc, verbose = False, beauty_nums = False, show_headers = True):
         self._output_desc = output_desc
         self._verbose = verbose
         self._beauty_nums = beauty_nums
+        self._show_headers = show_headers
         
-        return self
+    # Methods to be implemented in the child class
+    def output_features_header(self, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param, load_annot = False, annotator = None):
+        raise m2pException("Method has to be implemented in child class inheriting from OutputPrinter")
     
-    def print_maps(self, maps_dict, show_genes, show_markers, show_unmapped, multiple_param_text, load_annot, annotator, show_headers = True):
+    def output_features_pos(self, pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param, load_annot = False, annotator = None):
+        raise m2pException("Method has to be implemented in child class inheriting from OutputPrinter")
+    
+    def print_maps(self, maps_dict, show_genes, show_markers, show_unmapped, show_unaligned, multiple_param_text, load_annot, annotator):
         
         for map_id in maps_dict:
             mapping_results = maps_dict[map_id]
             map_config = mapping_results.get_map_config()
-            map_name = map_config.get_name()
-            map_is_physical = map_config.as_physical()
-            map_sort_by = mapping_results.get_sort_by()
-            
-            sys.stderr.write("OutputFacade: creating output for map "+str(map_name)+"\n")
-            
-            map_has_cm_pos = map_config.has_cm_pos()
-            map_has_bp_pos = map_config.has_bp_pos()
             
             if not (show_genes or show_markers):
                 ########## OUTPUT FOR ONLY MAP
                 
-                map_title = MAPPED_TITLE
-                self.print_genetic_map_header(map_name, show_unmapped, map_title)
-                
-                sorted_positions = mapping_results.get_mapped()
-                
-                self.print_genetic_map(sorted_positions, map_is_physical, map_has_cm_pos, map_has_bp_pos, \
-                                                multiple_param_text, show_headers)
+                self.print_map(mapping_results, map_config, multiple_param_text)
             
             elif show_genes:
                 ########## OUTPUT FOR MAP WITH GENES IF REQUESTED
                 
-                map_title = MAP_WITH_GENES_TITLE
-                self.print_genetic_map_header(map_name, show_unmapped, map_title)
-                
-                genes_enriched_positions = mapping_results.get_map_with_genes()
-                
-                self.print_map_with_genes(genes_enriched_positions, map_sort_by, map_is_physical, map_has_cm_pos, map_has_bp_pos, \
-                                                   multiple_param_text, load_annot, annotator, show_headers)
+                self.print_map_with_genes(mapping_results, map_config, multiple_param_text, load_annot, annotator)
             
             elif show_markers:
                 ########### OUTPUT FOR MAP WITH MARKERS
                 
-                map_title = MAP_WITH_MARKERS_TITLE
-                self.print_genetic_map_header(map_name, show_unmapped, map_title)
-                
-                marker_enriched_positions = mapping_results.get_map_with_markers()
-                
-                self.print_map_with_markers(marker_enriched_positions, map_sort_by, map_is_physical, map_has_cm_pos, map_has_bp_pos, \
-                                                     multiple_param_text, show_headers)
+                self.print_map_with_markers(mapping_results, map_config, multiple_param_text)
                 
             # else: this could never happen!?
             
             if show_unmapped:
-                # physical maps do not have anchored contigs, and thus contigs
-                # never lack map position
-                if not map_is_physical:
-                    ############ UNMAPPED
-                    map_title = UNMAPPED_TITLE
-                    unmapped_records = mapping_results.get_unmapped()
-                    
-                    if unmapped_records != None: # those obtained from mapping results have no unmapped records
-                        self.output_unmapped(map_title, unmapped_records, show_headers)
+                self.print_unmapped(mapping_results, map_config)
                 
-                ########### UNALIGNED
-                map_title = UNALIGNED_TITLE
-                unaligned_records = mapping_results.get_unaligned()
-                
-                self.output_unaligned(map_title, unaligned_records, show_headers)
+            if show_unaligned:
+                self.print_unaligned(mapping_results, map_config)
         
         ######
     
-    def print_genetic_map_header(self, map_name, show_unmapped = False, map_title = ""):
+    def _print_map_header(self, map_name, map_title = ""):
+        self._output_desc.write(">"+map_name+map_title+"\n")
         
-        self._output_desc.write(">"+map_name+"\n")
-        if show_unmapped: self._output_desc.write("##"+map_title+"\n")
+        return
+    
+    def print_map(self, mapping_results, map_config, multiple_param):
+        map_name = map_config.get_name()
+        
+        sys.stderr.write("OutputFacade: creating output for map "+str(map_name)+"\n")
+        
+        map_title = MAPPED_TITLE
+        self._print_map_header(map_name, map_title)
+        
+        map_as_physical = map_config.as_physical()
+        map_has_cm_pos = map_config.has_cm_pos()
+        map_has_bp_pos = map_config.has_bp_pos()
+        
+        sys.stderr.write("\tprinting plain genetic map...\n")
+        
+        ## Header
+        if self._show_headers:
+            headers_row = self.output_base_header(map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
+            
+            self._output_desc.write("#"+"\t".join(headers_row)+"\n")
+        
+        ## Rows
+        positions = mapping_results.get_mapped()
+        for pos in positions:
+            current_row = self.output_base_pos(pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
+            
+            self._output_desc.write("\t".join([str(x) for x in current_row])+"\n")
+        
+        sys.stderr.write("\tgenetic maps printed.\n")
+        
+        if self._verbose: sys.stderr.write("\tlines printed "+str(len(positions))+"\n")
+        
+        return
+    
+    def print_map_with_genes(self, mapping_results, map_config, multiple_param, load_annot, annotator):
+        
+        map_name = map_config.get_name()
+        
+        sys.stderr.write("OutputFacade: creating output for map with genes "+str(map_name)+"\n")
+        
+        map_title = MAP_WITH_GENES_TITLE
+        self._print_map_header(map_name, map_title)
+        
+        map_as_physical = map_config.as_physical()
+        map_sort_by = mapping_results.get_sort_by()
+        map_has_cm_pos = map_config.has_cm_pos()
+        map_has_bp_pos = map_config.has_bp_pos()
+        
+        ## Header
+        if self._show_headers:
+            
+            headers_row = self.output_features_header(map_as_physical, map_has_cm_pos, map_has_bp_pos,
+                                                      multiple_param, load_annot, annotator)
+            
+            self._output_desc.write("#"+"\t".join(headers_row)+"\n")
+        
+        ## Rows
+        positions = mapping_results.get_map_with_genes()
+        for pos in positions:
+            
+            current_row = self.output_features_pos(pos, map_as_physical, map_has_cm_pos, map_has_bp_pos,
+                                                    multiple_param, load_annot, annotator)
+            
+            self._output_desc.write("\t".join([str(x) for x in current_row])+"\n")
+            
+        sys.stderr.write("OutputFacade: map with genes printed.\n")
+        
+        if self._verbose: sys.stderr.write("\tlines printed "+str(len(positions))+"\n")
+        
+        return
+    
+    def print_map_with_markers(self, mapping_results, map_config, multiple_param):
+        
+        map_name = map_config.get_name()
+        
+        sys.stderr.write("OutputFacade: creating output for map with markers "+str(map_name)+"\n")
+        
+        map_title = MAP_WITH_MARKERS_TITLE
+        self._print_map_header(map_name, map_title)
+        
+        map_as_physical = map_config.as_physical()
+        map_sort_by = mapping_results.get_sort_by()
+        map_has_cm_pos = map_config.has_cm_pos()
+        map_has_bp_pos = map_config.has_bp_pos()
+        
+        ## Header
+        if self._show_headers:
+            
+            headers_row = self.output_features_header(map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
+            
+            self._output_desc.write("#"+"\t".join(headers_row)+"\n")
+        
+        ## Rows
+        positions = mapping_results.get_map_with_markers()
+        for pos in positions:
+            
+            current_row = self.output_features_pos(pos, map_as_physical, map_has_cm_pos, map_has_bp_pos,
+                                                    multiple_param)
+            
+            self._output_desc.write("\t".join([str(x) for x in current_row])+"\n")
+            
+        sys.stderr.write("OutputFacade: map with markers printed.\n")
+        
+        if self._verbose: sys.stderr.write("\tlines printed "+str(len(positions))+"\n")
+        
+        return
+    
+    # OutputPrinter base methods
+    def print_unmapped(self, mapping_results, map_config):
+        
+        map_name = map_config.get_name()
+        map_as_physical = map_config.as_physical()
+        
+        sys.stderr.write("OutputFacade: creating output for unmapped of "+str(map_name)+" map\n")
+        
+        # physical maps do not have anchored contigs, and thus contigs
+        # never lack map position
+        if not map_as_physical:
+            ############ UNMAPPED
+            map_title = UNMAPPED_TITLE
+            self._print_map_header(map_name, map_title)
+            
+            unmapped_records = mapping_results.get_unmapped()
+            if unmapped_records != None: # those obtained from mapping results have no unmapped records
+                self._output_unmapped(unmapped_records)
+        
+        return
+    
+    def _output_unmapped(self, unmapped_records):
+        sys.stderr.write("\tprinting unmapped...\n")
+        
+        #self._output_desc.write("##"+section_name+"\n")
+        if self._show_headers:
+            self._output_desc.write("#marker\tcontig\thas_pos_maps\n")
+        for pos in unmapped_records:
+            self._output_desc.write("\t".join([str(a) for a in pos])+"\n")
+            
+        sys.stderr.write("\tunmapped printed.\n")
+        if self._verbose: sys.stderr.write("\tUnmapped records: "+str(len(unmapped_records))+"\n")
+        
+        return
+    
+    # OutputPrinter base methods
+    def print_unaligned(self, mapping_results, map_config):
+        
+        map_name = map_config.get_name()
+        map_as_physical = map_config.as_physical()
+        
+        sys.stderr.write("OutputFacade: creating output for unaligned of "+str(map_name)+" map\n")
+        
+        ########### UNALIGNED
+        map_title = UNALIGNED_TITLE
+        self._print_map_header(map_name, map_title)
+        
+        unaligned_records = mapping_results.get_unaligned()
+        self._output_unaligned(unaligned_records)
+        
+        return
+    
+    def _output_unaligned(self, unaligned_records):
+        sys.stderr.write("\tprinting unaligned...\n")
+        
+        #self._output_desc.write("##"+section_name+"\n")
+        if self._show_headers:
+            self._output_desc.write("#marker\n")
+        for pos in unaligned_records:
+            self._output_desc.write(str(pos)+"\n")
+        
+        sys.stderr.write("\tunaligned printed.\n")
+        if self._verbose: sys.stderr.write("Unaligned records: "+str(len(unaligned_records))+"\n")
         
         return
     
     ## OUTPUT FOR BASIC MAP FIELDS
-    def __output_base_pos(self, current_row, pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param):
+    def output_base_header(self, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param):
+        
+        current_row = []
+        
+        if map_as_physical:
+            current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_ID])
+            current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_CHR])
+            current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_START_POS])
+            current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_END_POS])
+            current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_STRAND])
+            
+            if multiple_param == "yes":
+                current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_MULTIPLE_POS])
+            
+            current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_OTHER_ALIGNMENTS])
+            
+        else:
+            current_row.append(MapHeaders.OUTPUT_HEADERS[MapHeaders.MARKER_NAME_POS])
+            current_row.append(MapHeaders.OUTPUT_HEADERS[MapHeaders.MARKER_CHR_POS])
+            if map_has_cm_pos:
+                current_row.append(MapHeaders.OUTPUT_HEADERS[MapHeaders.MARKER_CM_POS])
+            
+            if map_has_bp_pos:
+                current_row.append(MapHeaders.OUTPUT_HEADERS[MapHeaders.MARKER_BP_POS])
+            
+            if multiple_param == "yes":
+                current_row.append(MapHeaders.OUTPUT_HEADERS[MapHeaders.MULTIPLE_POS])
+            
+            current_row.append(MapHeaders.OUTPUT_HEADERS[MapHeaders.OTHER_ALIGNMENTS])
+        
+        return current_row
+    
+    def output_base_pos(self, pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param):
+        
+        current_row = []
         
         ## Marker ID
         current_row.append(str(pos.get_marker_id())) #[MapFields.MARKER_NAME_POS]))
@@ -212,63 +402,16 @@ class OutputFacade(object):
             if pos.has_other_alignments(): current_row.append("Yes")
             else: current_row.append("No")
         
-        return
+        return current_row
     
-    def __output_base_header(self, current_row, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param):
-        
-        if map_as_physical:
-            current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_ID])
-            current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_CHR])
-            current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_START_POS])
-            current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_END_POS])
-            current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_STRAND])
-            
-            if multiple_param == "yes":
-                current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_MULTIPLE_POS])
-            
-            current_row.append(MapHeaders.PHYSICAL_HEADERS[MapHeaders.PHYSICAL_OTHER_ALIGNMENTS])
-            
-        else:
-            current_row.append(MapHeaders.OUTPUT_HEADERS[MapHeaders.MARKER_NAME_POS])
-            current_row.append(MapHeaders.OUTPUT_HEADERS[MapHeaders.MARKER_CHR_POS])
-            if map_has_cm_pos:
-                current_row.append(MapHeaders.OUTPUT_HEADERS[MapHeaders.MARKER_CM_POS])
-            
-            if map_has_bp_pos:
-                current_row.append(MapHeaders.OUTPUT_HEADERS[MapHeaders.MARKER_BP_POS])
-            
-            if multiple_param == "yes":
-                current_row.append(MapHeaders.OUTPUT_HEADERS[MapHeaders.MULTIPLE_POS])
-            
-            current_row.append(MapHeaders.OUTPUT_HEADERS[MapHeaders.OTHER_ALIGNMENTS])
-        
-        return
+## A printer to show MappingResults to the left
+## and FeatureMappings (genes, markers, ) to the right
+class ExpandedPrinter(OutputPrinter):
     
-    def print_genetic_map(self, positions, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param, show_headers = False):
+    def output_features_header(self, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param, load_annot = False, annotator = None):
         
-        sys.stderr.write("\tprinting plain genetic map...\n")
-        
-        if show_headers:
-            headers_row = []
-            self.__output_base_header(headers_row, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
-            
-            self._output_desc.write("#"+"\t".join(headers_row)+"\n")
-        
-        for pos in positions:
-            current_row = []
-            self.__output_base_pos(current_row, pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
-            
-            self._output_desc.write("\t".join([str(x) for x in current_row])+"\n")
-        
-        sys.stderr.write("\tgenetic maps printed.\n")
-        
-        if self._verbose: sys.stderr.write("\tlines printed "+str(len(positions))+"\n")
-        
-        return
-    
-    def __output_features_header(self, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param, load_annot = False, annotator = None):
-        headers_row = []
-        self.__output_base_header(headers_row, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
+        #headers_row = []
+        headers_row = self.output_base_header(map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
         
         headers_row.append(MapHeaders.FEATURE_HEADERS[GenesFields.GENES_ID_POS])
         #headers_row.append(MapHeaders.FEATURE_HEADERS[GenesFields.GENES_TYPE_POS])
@@ -297,10 +440,14 @@ class OutputFacade(object):
         
         return headers_row
     
-    def __output_features_pos(self, pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, map_sort_by, load_annot = False, annotator = None):
-        feature_data = []
+    def output_features_pos(self, pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param,
+                            load_annot = False, annotator = None):
+        
+        #current_row = []
+        current_row = self.output_base_pos(pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
         
         feature_data = []
+        
         feature = pos.get_feature()
         feature_data.append(feature.get_feature_id())
         #feature_data.append(feature.get_feature_type())
@@ -308,27 +455,27 @@ class OutputFacade(object):
         feature_data.append(feature.get_chrom_name())
         
         if map_as_physical:
-            feature_data.append(str(feature.get_pos()))
-            feature_data.append(str(feature.get_end_pos()))
+            feature_data.append(str(feature.get_bp_pos()))
+            feature_data.append(str(feature.get_bp_end_pos()))
         else:
-            if map_has_cm_pos and map_has_bp_pos:
-                if map_sort_by == MapTypes.MAP_SORT_PARAM_CM:
-                    feature_cm = feature.get_pos()
-                    if feature_cm != "-":
-                        if self._beauty_nums:
-                            cm_pos = str("%0.2f" % float(feature_cm))
-                        else:
-                            cm_pos = feature_cm
-                    else:
-                        cm_pos = feature_cm
-                    feature_data.append(cm_pos)
-                elif map_sort_by == MapTypes.MAP_SORT_PARAM_BP:
-                    feature_data.append(str(feature.get_pos()))
-                else:
-                    raise m2pException("Unrecognized sort by "+map_sort_by+".")
-            
-            elif map_has_cm_pos:
-                feature_cm = feature.get_pos()
+            #if map_has_cm_pos and map_has_bp_pos:
+            #    if map_sort_by == MapTypes.MAP_SORT_PARAM_CM:
+            #        feature_cm = feature.get_cm_pos()
+            #        if feature_cm != "-":
+            #            if self._beauty_nums:
+            #                cm_pos = str("%0.2f" % float(feature_cm))
+            #            else:
+            #                cm_pos = feature_cm
+            #        else:
+            #            cm_pos = feature_cm
+            #        feature_data.append(cm_pos)
+            #    elif map_sort_by == MapTypes.MAP_SORT_PARAM_BP:
+            #        feature_data.append(str(feature.get_bp_pos()))
+            #    else:
+            #        raise m2pException("Unrecognized sort by "+map_sort_by+".")
+            #
+            if map_has_cm_pos:
+                feature_cm = feature.get_cm_pos()
                 if feature_cm != "-":
                     if self._beauty_nums:
                         cm_pos = str("%0.2f" % float(feature_cm))
@@ -338,10 +485,8 @@ class OutputFacade(object):
                     cm_pos = feature_cm
                 feature_data.append(cm_pos)
                 
-            elif map_has_bp_pos:
-                feature_data.append(str(feature.get_pos()))
-            else:
-                raise m2pException("Map configuration indicates that has no cm nor bp positions.")
+            if map_has_bp_pos:
+                feature_data.append(str(feature.get_bp_pos()))
             
         if load_annot:
             gene_annots = feature.get_annots()
@@ -362,167 +507,61 @@ class OutputFacade(object):
                     else:
                         feature_data.append("-")
         
-        return feature_data
+        current_row.extend(feature_data)
+        
+        return current_row
+
+## A printer to show MappingResults and FeatureMappings (markers, genes,)
+## in rows at the same level
+class CollapsedPrinter(OutputPrinter):
+    def output_features_header(self, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param, load_annot = False, annotator = None):
+        
+        #headers_row = []
+        headers_row = self.output_base_header(map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
+        
+        if load_annot:
+            anntypes_config = annotator.get_anntypes_config()
+            anntypes_list = anntypes_config.get_anntypes_list()
+            loaded_anntypes = annotator.get_loaded_anntypes()
+            
+            for anntype_id in anntypes_list:
+                if anntype_id in loaded_anntypes:
+                    anntype = anntypes_config.get_anntype(anntype_id)
+                    headers_row.append(anntype.get_name())
+        
+        return headers_row
     
-    def print_map_with_genes(self, positions, map_sort_by, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param,
-                             load_annot, annotator, show_headers = False):
+    def output_features_pos(self, pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param,
+                            load_annot = False, annotator = None):
         
-        sys.stderr.write("\tprinting map with genes...\n")
+        #current_row = []
+        current_row = self.output_base_pos(pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
         
-        if show_headers:
+        feature_data = []
+        
+        feature_type = pos.get_feature_type()
+        
+        if load_annot and feature_type == DatasetsConfig.DATASET_TYPE_GENE:
+            gene_annots = pos.get_annots()
             
-            headers_row = self.__output_features_header(map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param, load_annot, annotator)
+            anntypes_list = annotator.get_anntypes_config().get_anntypes_list()
+            loaded_anntypes = annotator.get_loaded_anntypes()
             
-            self._output_desc.write("#"+"\t".join(headers_row)+"\n")
+            # This is read like this to keep the same order of annotation types
+            # in all the records so that they can share column (and header title)
+            for anntype_id in [anntype_id for anntype_id in anntypes_list if anntype_id in loaded_anntypes]:
+                    
+                    # load gene_annots only of that anntype
+                    gene_annots_anntype = [gene_annot for gene_annot in gene_annots if gene_annot.get_anntype().get_anntype_id()==anntype_id]
+                    if len(gene_annots_anntype)>0:
+                        for gene_annot_anntype in gene_annots_anntype:
+                            data_line = ",".join(gene_annot_anntype.get_annot_data())
+                            feature_data.append(data_line)
+                    else:
+                        feature_data.append("-")
         
-        for pos in positions:
-            current_row = []
-            self.__output_base_pos(current_row, pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
-            
-            feature_data = self.__output_features_pos(pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, map_sort_by, load_annot, annotator)
-            
-            current_row.extend(feature_data)
-            
-            #if load_annot:
-            #    annot = gene[len(MapHeaders.FEATURE_HEADERS):]
-            #    current_row.append(annot[AnnotFields.GENES_ANNOT_DESC]) # Readable description
-            #    # InterPro
-            #    current_row.append(annot[AnnotFields.GENES_ANNOT_INTERPRO])
-            #    current_row.append(annot[AnnotFields.GENES_ANNOT_PFAM]) # PFAM ID
-            #    #output_buffer.append("<td>"+x[7]+"</td>") # PFAM source
-            #    current_row.append(annot[AnnotFields.GENES_ANNOT_GO]) # GO terms
-            
-            self._output_desc.write("\t".join([str(x) for x in current_row])+"\n")
-            
-        sys.stderr.write("OutputFacade: map with genes printed.\n")
+        current_row.extend(feature_data)
         
-        if self._verbose: sys.stderr.write("\tlines printed "+str(len(positions))+"\n")
-        
-        return
-    
-    def print_map_with_markers(self, positions, map_sort_by, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param, show_headers = False):
-        
-        sys.stderr.write("\tprinting map with markers...\n")
-        
-        if show_headers:
-            
-            headers_row = self.__output_features_header(map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
-            
-            self._output_desc.write("#"+"\t".join(headers_row)+"\n")
-        
-        for pos in positions:
-            current_row = []
-            self.__output_base_pos(current_row, pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
-            
-            feature_data = self.__output_features_pos(pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, map_sort_by)
-            
-            current_row.extend(feature_data)
-            
-            self._output_desc.write("\t".join([str(x) for x in current_row])+"\n")
-            
-        sys.stderr.write("OutputFacade: map with markers printed.\n")
-        
-        if self._verbose: sys.stderr.write("\tlines printed "+str(len(positions))+"\n")
-        
-        return
-    
-        #def print_map_with_genes(self, positions, map_has_cm_pos, map_has_bp_pos, multiple_param, load_annot, show_headers = False):
-    #    
-    #    sys.stderr.write("\tprinting map with genes...\n")
-    #    
-    #    if show_headers:
-    #        headers_row = []
-    #        self.__output_base_header(headers_row, map_has_cm_pos, map_has_bp_pos, multiple_param)
-    #        
-    #        headers_row.append(MapHeaders.GENES_HEADERS[GenesFields.GENES_ID_POS])
-    #        headers_row.append(MapHeaders.GENES_HEADERS[GenesFields.GENES_TYPE_POS])
-    #        headers_row.append(MapHeaders.GENES_HEADERS[GenesFields.GENES_CHR_POS])
-    #        
-    #        if map_has_cm_pos:
-    #            headers_row.append(MapHeaders.GENES_HEADERS[GenesFields.GENES_CM_POS])
-    #        
-    #        if map_has_bp_pos:
-    #            headers_row.append(MapHeaders.GENES_HEADERS[GenesFields.GENES_BP_POS])
-    #            
-    #        if load_annot:
-    #            headers_row.append(MapHeaders.ANNOT_HEADERS[AnnotFields.GENES_ANNOT_DESC])
-    #            headers_row.append(MapHeaders.ANNOT_HEADERS[AnnotFields.GENES_ANNOT_INTERPRO])
-    #            headers_row.append(MapHeaders.ANNOT_HEADERS[AnnotFields.GENES_ANNOT_PFAM])
-    #            headers_row.append(MapHeaders.ANNOT_HEADERS[AnnotFields.GENES_ANNOT_GO])
-    #        
-    #        self._output_desc.write("#"+"\t".join(headers_row)+"\n")
-    #    
-    #    for pos in positions:
-    #        current_row = []
-    #        self.__output_base_pos(current_row, pos, map_has_cm_pos, map_has_bp_pos, multiple_param)
-    #        
-    #        gene = pos[MapPosition.MAP_FIELDS:]
-    #        
-    #        gene_cm = gene[GenesFields.GENES_CM_POS]
-    #        if gene_cm != "-":
-    #            if self._beauty_nums:
-    #                cm_pos = str("%0.2f" % float(gene_cm))
-    #            else:
-    #                cm_pos = gene_cm
-    #        else:
-    #            cm_pos = gene_cm
-    #        
-    #        gene_data = []
-    #        gene_data.append(gene[GenesFields.GENES_ID_POS])
-    #        gene_data.append(gene[GenesFields.GENES_TYPE_POS])
-    #        gene_data.append(str(gene[GenesFields.GENES_CHR_POS]))
-    #        
-    #        if map_has_cm_pos:
-    #            gene_data.append(cm_pos)
-    #        
-    #        if map_has_bp_pos:
-    #            gene_data.append(str(gene[GenesFields.GENES_BP_POS]))
-    #        
-    #        current_row.extend(gene_data)
-    #        
-    #        if load_annot:
-    #            annot = gene[len(MapHeaders.GENES_HEADERS):]
-    #            current_row.append(annot[AnnotFields.GENES_ANNOT_DESC]) # Readable description
-    #            # InterPro
-    #            current_row.append(annot[AnnotFields.GENES_ANNOT_INTERPRO])
-    #            current_row.append(annot[AnnotFields.GENES_ANNOT_PFAM]) # PFAM ID
-    #            #output_buffer.append("<td>"+x[7]+"</td>") # PFAM source
-    #            current_row.append(annot[AnnotFields.GENES_ANNOT_GO]) # GO terms
-    #        
-    #        self._output_desc.write("\t".join([str(x) for x in current_row])+"\n")
-    #        
-    #    sys.stderr.write("\tmap with genes printed.\n")
-    #    
-    #    if self._verbose: sys.stderr.write("\tlines printed "+str(len(positions))+"\n")
-    #    
-    #    return
-    
-    def output_unmapped(self, section_name, unmapped_records, show_headers = False):
-        sys.stderr.write("\tprinting unmapped...\n")
-        
-        self._output_desc.write("##"+section_name+"\n")
-        if show_headers:
-            self._output_desc.write("#marker\tcontig\thas_pos_maps\n")
-        for pos in unmapped_records:
-            self._output_desc.write("\t".join([str(a) for a in pos])+"\n")
-            
-        sys.stderr.write("\tunmapped printed.\n")
-        if self._verbose: sys.stderr.write("\tUnmapped records: "+str(len(unmapped_records))+"\n")
-        
-        return
-    
-    def output_unaligned(self, section_name, unaligned_records, show_headers = False):
-        sys.stderr.write("\tprinting unaligned...\n")
-        
-        self._output_desc.write("##"+section_name+"\n")
-        if show_headers:
-            self._output_desc.write("#marker\n")
-        for pos in unaligned_records:
-            self._output_desc.write(str(pos)+"\n")
-        
-        sys.stderr.write("\tunaligned printed.\n")
-        if self._verbose: sys.stderr.write("Unaligned records: "+str(len(unaligned_records))+"\n")
-        
-        return
-    
+        return current_row
+
 ## END

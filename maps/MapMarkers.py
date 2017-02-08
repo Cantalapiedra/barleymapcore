@@ -90,7 +90,7 @@ class MapMarkers(object):
         return
     
     def enrich_with_markers(self, datasets_facade, extend, extend_window, \
-                            constrain_fine_mapping = True):
+                            collapsed_view = False, constrain_fine_mapping = True):
         
         sys.stderr.write("MapMarkers: adding other markers...\n")
         
@@ -119,14 +119,14 @@ class MapMarkers(object):
         ##########      obtain contigs within those positions and, afterwards, markers anchored to them (not map.as_physical)
         ########## and add markers to the map
         
-        map_enricher.enrich_with_markers(map_intervals, datasets_facade, self._mapReader)
+        map_enricher.enrich_with_markers(map_intervals, datasets_facade, self._mapReader, collapsed_view)
         
         sys.stderr.write("MapMarkers: added other markers.\n")
         
         return
     
     def enrich_with_genes(self, datasets_facade, extend, extend_window, \
-                            annotator, constrain_fine_mapping = True):
+                            annotator, collapsed_view = False, constrain_fine_mapping = True):
         
         sys.stderr.write("MapMarkers: adding other genes...\n")
         
@@ -155,7 +155,7 @@ class MapMarkers(object):
         ##########      obtain contigs within those positions and, afterwards, markers anchored to them (not map.as_physical)
         ########## and add markers to the map
         
-        map_enricher.enrich_with_genes(map_intervals, datasets_facade, self._mapReader, annotator)
+        map_enricher.enrich_with_genes(map_intervals, datasets_facade, self._mapReader, annotator, collapsed_view)
         
         sys.stderr.write("MapMarkers: added other markers.\n")
         

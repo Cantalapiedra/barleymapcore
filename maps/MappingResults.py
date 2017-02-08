@@ -95,14 +95,14 @@ class MappingResult(object):
         else:
             if map_has_cm_pos and map_has_bp_pos:
                 cm_pos = mapping_data[2]#float(mapping_data[2])
-                cm_end_pos = -1.0
+                cm_end_pos = cm_pos
                 bp_pos = mapping_data[3]#long(mapping_data[3])
-                bp_end_pos = -1
+                bp_end_pos = bp_pos
                 strand = ""
                 pos_shift = 4
             elif map_has_cm_pos:
                 cm_pos = mapping_data[2]#float(mapping_data[2])
-                cm_end_pos = -1.0
+                cm_end_pos = cm_pos
                 bp_pos = -1
                 bp_end_pos = -1
                 strand = ""
@@ -111,7 +111,7 @@ class MappingResult(object):
                 cm_pos = -1.0
                 cm_end_pos = -1.0
                 bp_pos = mapping_data[2]#long(mapping_data[2])
-                bp_end_pos = -1
+                bp_end_pos = bp_pos
                 strand = ""
                 pos_shift = 3
             else:

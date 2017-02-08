@@ -127,7 +127,7 @@ class DatasetsFacade(DatasetsRetriever):
                 # Check if alignment overlaps with some mapping interval
                 if does_overlap:
                     feature_mapping = FeaturesFactory.get_feature(marker_id, dataset_id, dataset_name,
-                                                    chrom_name, chrom_order, map_pos, map_end_pos, feature_type)
+                                                    feature_type, mapping_result)
                     
                     features.append(feature_mapping)
                     break # skip intervals, continue with next dataset record
