@@ -146,9 +146,8 @@ class Mapper(object):
         
         for marker_id in markers_positions:
             hits_no_pos = markers_positions[marker_id]["hits_no_position"]
-            num_contig_no_pos = len(hits_no_pos)
             
-            if num_contig_no_pos == 0: continue # if has all the contigs with map position, continue
+            if len(hits_no_pos) == 0: continue # if has all the contigs with map position, continue
             
             # This is to point out if the marker has other alignments which YES have map position
             num_marker_pos = len(markers_positions[marker_id]["positions"])

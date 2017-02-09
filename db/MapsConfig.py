@@ -20,9 +20,10 @@ class MapConfig(object):
     _as_physical = False
     _search_type = ""
     _db_list = None
+    _map_dir = None
     
     def __init__(self, name, map_id, has_cm_pos, has_bp_pos, default_sort_by,
-                 as_physical, search_type, db_list):
+                 as_physical, search_type, db_list, map_dir):
         
         self._name = name
         self._id = map_id
@@ -32,6 +33,7 @@ class MapConfig(object):
         self._as_physical = as_physical
         self._search_type = search_type
         self._db_list = db_list
+        self._map_dir = map_dir
         
         return
     
@@ -59,6 +61,10 @@ class MapConfig(object):
     
     def get_db_list(self):
         return self._db_list
+    
+    def get_map_dir(self):
+        return self._map_dir
+    
     
     def check_sort_param(self, map_config, sort_param, DEFAULT_SORT_PARAM):
         sort_by = ""
@@ -101,6 +107,7 @@ class MapsConfig(object):
     AS_PHYSICAL = 5
     SEARCH_TYPE = 6
     DB_LIST = 7
+    MAP_DIR = 8 # usually the same as ID, but this is really the folder name within maps_path
     
     # HAS_CM_POS values
     #HAS_CM_POS_FALSE = "cm_false"
@@ -157,8 +164,10 @@ class MapsConfig(object):
             
             map_db_list = conf_row[self.DB_LIST].split(",")
             
+            map_dir = conf_row[self.MAP_DIR]
+            
             map_config = MapConfig(map_name, map_id, map_has_cm, map_has_bp, map_default_sort_by,
-                        map_physical, search_type, map_db_list)
+                        map_physical, search_type, map_db_list, map_dir)
             
             self._config_dict[map_id] = map_config
     

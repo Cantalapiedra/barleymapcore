@@ -39,9 +39,10 @@ class MapReader(object):
         
         map_config = self.get_map_config()
         map_id = map_config.get_id()
+        map_dir = map_config.get_map_dir()
         
         # File with map-DB positions
-        map_path = self._maps_path+map_id+"/"+map_id+ChromosomesFile.FILE_EXT
+        map_path = self._maps_path+map_dir+"/"+map_dir+ChromosomesFile.FILE_EXT
         if self._verbose: sys.stderr.write("\tMapReader: reading chromosome order from "+map_path+"\n")
         
         # Map data for this database
@@ -66,6 +67,7 @@ class MapReader(object):
         map_config = self.get_map_config()
         map_id = map_config.get_id()
         map_db_list = map_config.get_db_list()
+        map_dir = map_config.get_map_dir()
         
         #contig_set = set(contig_list) # A clone of contig_list. Used to shorten the search of contigs
         
@@ -74,7 +76,7 @@ class MapReader(object):
             db_records_read = 0
             
             # File with map-DB positions
-            map_path = self._maps_path+map_id+"/"+map_id+"."+db
+            map_path = self._maps_path+map_dir+"/"+map_dir+"."+db
             if self._verbose: sys.stderr.write("\tMapReader: map file --> "+map_path+"\n")
             
             # Map data for this database
@@ -88,9 +90,6 @@ class MapReader(object):
                 if contig_id in contig_set:
                     
                     map_pos_chr = map_data[MapFile.MAP_FILE_CHR]
-                
-                    #if map_pos_chr == -1:
-                    #    continue
                     
                     if not contig_id in positions_dict:
                         positions_dict[contig_id] = {}
@@ -117,10 +116,6 @@ class MapReader(object):
             
             if self._verbose: sys.stderr.write("\t\t records read: "+str(db_records_read)+"\n")
         
-        #if filter_results:
-        #    positions_dict = dict((contig, positions_dict[contig]) for contig in positions_dict
-        #                                                if positions_dict[contig]["chr"] != -1)
-        
         return positions_dict
     
     ### Obtain the contigs in the maps which are within intervals
@@ -134,13 +129,14 @@ class MapReader(object):
         map_config = self.get_map_config()
         map_id = map_config.get_id()
         map_db_list = map_config.get_db_list()
+        map_dir = map_config.get_map_dir()
         
         # For this genetic_map, read the info related to each database of contigs
         for db in map_db_list:
             db_records_read = 0
             
             # File with map-DB positions
-            map_path = self._maps_path+map_id+"/"+map_id+"."+db
+            map_path = self._maps_path+map_dir+"/"+map_dir+"."+db
             if self._verbose: sys.stderr.write("\tMapReader: map file --> "+map_path+"\n")
             
             (sort_by, sort_sec_pos) = MapFile.get_sort_pos_contigs(map_sort_by,
@@ -201,83 +197,6 @@ class MapReader(object):
                 interval_list.append(i)
                 #break
         
-        #print interval_list
-        
         return ret_value
-    
-    
-    #def __get_position_indexed_data(self, datasets_contig_index, sort_param):
-    #    
-    #    positions_index = {}
-    #    
-    #    map_config = self.get_map_config()
-    #    map_id = map_config.get_id()
-    #    has_cm_pos = map_config.has_cm_pos()
-    #    has_bp_pos = map_config.has_bp_pos()
-    #    
-    #    if sort_param == MapTypes.MAP_SORT_PARAM_CM:
-    #        if has_cm_pos:
-    #            position_offset = MapFile.MAP_FILE_CM
-    #        else:
-    #            position_offset = MapFile.MAP_FILE_BP
-    #    elif sort_param == MapTypes.MAP_SORT_PARAM_BP:
-    #        if has_bp_pos:
-    #            position_offset = MapFile.MAP_FILE_BP
-    #        else:
-    #            position_offset = MapFile.MAP_FILE_CM
-    #    
-    #    # For each database configured for this map
-    #    map_db_list = map_config.get_db_list()
-    #    for db in map_db_list:
-    #        if self._verbose: sys.stderr.write("\tMapReader: DB: "+db+"\n")
-    #        
-    #        map_path = self._maps_path+map_id+"/"+map_id+"."+db
-    #        if self._verbose: sys.stderr.write("\tMapReader: \t map file --> "+map_path+"\n")
-    #        
-    #        # For each contig position, find its chromosome index and position data
-    #        for map_line in open(map_path, 'r'):
-    #            map_data = map_line.strip().split("\t")
-    #            contig_id = map_data[MapFile.MAP_FILE_CONTIG]
-    #            
-    #            # If the contig has not aligned marker associated, it wont yield markers to append
-    #            if contig_id not in datasets_contig_index: continue
-    #            
-    #            contig_chr = int(map_data[MapFile.MAP_FILE_CHR])
-    #            
-    #            if has_cm_pos:
-    #                contig_cm = float(map_data[MapFile.MAP_FILE_CM])
-    #            else:
-    #                contig_cm = -1.0
-    #            
-    #            if has_bp_pos:
-    #                contig_bp = long(map_data[MapFile.MAP_FILE_BP])
-    #            else:
-    #                contig_bp = -1
-    #            
-    #            contig_data = [contig_id, contig_chr, contig_cm, contig_bp]
-    #            contig_pos = contig_data[position_offset]
-    #            
-    #            if contig_chr in positions_index:
-    #                chr_dict = positions_index[contig_chr]
-    #                if contig_pos in chr_dict:
-    #                    chr_dict[contig_pos].append(contig_data)
-    #                else:
-    #                    chr_dict[contig_pos] = [contig_data]
-    #            else:
-    #                positions_index[contig_chr] = {}
-    #                positions_index[contig_chr][contig_pos] = [contig_data]
-    #    
-    #    return positions_index
-    
-    ## Obtain a double index of contigs with keys [chromosome][position] --> list of [contig_id, contig_chr, contig_pos]
-    #def get_positions_index(self, datasets_contig_index, sort_param):
-    #    positions_index = {}
-    #    
-    #    # Creates an index (by position) of the contigs of databases list (dbs_list) for this genetic map
-    #    positions_index = self.__get_position_indexed_data(datasets_contig_index, sort_param)
-    #    
-    #    # positions_index[chromsome][poisition] --> list of [contig_id, contig_chr, contig_pos]
-    #    
-    #    return positions_index
     
 ## END

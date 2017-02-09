@@ -55,7 +55,7 @@ class MapMarkers(object):
         mapping_results = search_engine.create_map(query_ids_path, datasets_ids, self._map_config, self._facade,
                                                    sort_param, multiple_param)
         
-        sys.stderr.write("MapMarkers: Map "+map_config.get_name()+" created.\n")
+        sys.stderr.write("MapMarkers: Map "+self._map_config.get_name()+" created.\n")
         sys.stderr.write("\n")
         
         self._mapping_results = mapping_results
@@ -120,7 +120,7 @@ class MapMarkers(object):
     #    return
     
     #
-    def enrichment(self, show_markers, show_genes, datasets_facade, extend_window, collapsed_view, constrain_fine_mapping = False):
+    def enrichment(self, annotator, show_markers, show_genes, datasets_facade, extend_window, collapsed_view, constrain_fine_mapping = False):
         if show_markers and not show_genes:
             
             # Enrich with markers
