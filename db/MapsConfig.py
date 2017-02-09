@@ -11,6 +11,84 @@ from barleymapcore.m2p_exception import m2pException
 from barleymapcore.utils.data_utils import load_conf
 from barleymapcore.maps.MapsBase import MapTypes
 
+class MapConfig(object):
+    _name = ""
+    _id = ""
+    _has_cm_pos = False
+    _has_bp_pos = False
+    _default_sort_by = ""
+    _as_physical = False
+    _search_type = ""
+    _db_list = None
+    
+    def __init__(self, name, map_id, has_cm_pos, has_bp_pos, default_sort_by,
+                 as_physical, search_type, db_list):
+        
+        self._name = name
+        self._id = map_id
+        self._has_cm_pos = has_cm_pos
+        self._has_bp_pos = has_bp_pos
+        self._default_sort_by = default_sort_by
+        self._as_physical = as_physical
+        self._search_type = search_type
+        self._db_list = db_list
+        
+        return
+    
+    # These are wrappers to use the config_dict fields just within MapsConfig class
+    def get_name(self):
+        return self._name
+    
+    def get_id(self):
+        return self._id
+    
+    def has_cm_pos(self):
+        return self._has_cm_pos
+    
+    def has_bp_pos(self):
+        return self._has_bp_pos
+    
+    def get_default_sort_by(self):
+        return self._default_sort_by
+    
+    def as_physical(self):
+        return self._as_physical
+    
+    def get_search_type(self):
+        return self._search_type
+    
+    def get_db_list(self):
+        return self._db_list
+    
+    def check_sort_param(self, map_config, sort_param, DEFAULT_SORT_PARAM):
+        sort_by = ""
+        
+        map_name = map_config.get_name()
+        map_has_cm_pos = map_config.has_cm_pos()
+        map_has_bp_pos = map_config.has_bp_pos()
+        map_default_sort_by = map_config.get_default_sort_by()
+        
+        if sort_param == map_default_sort_by:
+            sort_by = sort_param
+        else:
+            # sort_param has priority
+            if sort_param == MapTypes.MAP_SORT_PARAM_CM and map_has_cm_pos:
+                sort_by = sort_param
+            elif sort_param == MapTypes.MAP_SORT_PARAM_BP and map_has_bp_pos:
+                sort_by = sort_param
+            # else, check map_default_sort_by
+            else:
+                if sort_param != DEFAULT_SORT_PARAM:
+                    sys.stderr.write("WARNING: the sort parameter "+sort_param+" is not compatible with map "+map_name+". Using default map sort parameter...\n")
+                if map_default_sort_by == MapTypes.MAP_SORT_PARAM_CM and map_has_cm_pos:
+                    sort_by = map_default_sort_by
+                elif map_default_sort_by == MapTypes.MAP_SORT_PARAM_BP and map_has_bp_pos:
+                    sort_by = map_default_sort_by
+                else:
+                    raise m2pException("Map default sort configure as \""+map_default_sort_by+"\" assigned to a map which has not such kind of position.")
+        
+        return sort_by
+
 class MapsConfig(object):
     
     # Field number (space delimited)
@@ -21,9 +99,8 @@ class MapsConfig(object):
     HAS_BP_POS = 3
     DEFAULT_SORT_BY = 4 # bp, cm
     AS_PHYSICAL = 5
-    IS_HIERARCHICAL = 6
-    BEST_SCORE = 7
-    DB_LIST = 8
+    SEARCH_TYPE = 6
+    DB_LIST = 7
     
     # HAS_CM_POS values
     #HAS_CM_POS_FALSE = "cm_false"
@@ -42,13 +119,10 @@ class MapsConfig(object):
     AS_PHYSICAL_TRUE = "physical"
     #AS_PHYSICAL_FALSE = "genetic"
     
-    # IS_HIERARCHICAL values
-    IS_HIERARCHICAL_TRUE = "hierarchical"
-    #IS_HIERARCHICAL_FALSE = "greedy"
-    
-    # BEST_SCORE values
-    BEST_SCORE_YES = "yes"
-    #BEST_SCORE_NO = "no"
+    # SEARCH_TYPE values
+    SEARCH_TYPE_GREEDY = "greedy"
+    SEARCH_TYPE_HIERARCHICAL = "hierarchical"
+    SEARCH_TYPE_EXHAUSTIVE = "exhaustive"
 
     _config_file = ""
     _verbose = False
@@ -79,16 +153,12 @@ class MapsConfig(object):
             if conf_row[self.AS_PHYSICAL] == self.AS_PHYSICAL_TRUE: map_physical = True
             else: map_physical = False
             
-            if conf_row[self.IS_HIERARCHICAL] == self.IS_HIERARCHICAL_TRUE: map_hierarchical = True
-            else: map_hierarchical = False
-            
-            if conf_row[self.BEST_SCORE] == self.BEST_SCORE_YES: best_score = True
-            else: best_score = False
+            search_type = conf_row[self.SEARCH_TYPE]
             
             map_db_list = conf_row[self.DB_LIST].split(",")
             
             map_config = MapConfig(map_name, map_id, map_has_cm, map_has_bp, map_default_sort_by,
-                        map_physical, map_hierarchical, best_score, map_db_list)
+                        map_physical, search_type, map_db_list)
             
             self._config_dict[map_id] = map_config
     
@@ -142,88 +212,5 @@ class MapsConfig(object):
             maps_ids = self._config_dict.keys()
         
         return maps_ids
-
-class MapConfig(object):
-    _name = ""
-    _id = ""
-    _has_cm_pos = False
-    _has_bp_pos = False
-    _default_sort_by = ""
-    _as_physical = False
-    _is_hierarchical = False
-    _best_score = False
-    _db_list = None
-    
-    def __init__(self, name, map_id, has_cm_pos, has_bp_pos, default_sort_by,
-                 as_physical, is_hierarchical, best_score, db_list):
-        
-        self._name = name
-        self._id = map_id
-        self._has_cm_pos = has_cm_pos
-        self._has_bp_pos = has_bp_pos
-        self._default_sort_by = default_sort_by
-        self._as_physical = as_physical
-        self._is_hierarchical = is_hierarchical
-        self._best_score = best_score
-        self._db_list = db_list
-        
-        return
-    
-    # These are wrappers to use the config_dict fields just within MapsConfig class
-    def get_name(self):
-        return self._name
-    
-    def get_id(self):
-        return self._id
-    
-    def has_cm_pos(self):
-        return self._has_cm_pos
-    
-    def has_bp_pos(self):
-        return self._has_bp_pos
-    
-    def get_default_sort_by(self):
-        return self._default_sort_by
-    
-    def as_physical(self):
-        return self._as_physical
-    
-    def is_hierarchical(self):
-        return self._is_hierarchical
-    
-    def is_best_score(self):
-        return self._best_score
-    
-    def get_db_list(self):
-        return self._db_list
-    
-    def check_sort_param(self, map_config, sort_param, DEFAULT_SORT_PARAM):
-        sort_by = ""
-        
-        map_name = map_config.get_name()
-        map_has_cm_pos = map_config.has_cm_pos()
-        map_has_bp_pos = map_config.has_bp_pos()
-        map_default_sort_by = map_config.get_default_sort_by()
-        
-        if sort_param == map_default_sort_by:
-            sort_by = sort_param
-        else:
-            # sort_param has priority
-            if sort_param == MapTypes.MAP_SORT_PARAM_CM and map_has_cm_pos:
-                sort_by = sort_param
-            elif sort_param == MapTypes.MAP_SORT_PARAM_BP and map_has_bp_pos:
-                sort_by = sort_param
-            # else, check map_default_sort_by
-            else:
-                if sort_param != DEFAULT_SORT_PARAM:
-                    sys.stderr.write("WARNING: the sort parameter "+sort_param+" is not compatible with map "+map_name+". Using default map sort parameter...\n")
-                if map_default_sort_by == MapTypes.MAP_SORT_PARAM_CM and map_has_cm_pos:
-                    sort_by = map_default_sort_by
-                elif map_default_sort_by == MapTypes.MAP_SORT_PARAM_BP and map_has_bp_pos:
-                    sort_by = map_default_sort_by
-                else:
-                    raise m2pException("Map default sort configure as \""+map_default_sort_by+"\" assigned to a map which has not such kind of position.")
-        
-        return sort_by
     
 ## END

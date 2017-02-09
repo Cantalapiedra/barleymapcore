@@ -11,6 +11,8 @@ from barleymapcore.db.DatasetsConfig import DatasetsConfig
 from barleymapcore.maps.MapsBase import MapTypes
 from barleymapcore.m2p_exception import m2pException
 
+from barleymapcore.alignment.AlignmentEngines import ALIGNMENT_TYPE_GREEDY, ALIGNMENT_TYPE_HIERARCHICAL, ALIGNMENT_TYPE_BEST_SCORE
+
 MAPPED_TITLE = ""
 UNMAPPED_TITLE = "_Unmapped"
 UNALIGNED_TITLE = "_Unaligned"
@@ -78,6 +80,21 @@ class AnnotFields(object):
 class OutputFacade(object):
     
     @staticmethod
+    def get_alignments_printer(search_type, databases_config):
+        alignments_printer = None
+        
+        if search_type == ALIGNMENT_TYPE_GREEDY:
+            alignments_printer = AlignmentsGreedyPrinter(databases_config)
+        elif search_type == ALIGNMENT_TYPE_HIERARCHICAL:
+            alignments_printer = AlignmentsHierarchicalPrinter(databases_config)
+        elif search_type == ALIGNMENT_TYPE_BEST_SCORE:
+            alignments_printer = AlignmentsBestScorePrinter(databases_config)
+        else:
+            raise m2pException("Unrecognized search type "+search_type+".")
+        
+        return alignments_printer
+    
+    @staticmethod
     def get_expanded_printer(output_desc, verbose = False, beauty_nums = False, show_headers = True):
         output_printer = ExpandedPrinter(output_desc, verbose, beauty_nums, show_headers)
         
@@ -88,6 +105,95 @@ class OutputFacade(object):
         output_printer = CollapsedPrinter(output_desc, verbose, beauty_nums, show_headers)
         
         return output_printer
+
+########## AlignmentsPrinter
+class AlignmentsPrinter(object):
+    
+    _databases_config = None
+    
+    def __init__(self, databases_config):
+        self._databases_config = databases_config
+    
+    def output_results(self, aligned, databases_ids = None):
+        raise Exception("To be implemented in child classes inheriting from AlignmentsPrinter")
+    
+    def print_header(self):
+        sys.stdout.write("#"+"\t".join(["query_id", "subject_id", "identity", "query_coverage", \
+                                        "score", "strand", "qstart", "qend", "sstart", "send",
+                                        "database", "algorithm"])+"\n")
+    
+    def print_records_db(self, aligned, db_entry, db_name):
+        # records
+        for alignment_result in aligned: #db_results:
+            
+            if alignment_result.get_db_id() != db_entry: continue
+            
+            self.print_record(alignment_result, db_name)
+        
+        return
+    
+    def print_records(self, aligned):
+        # records
+        for alignment_result in aligned: #db_results:
+            
+            db_name = self._databases_config.get_database_name(alignment_result.get_db_id())
+            
+            self.print_record(alignment_result, db_name)
+        
+        return
+    
+    def print_record(self, alignment_result, db_name = None):
+        sys.stdout.write("\t".join([
+                alignment_result.get_query_id(),
+                alignment_result.get_subject_id(),
+                str("%0.2f" % float(alignment_result.get_align_ident())),
+                str("%0.2f" % float(alignment_result.get_query_cov())),
+                str(alignment_result.get_align_score()),
+                str(alignment_result.get_strand()),
+                str(alignment_result.get_qstart_pos()),
+                str(alignment_result.get_qend_pos()),
+                str(alignment_result.get_local_position()),
+                str(alignment_result.get_end_position()),
+                str(db_name),
+                str(alignment_result.get_algorithm())
+            ]))
+        sys.stdout.write("\n")
+        
+        return
+
+class AlignmentsGreedyPrinter(AlignmentsPrinter):
+    
+    def output_results(self, aligned, databases_ids = None):
+        
+        if not databases_ids: raise m2pException("AlignmentsGreedyPrinter needs a list of DBs.")
+        
+        for db_entry in databases_ids:
+            
+            db_name = self._databases_config.get_database_name(db_entry)
+            
+            sys.stdout.write(">"+str(db_name)+"\n")
+            self.print_header()
+            self.print_records_db(aligned, db_entry, db_name)
+        
+        return
+
+class AlignmentsHierarchicalPrinter(AlignmentsPrinter):
+    
+    def output_results(self, aligned, databases_ids = None):
+        sys.stdout.write(">Alignments\n")
+        self.print_header()
+        self.print_records(aligned)
+        
+        return
+    
+class AlignmentsBestScorePrinter(AlignmentsPrinter):
+    
+    def output_results(self, aligned, databases_ids = None):
+        sys.stdout.write(">Alignments\n")
+        self.print_header()
+        self.print_records(aligned)
+        
+        return
 
 ########## OutputPrinter base output printer class
 ########## This should be treated as an Abstract class

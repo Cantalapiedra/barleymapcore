@@ -45,13 +45,22 @@ class DatabasesConfig(object):
         return self._config_dict
     
     def get_database(self, database_id):
-        return self._config_dict[database_id]
+        if self.database_exists(database_id):
+            return self._config_dict[database_id]
+        else:
+            return None
     
     def get_database_name(self, database_id):
-        return self._config_dict[database_id][REF_NAME]
+        if self.database_exists(database_id):
+            return self._config_dict[database_id][REF_NAME]
+        else:
+            return database_id
     
     def get_database_type(self, database_id):
-        return self._config_dict[database_id][REF_TYPE]
+        if self.database_exists(database_id):
+            return self._config_dict[database_id][REF_TYPE]
+        else:
+            return None
     
     def get_databases_ids(self, databases_names = None):
         databases_ids = []
@@ -87,10 +96,6 @@ class DatabasesConfig(object):
                 databases_names.append(database)
         
         return databases_names
-    
-    # Obtain type (big or std size) of fasta DB
-    def get_ref_type(self, database_config):
-        return database_config[REF_TYPE]
     
     def database_exists(self, database):
         return database in self._config_dict

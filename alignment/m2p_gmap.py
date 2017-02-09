@@ -9,6 +9,7 @@ import sys, re, os
 from subprocess import Popen, PIPE
 
 from AlignmentResult import *
+from barleymapcore.m2p_exception import m2pException
 
 #from Aligners import SELECTION_BEST_SCORE, SELECTION_NONE
 
@@ -324,32 +325,16 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, db_name, verbose
         else:
             filter_dict[query_id] = {"query_list":[result_tuple], "max_scores":[(align_ident, query_cov)]}
         
-        #elif selection == SELECTION_NONE:
-        #    if query_id in filter_dict:
-        #        filter_dict[query_id]["query_list"].append(result_tuple)
-        #    else:
-        #        filter_dict[query_id] = {"query_list":[result_tuple], "max_score":-1}
-        #else:
-        #    raise Exception("m2p_gmap: unknown value "+str(selection)+" for selection parameter.")
-        
-        #if debug:
-        #    sys.stderr.write(query_id+"\n")
-        #    sys.stderr.write(str(filter_dict[query_id])+"\n")
-        #    sys.stderr.write(str(line)+"\n")
-        #    sys.stderr.write("\n")
-        
     # Recover filtered results
     for query_id in filter_dict:
         for alignment_result in filter_dict[query_id]["query_list"]:
             filtered_results.append(alignment_result)
     
-    #sys.stderr.write("m2p_gmap: number of chimeras found: "+str(len(chimera_dict))+"\n")
-    
     if verbose: sys.stderr.write("m2p_gmap: number of chimeras found: "+str(chimera_num)+"\n")
     
     return filtered_results
 
-def get_hits(gmap_app_path, n_threads, query_fasta_path, gmap_dbs_path, db_name, \
+def get_best_score_hits(gmap_app_path, n_threads, query_fasta_path, gmap_dbs_path, db_name, \
              threshold_id, threshold_cov, verbose = False):
     results = []
     

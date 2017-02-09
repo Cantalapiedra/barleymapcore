@@ -17,7 +17,7 @@ class AlignmentResult(object):
     _end_position = -1
     _qstart_pos = -1
     _qend_pos = -1
-    _db_name = ""
+    _db_id = ""
     _algorithm = ""
     
     def __init__(self):
@@ -25,7 +25,7 @@ class AlignmentResult(object):
     
     def create_from_attributes(self, query_id, subject_id, align_ident, query_cov, align_score,
                         strand, qstart_pos, qend_pos, local_position, end_position,
-                        db_name, algorithm):
+                        db_id, algorithm):
         self.set_query_id(query_id)
         self.set_subject_id(subject_id)
         self.set_align_ident(align_ident)
@@ -36,7 +36,7 @@ class AlignmentResult(object):
         self.set_qend_pos(qend_pos)
         self.set_local_position(local_position)
         self.set_end_position(end_position)
-        self.set_db_name(db_name)
+        self.set_db_id(db_id)
         self.set_algorithm(algorithm)
         
         return
@@ -56,7 +56,7 @@ class AlignmentResult(object):
         self._local_position = alignment_data[8]
         self._end_position = alignment_data[9]
         
-        self._db_name = alignment_data[10]
+        self._db_id = alignment_data[10]
         self._algorithm = alignment_data[11]
         
         return
@@ -121,11 +121,11 @@ class AlignmentResult(object):
     def set_qend_pos(self, qend_pos):
         self._qend_pos = qend_pos
     
-    def get_db_name(self):
-        return self._db_name
+    def get_db_id(self):
+        return self._db_id
     
-    def set_db_name(self, db_name):
-        self._db_name = db_name
+    def set_db_id(self, db_id):
+        self._db_id = db_id
     
     def get_algorithm(self):
         return self._algorithm
@@ -136,7 +136,26 @@ class AlignmentResult(object):
     def __str__(self):
         return " - ".join([self._query_id, self._subject_id, str(self._align_ident), str(self._query_cov), str(self._align_score),
                           self._strand, str(self._local_position), str(self._end_position), str(self._qstart_pos), str(self._qend_pos),
-                          self._db_name, self._algorithm])
+                          self._db_id, self._algorithm])
+
+class AlignmentResults(object):
+    _aligned = None
+    _unaligned = None
     
+    def __init__(self, aligned, unaligned):
+        self._aligned = aligned
+        self._unaligned = unaligned
+    
+    def get_aligned(self):
+        return self._aligned
+    
+    def set_aligned(self, aligned):
+        self._aligned = aligned
+    
+    def get_unaligned(self):
+        return self._unaligned
+    
+    def set_unaligned(self, unaligned):
+        self._unaligned = unaligned
     
 ## END

@@ -147,14 +147,6 @@ def __filter_blast_results(results, threshold_id, threshold_cov, db_name, qlen_d
             #    print "FILTERED"
         else:
             filter_dict[query_id] = {"query_list":[result_tuple], "max_score":align_score}
-        
-        #elif selection == SELECTION_NONE:
-        #    if query_id in filter_dict:
-        #        filter_dict[query_id]["query_list"].append(result_tuple)
-        #    else:
-        #        filter_dict[query_id] = {"query_list":[result_tuple], "max_score":-1}
-        #else:
-        #    raise Exception("m2p_split_blast: unknown value "+str(selection)+" for selection parameter.")
     
     # Recover filtered results
     for query_id in filter_dict:

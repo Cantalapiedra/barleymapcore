@@ -133,7 +133,6 @@ def __filter_blast_results(results, threshold_id, threshold_cov, db_name, verbos
                                             db_name, algorithm)
         
         # For a given DB, keep always the best score
-        #if selection == SELECTION_BEST_SCORE:
         if query_id in filter_dict:
             prev_max_score = filter_dict[query_id]["max_score"]
             
@@ -147,15 +146,6 @@ def __filter_blast_results(results, threshold_id, threshold_cov, db_name, verbos
             #    print "FILTERED"
         else:
             filter_dict[query_id] = {"query_list":[result_tuple], "max_score":align_score}
-        
-        #elif selection == SELECTION_NONE:
-        #    if query_id in filter_dict:
-        #        filter_dict[query_id]["query_list"].append(result_tuple)
-        #    else:
-        #        filter_dict[query_id] = {"query_list":[result_tuple], "max_score":-1}
-        #else:
-        #    raise Exception("m2p_split_blast: unknown value "+str(selection)+" for selection parameter.")
-    
     
     # Recover filtered results
     for query_id in filter_dict:
