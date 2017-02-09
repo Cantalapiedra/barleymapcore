@@ -45,10 +45,10 @@ class DatasetsFacade(DatasetsRetriever):
     # Obtain the mapping results from a dataset in a given map
     #
     def retrieve_datasets(self, query_ids_path, dataset_list, map_config, chrom_dict,
-                                 best_score_filter = False, multiple_param = True):
+                                 multiple_param = True):
         
         results = self._datasets_retriever.retrieve_datasets(query_ids_path, dataset_list, map_config, chrom_dict,
-                                                                   best_score_filter, multiple_param)
+                                                                   multiple_param)
         
         return results
     

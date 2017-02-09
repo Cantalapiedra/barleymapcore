@@ -61,7 +61,7 @@ class DatasetsRetriever(object):
         return retvalue
     
     def retrieve_datasets(self, query_ids_path, dataset_list, map_config, chrom_dict,
-                                 best_score_filter = False, multiple_param = True):
+                                 multiple_param = True):
         self._results = []
         
         self._query_ids_path = query_ids_path
@@ -136,8 +136,6 @@ class DatasetsRetriever(object):
             else:
                 # TODO refactor to handled exception
                 sys.stderr.write("WARNING: DatasetsRetriever: there is no available data for dataset "+dataset+"\n")
-            
-            #retriever.retrieve_datasets(query_ids_path, [dataset], map_config, chrom_dict, best_score_filter, multiple_param)
             
             num_results += len(map_results)
             if self._verbose:

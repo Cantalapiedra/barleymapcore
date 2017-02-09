@@ -7,6 +7,7 @@
 
 import sys
 
+from SearchEngines import SearchEnginesFactory
 from reader.MapReader import MapReader
 from mappers.Mappers import Mappers
 from enrichment.MapEnricher import MapEnricher
@@ -25,16 +26,17 @@ class MapMarkers(object):
     #_config_path_dict = {}
     _maps_path = ""
     _map_config = None
+    _facade = None
     _verbose = False
     _mapReader = None
-    _chrom_dict = None
     
     _mapping_results = None
     _maps_data = {}
     
-    def __init__(self, maps_path, map_config, verbose = False):
+    def __init__(self, maps_path, map_config, facade = None, verbose = False):
         self._maps_path = maps_path
         self._map_config = map_config
+        self._facade = facade
         self._verbose = verbose
         # Load MapReader
         self._mapReader = MapReader(self._maps_path, map_config, self._verbose)
@@ -45,47 +47,92 @@ class MapMarkers(object):
     def get_map_config(self):
         return self._map_config
     
-    def get_chrom_dict(self):
-        return self._mapReader.get_chrom_dict()
-    
-    def setup_map(self, query_ids_path, datasets_ids, datasets_facade, best_score_filter, sort_param, multiple_param):
+    # previously: setup_map
+    def retrieve_mappings(self, query_ids_path, datasets_ids, sort_param, multiple_param):
         
-        map_config = self.get_map_config()
+        search_engine = SearchEnginesFactory.get_search_engine_datasets(self._maps_path, self._verbose)
         
-        sys.stderr.write("MapMarkers: setting up map: "+map_config.get_name()+"\n")
-        
-        map_as_physical = map_config.as_physical()
-        chrom_dict = self.get_chrom_dict()
-        
-        ############ Retrieve pre-computed alignments
-        datasets_facade.retrieve_datasets(query_ids_path, datasets_ids, map_config, chrom_dict, best_score_filter, multiple_param)
-        
-        mapping_results = datasets_facade.get_results()
-        mapping_unmapped = datasets_facade.get_unmapped()
-        
-        # Obtain Mapper without MapReader
-        mapper = Mappers.get_mappings_mapper(self._mapReader, self._verbose)
-        
-        # Translate from alignment format to map format
-        #self._map = mapper.create_physical_map(markers_dict, unaligned, self._map_config, sort_param, multiple_param)
-        self._mapping_results = mapper.create_map(mapping_results, mapping_unmapped, map_config, sort_param)
-        
-        return
-    
-    def create_map(self, alignment_results, unaligned, sort_param, multiple_param):
-        
-        map_config = self.get_map_config()
-        
-        sys.stderr.write("MapMarkers: creating map: "+map_config.get_name()+"\n")
-        
-        map_as_physical = map_config.as_physical()
-        
-        mapper = Mappers.get_alignments_mapper(map_as_physical, self._mapReader, self._verbose)
-        
-        self._mapping_results = mapper.create_map(alignment_results, unaligned, map_config, sort_param, multiple_param)
+        mapping_results = search_engine.create_map(query_ids_path, datasets_ids, self._map_config, self._facade,
+                                                   sort_param, multiple_param)
         
         sys.stderr.write("MapMarkers: Map "+map_config.get_name()+" created.\n")
         sys.stderr.write("\n")
+        
+        self._mapping_results = mapping_results
+        
+        return mapping_results
+    
+    def perform_mappings(self, query_fasta_path, databases_ids, databases_config, aligner_list,
+                                threshold_id, threshold_cov, n_threads,
+                                best_score_param, sort_param, multiple_param, tmp_files_dir):
+        
+        search_type = self._map_config.get_search_type()
+        
+        search_engine = SearchEnginesFactory.get_search_engine(search_type, self._maps_path,
+                                                               best_score_param, databases_config, aligner_list,
+                                                               threshold_id, threshold_cov, n_threads, self._verbose)
+        
+        mapping_results = search_engine.create_map(query_fasta_path, databases_ids, self._map_config, self._facade,
+                                                   sort_param, multiple_param, tmp_files_dir)
+        
+        sys.stderr.write("MapMarkers: Map "+self._map_config.get_name()+" created.\n")
+        sys.stderr.write("\n")
+        
+        self._mapping_results = mapping_results
+        
+        ############# Perform alignments
+        ## Perform alignments
+        ## TODO: avoid aligning to the same DB as one of a previous map
+        ## this "TODO" would need to handle correctly best_score and hierarchical
+        #facade.perform_alignment(query_fasta_path, databases_ids, hierarchical, query_mode,
+        #                                   threshold_id, threshold_cov, n_threads, \
+        #                                   best_score)
+        #
+        #results = facade.get_alignment_results()
+        #unaligned = facade.get_alignment_unmapped()  
+        #
+        ############# MAPS
+        #mapMarkers = MapMarkers(maps_path, map_config, verbose_param)
+        #
+        #mapMarkers.create_map(results, unaligned, sort_by, multiple_param)
+        #
+        ## enrichment (OLD)
+        #
+        #mapping_results = mapMarkers.get_mapping_results()
+        
+        return mapping_results
+    
+    #def create_map(self, alignment_results, unaligned, sort_param, multiple_param):
+    #    
+    #    map_config = self.get_map_config()
+    #    
+    #    sys.stderr.write("MapMarkers: creating map: "+map_config.get_name()+"\n")
+    #    
+    #    map_as_physical = map_config.as_physical()
+    #    
+    #    mapper = Mappers.get_alignments_mapper(map_as_physical, self._mapReader, self._verbose)
+    #    
+    #    self._mapping_results = mapper.create_map(alignment_results, unaligned, map_config, sort_param, multiple_param)
+    #    
+    #    sys.stderr.write("MapMarkers: Map "+map_config.get_name()+" created.\n")
+    #    sys.stderr.write("\n")
+    #    
+    #    return
+    
+    #
+    def enrichment(self, show_markers, show_genes, datasets_facade, extend_window, collapsed_view, constrain_fine_mapping = False):
+        if show_markers and not show_genes:
+            
+            # Enrich with markers
+            self.enrich_with_markers(datasets_facade, extend_window,
+                                            collapsed_view, constrain_fine_mapping)
+            
+        ########### GENES
+        if show_genes:
+            
+            # Enrich with genes
+            self.enrich_with_genes(datasets_facade, extend_window,
+                                         annotator, collapsed_view, constrain_fine_mapping)
         
         return
     

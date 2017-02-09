@@ -242,6 +242,9 @@ class MappingResults(object):
     def __init__(self):
         return
     
+    def extend(self, mapping_results):
+        self._mapped.extend(mapping_results.get_mapped())
+    
     def get_mapped(self):
         return self._mapped
     
