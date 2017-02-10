@@ -8,7 +8,7 @@
 import sys
 
 from barleymapcore.db.DatasetsConfig import DatasetsConfig
-from barleymapcore.maps.enrichment.FeatureMapping import FeaturesFactory
+from barleymapcore.maps.enrichment.FeatureMapping import FeaturesFactory, FeatureMapping
 from barleymapcore.maps.MappingResults import MappingResult
 from barleymapcore.maps.MapInterval import MapInterval
 
@@ -84,12 +84,6 @@ class Enricher(object):
             
             if MapInterval.intervals_overlap(map_interval, feature_interval):
                 
-                #print "ENRICHERS"
-                #print "Overlap"
-                #print map_interval
-                #print feature_interval
-                
-                # create position-feature
                 row_type = ROW_TYPE_BOTH
                 p+=1
                 m+=1
@@ -99,10 +93,10 @@ class Enricher(object):
                     enriched_map.append(row)
                     row = self._create_row(None, feature_mapping, ROW_TYPE_FEATURE, collapsed_view)
                     enriched_map.append(row)
+                    
                 else: # Combined row with the MappingResult and the FeatureMapping
                     row = self._create_row(map_position, feature_mapping, row_type, collapsed_view)
                     enriched_map.append(row)
-                # IF COLLAPSED VIEW: we will create 2 rows, one for the map and another for the interval
                 
             else:
                 if map_chrom_order < feature_chrom_order:
@@ -135,42 +129,6 @@ class Enricher(object):
                 
                 row = self._create_row(map_position, feature_mapping, row_type, collapsed_view)
                 enriched_map.append(row)
-                
-            ## Create rows of enriched map
-            #if map_chrom_order < feature_chrom_order:
-            #    # create position
-            #    row_type = ROW_TYPE_POSITION
-            #    p+=1
-            #    
-            #elif feature_chrom_order < map_chrom_order:
-            #    # create feature
-            #    row_type = ROW_TYPE_FEATURE
-            #    m+=1
-            #    
-            #else: # feature_chrom_order == map_chrom_order
-            #    #print "SAME CHROM"
-            #    #print str(map_pos)+"\t"+str(feature_pos)
-            #    if map_pos < feature_pos:
-            #        # create position
-            #        row_type = ROW_TYPE_POSITION
-            #        p+=1
-            #        
-            #    elif feature_pos < map_pos:
-            #        # create feature
-            #        row_type = ROW_TYPE_FEATURE
-            #        m+=1
-            #        
-            #    else: # feature_pos == map_pos
-            #        #print "SAME POS"
-            #        # create position-feature
-            #        row_type = ROW_TYPE_BOTH
-            #        p+=1
-            #        m+=1
-            #    #print str(row_type)+"\n"
-            #
-            #row = self._create_row(map_position, feature_mapping, row_type=row_type)
-            #
-            #enriched_map.append(row)
         
         # When there are only MappingResults left
         while (p<num_pos):
@@ -240,6 +198,7 @@ class Enricher(object):
         
         new_map_position = map_position.clone()
         new_map_position.set_feature(feature_mapping)
+        feature_mapping.set_row_type(FeatureMapping.ROW_TYPE_MAPPING_RESULT)
         
         return new_map_position
 

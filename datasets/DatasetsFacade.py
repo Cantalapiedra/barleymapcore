@@ -166,72 +166,72 @@ class DatasetsFacade(DatasetsRetriever):
     
     ### Obtain markers aligned to a list of contigs
     ### and adds them to the field "markers" of each contig in contig_list
-    def retrieve_markers_by_anchor(self, contig_list, map_id, feature_type = DatasetsConfig.DATASET_TYPE_GENETIC_MARKER):
-        
-        if self._verbose: sys.stderr.write("DatasetsFacade: loading markers associated to contigs...\n")
-        
-        ## Prepare a list of contig identifiers
-        ##
-        contigs_dict = dict([(contig_dict["map_file_contig"],contig_dict) for contig_dict in contig_list])
-        
-        ## Search datasets for markers
-        ## associated to those contigs
-        dataset_list = self._datasets_config.get_datasets().keys()
-        
-        # Look for markers for each dataset
-        for dataset in dataset_list:
-            
-            dataset_config = self._datasets_config.get_dataset_config(dataset)
-            dataset_name = dataset_config.get_dataset_name()#datasets_dict[dataset]["dataset_name"]
-            dataset_type = dataset_config.get_dataset_type()
-            
-            ####### IF DATASET IS NOT OF GENETIC MARKERS: EXCLUDE flcDNAs, ESTs, ...
-            if dataset_type != feature_type:#DatasetsConfig.DATASET_TYPE_GENETIC_MARKER:
-                if self._verbose: sys.stderr.write("\t No markers dataset: "+dataset+"\n")
-                continue
-            
-            if self._verbose: sys.stderr.write("\t dataset: "+dataset+"\n")
-            
-            ########## Using the dataset generated for the whole map
-            ##########
-            dataset_map_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(map_id)
-            if os.path.exists(dataset_map_path) and os.path.isfile(dataset_map_path):
-                if self._verbose: sys.stderr.write("DatasetsFacade: loading from map data\n")
-                
-                self.__retrieve_markers_by_anchor(dataset_map_path, dataset_name, contigs_dict)
-            
-            ### The next will be deprecated. Generate always a dataset.map file during barleymap setup
-            ########## In case that the positions were not precalculated for the map as a whole
-            ########## but for individual DBs
-            #else:
-            #    if self._verbose: sys.stderr.write("DatasetsFacade: loading from DBs data\n")
-            #    
-            #    self.__retrieve_markers_from_db_files(markers, map_db_list, map_is_hierarchical)
-        
-        return
-    
-    # Obtain alignment results from a dataset.map file
-    # and add them both to a list (markers) and to a dict of contigs (contigs_dict)
-    def __retrieve_markers_by_anchor(self, data_path, dataset_name, contigs_dict):
-        
-        contigs_set = set(contigs_dict.keys())
-        
-        # Find all the hits for this map
-        for hit in open(data_path, 'r'):
-            
-            hit_data = hit.strip().split("\t")
-            alignment_result = AlignmentResult(hit_data)
-            contig = alignment_result.get_subject_id()
-            
-            if contig in contigs_set:
-                query_data = {"alignment_result":alignment_result,
-                              "dataset_name":dataset_name,
-                              "hit_genes":[],
-                              "dataset_genes_configured":False}
-                
-                contigs_dict[contig]["markers"].append(query_data)
-        
-        return
+    #def retrieve_markers_by_anchor(self, contig_list, map_id, feature_type = DatasetsConfig.DATASET_TYPE_GENETIC_MARKER):
+    #    
+    #    if self._verbose: sys.stderr.write("DatasetsFacade: loading markers associated to contigs...\n")
+    #    
+    #    ## Prepare a list of contig identifiers
+    #    ##
+    #    contigs_dict = dict([(contig_dict["map_file_contig"],contig_dict) for contig_dict in contig_list])
+    #    
+    #    ## Search datasets for markers
+    #    ## associated to those contigs
+    #    dataset_list = self._datasets_config.get_datasets().keys()
+    #    
+    #    # Look for markers for each dataset
+    #    for dataset in dataset_list:
+    #        
+    #        dataset_config = self._datasets_config.get_dataset_config(dataset)
+    #        dataset_name = dataset_config.get_dataset_name()#datasets_dict[dataset]["dataset_name"]
+    #        dataset_type = dataset_config.get_dataset_type()
+    #        
+    #        ####### IF DATASET IS NOT OF GENETIC MARKERS: EXCLUDE flcDNAs, ESTs, ...
+    #        if dataset_type != feature_type:#DatasetsConfig.DATASET_TYPE_GENETIC_MARKER:
+    #            if self._verbose: sys.stderr.write("\t No markers dataset: "+dataset+"\n")
+    #            continue
+    #        
+    #        if self._verbose: sys.stderr.write("\t dataset: "+dataset+"\n")
+    #        
+    #        ########## Using the dataset generated for the whole map
+    #        ##########
+    #        dataset_map_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(map_id)
+    #        if os.path.exists(dataset_map_path) and os.path.isfile(dataset_map_path):
+    #            if self._verbose: sys.stderr.write("DatasetsFacade: loading from map data\n")
+    #            
+    #            self.__retrieve_markers_by_anchor(dataset_map_path, dataset_name, contigs_dict)
+    #        
+    #        ### The next will be deprecated. Generate always a dataset.map file during barleymap setup
+    #        ########## In case that the positions were not precalculated for the map as a whole
+    #        ########## but for individual DBs
+    #        #else:
+    #        #    if self._verbose: sys.stderr.write("DatasetsFacade: loading from DBs data\n")
+    #        #    
+    #        #    self.__retrieve_markers_from_db_files(markers, map_db_list, map_is_hierarchical)
+    #    
+    #    return
+    #
+    ## Obtain alignment results from a dataset.map file
+    ## and add them both to a list (markers) and to a dict of contigs (contigs_dict)
+    #def __retrieve_markers_by_anchor(self, data_path, dataset_name, contigs_dict):
+    #    
+    #    contigs_set = set(contigs_dict.keys())
+    #    
+    #    # Find all the hits for this map
+    #    for hit in open(data_path, 'r'):
+    #        
+    #        hit_data = hit.strip().split("\t")
+    #        alignment_result = AlignmentResult(hit_data)
+    #        contig = alignment_result.get_subject_id()
+    #        
+    #        if contig in contigs_set:
+    #            query_data = {"alignment_result":alignment_result,
+    #                          "dataset_name":dataset_name,
+    #                          "hit_genes":[],
+    #                          "dataset_genes_configured":False}
+    #            
+    #            contigs_dict[contig]["markers"].append(query_data)
+    #    
+    #    return
     
     
     

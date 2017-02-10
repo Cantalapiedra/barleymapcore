@@ -22,23 +22,45 @@ class MapFile(object):
         sort_by = -1 # 1st sorting pos
         sec_pos = -1 # 2nd sorting pos
         
-        # sort type
-        if sort_param == MapTypes.MAP_SORT_PARAM_CM:
-            if map_has_cm:
+        if map_has_cm and map_has_bp:
+            if sort_param == MapTypes.MAP_SORT_PARAM_CM:
                 sort_by = MapFile.MAP_FILE_CM
                 sec_pos = MapFile.MAP_FILE_BP
-            else:
-                sort_by = MapFile.MAP_FILE_BP
-                sec_pos = MapFile.MAP_FILE_CM
-        elif sort_param == MapTypes.MAP_SORT_PARAM_BP:
-            if map_has_bp:
+            elif sort_param == MapTypes.MAP_SORT_PARAM_BP:
                 sort_by = MapFile.MAP_FILE_BP
                 sec_pos = MapFile.MAP_FILE_CM
             else:
-                sort_by = MapFile.MAP_FILE_CM
-                sec_pos = MapFile.MAP_FILE_BP
+                raise Exception("Wrong sort type "+str(sort_param))
+            
+        elif map_has_cm or map_has_bp:
+            sort_by = MapFile.MAP_FILE_CM
+            sec_pos = MapFile.MAP_FILE_CM
         else:
-            raise Exception("get_sort_pos_contigs: Wrong field for sorting "+str(sort_param))
+            raise Exception("Map must have either cM or bp, or both.")
+        
+        ## sort type
+        #if sort_param == MapTypes.MAP_SORT_PARAM_CM:
+        #    if map_has_cm and map_has_bp:
+        #        sort_by = MapFile.MAP_FILE_CM
+        #        sec_pos = MapFile.MAP_FILE_BP
+        #    elif map_has_cm:
+        #        sort_by = MapFile.MAP_FILE_CM
+        #        sec_pos = MapFile.MAP_FILE_CM
+        #    elif map_has_bp:
+        #        sort_by = MapFile.MAP_FILE_CM
+        #        sec_pos = MapFile.MAP_FILE_CM
+        #elif sort_param == MapTypes.MAP_SORT_PARAM_BP:
+        #    if map_has_cm and map_has_bp:
+        #        sort_by = MapFile.MAP_FILE_BP
+        #        sec_pos = MapFile.MAP_FILE_CM
+        #    elif map_has_cm:
+        #        sort_by = MapFile.MAP_FILE_CM
+        #        sec_pos = MapFile.MAP_FILE_CM
+        #    elif map_has_bp:
+        #        sort_by = MapFile.MAP_FILE_CM
+        #        sec_pos = MapFile.MAP_FILE_CM
+        #else:
+        #    raise Exception("get_sort_pos_contigs: Wrong field for sorting "+str(sort_param))
         
         return (sort_by, sec_pos)
     

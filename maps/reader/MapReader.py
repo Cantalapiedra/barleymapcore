@@ -10,6 +10,7 @@ import sys
 from MapFiles import MapFile, ChromosomesFile
 
 from barleymapcore.maps.MapsBase import MapTypes
+from barleymapcore.maps.MappingResults import MappingResult
 
 from barleymapcore.db.MapsConfig import MapsConfig
 
@@ -58,6 +59,51 @@ class MapReader(object):
                 chrom_dict[chrom_name] = chrom_order
         
         return chrom_dict
+    
+    ## Reads a complete Map file and translates it to a list of MappingResult
+    def read_as_mapping_results(self, map_file):
+        
+        mapping_results = []
+        
+        map_config = self.get_map_config()
+        map_has_cm_pos = map_config.has_cm_pos()
+        map_has_bp_pos = map_config.has_bp_pos()
+        
+        chrom_dict = self.get_chrom_dict()
+        
+        for map_line in open(map_file, 'r'):
+            map_record = map_line.strip().split()
+            map_line_contig = map_record[MapFile.MAP_FILE_CONTIG]
+            map_line_chr = map_record[MapFile.MAP_FILE_CHR]
+            chrom_order = chrom_dict[map_line_chr]
+            #map_line_pos = map_record[sort_by]#float(map_record[sort_by])
+            
+            if map_has_cm_pos and map_has_bp_pos:
+                map_cm_pos = map_record[MapFile.MAP_FILE_CM]
+                map_cm_end_pos = map_cm_pos
+                map_bp_pos = map_record[MapFile.MAP_FILE_BP]
+                map_bp_end_pos = map_bp_pos
+            elif map_has_cm_pos:
+                map_cm_pos = map_record[MapFile.MAP_FILE_CM]
+                map_cm_end_pos = map_cm_pos
+                map_bp_pos = -1
+                map_bp_end_pos = -1
+            elif map_has_bp_pos:
+                map_bp_pos = map_record[MapFile.MAP_FILE_CM] # MAP_FILE_CM because is column 2
+                map_bp_end_pos = map_bp_pos
+            
+            strand = "."
+            has_multiple_pos = False # This could be computed from a dict of map_line_contig
+            has_other_alignments = False
+            map_name = map_config.get_name()
+            
+            mapping_result = MappingResult(map_line_contig, map_line_chr, chrom_order,
+                                            map_cm_pos, map_cm_end_pos, map_bp_pos, map_bp_end_pos, strand,
+                                            has_multiple_pos, has_other_alignments, map_name)
+            
+            mapping_results.append(mapping_result)
+        
+        return mapping_results
     
     def obtain_map_positions(self, contig_set):#, filter_results = True):
         #

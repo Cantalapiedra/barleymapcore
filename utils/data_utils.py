@@ -9,17 +9,17 @@ import sys
 
 from barleymapcore.m2p_exception import m2pException
 
-def read_paths(config_file_path): # TODO pass this to utils package
+def read_paths(config_file_path, verbose = False): # TODO pass this to utils package
     config_path_dict = {}
     
-    sys.stderr.write("Reading paths from config file...\n")
+    if verbose: sys.stderr.write("Reading paths from config file...\n")
     
     for config_line in open(config_file_path, 'r'):
         if config_line.startswith("#"): continue
         config_data = config_line.strip().split(" ")
         config_path_dict[config_data[0]] = config_data[1]
     
-    sys.stderr.write("Config file read.\n")
+    if verbose: sys.stderr.write("Config file read.\n")
     
     return config_path_dict
 

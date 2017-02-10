@@ -227,25 +227,25 @@ class OutputPrinter(object):
             if not (show_genes or show_markers):
                 ########## OUTPUT FOR ONLY MAP
                 
-                self.print_map(mapping_results, map_config, multiple_param)
+                self.print_map(mapping_results.get_mapped(), map_config, multiple_param)
             
             elif show_genes:
                 ########## OUTPUT FOR MAP WITH GENES IF REQUESTED
                 
-                self.print_map_with_genes(mapping_results, map_config, multiple_param, load_annot, annotator)
+                self.print_map_with_genes(mapping_results.get_map_with_genes(), map_config, multiple_param, load_annot, annotator)
             
             elif show_markers:
                 ########### OUTPUT FOR MAP WITH MARKERS
                 
-                self.print_map_with_markers(mapping_results, map_config, multiple_param)
+                self.print_map_with_markers(mapping_results.get_map_with_markers(), map_config, multiple_param)
                 
             # else: this could never happen!?
             
             if show_unmapped:
-                self.print_unmapped(mapping_results, map_config)
+                self.print_unmapped(mapping_results.get_unmapped(), map_config)
                 
             if show_unaligned:
-                self.print_unaligned(mapping_results, map_config)
+                self.print_unaligned(mapping_results.get_unaligned(), map_config)
         
         ######
     
@@ -275,7 +275,7 @@ class OutputPrinter(object):
             self._output_desc.write("#"+"\t".join(headers_row)+"\n")
         
         ## Rows
-        positions = mapping_results.get_mapped()
+        positions = mapping_results#.get_mapped()
         for pos in positions:
             current_row = self.output_base_pos(pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
             
@@ -297,7 +297,7 @@ class OutputPrinter(object):
         self._print_map_header(map_name, map_title)
         
         map_as_physical = map_config.as_physical()
-        map_sort_by = mapping_results.get_sort_by()
+        #map_sort_by = mapping_results.get_sort_by()
         map_has_cm_pos = map_config.has_cm_pos()
         map_has_bp_pos = map_config.has_bp_pos()
         
@@ -310,7 +310,7 @@ class OutputPrinter(object):
             self._output_desc.write("#"+"\t".join(headers_row)+"\n")
         
         ## Rows
-        positions = mapping_results.get_map_with_genes()
+        positions = mapping_results#.get_map_with_genes()
         for pos in positions:
             
             current_row = self.output_features_pos(pos, map_as_physical, map_has_cm_pos, map_has_bp_pos,
@@ -334,7 +334,7 @@ class OutputPrinter(object):
         self._print_map_header(map_name, map_title)
         
         map_as_physical = map_config.as_physical()
-        map_sort_by = mapping_results.get_sort_by()
+        #map_sort_by = mapping_results.get_sort_by()
         map_has_cm_pos = map_config.has_cm_pos()
         map_has_bp_pos = map_config.has_bp_pos()
         
@@ -346,7 +346,7 @@ class OutputPrinter(object):
             self._output_desc.write("#"+"\t".join(headers_row)+"\n")
         
         ## Rows
-        positions = mapping_results.get_map_with_markers()
+        positions = mapping_results#.get_map_with_markers()
         for pos in positions:
             
             current_row = self.output_features_pos(pos, map_as_physical, map_has_cm_pos, map_has_bp_pos,
@@ -375,7 +375,7 @@ class OutputPrinter(object):
             map_title = UNMAPPED_TITLE
             self._print_map_header(map_name, map_title)
             
-            unmapped_records = mapping_results.get_unmapped()
+            unmapped_records = mapping_results#.get_unmapped()
             if unmapped_records != None: # those obtained from mapping results have no unmapped records
                 self._output_unmapped(unmapped_records)
         
@@ -407,7 +407,7 @@ class OutputPrinter(object):
         map_title = UNALIGNED_TITLE
         self._print_map_header(map_name, map_title)
         
-        unaligned_records = mapping_results.get_unaligned()
+        unaligned_records = mapping_results#.get_unaligned()
         self._output_unaligned(unaligned_records)
         
         return
@@ -516,8 +516,9 @@ class ExpandedPrinter(OutputPrinter):
     
     def output_features_header(self, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param, load_annot = False, annotator = None):
         
-        #headers_row = []
-        headers_row = self.output_base_header(map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
+        headers_row = ["Row_type"]
+        base_headers_row = self.output_base_header(map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
+        headers_row.extend(base_headers_row)
         
         headers_row.append(MapHeaders.FEATURE_HEADERS[GenesFields.GENES_ID_POS])
         #headers_row.append(MapHeaders.FEATURE_HEADERS[GenesFields.GENES_TYPE_POS])
@@ -550,11 +551,13 @@ class ExpandedPrinter(OutputPrinter):
                             load_annot = False, annotator = None):
         
         #current_row = []
-        current_row = self.output_base_pos(pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
+        feature = pos.get_feature()
+        current_row = [feature.get_row_type()]
+        base_row = self.output_base_pos(pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
+        current_row.extend(base_row)
         
         feature_data = []
         
-        feature = pos.get_feature()
         feature_data.append(feature.get_feature_id())
         #feature_data.append(feature.get_feature_type())
         feature_data.append(feature.get_dataset_name())
@@ -564,22 +567,6 @@ class ExpandedPrinter(OutputPrinter):
             feature_data.append(str(feature.get_bp_pos()))
             feature_data.append(str(feature.get_bp_end_pos()))
         else:
-            #if map_has_cm_pos and map_has_bp_pos:
-            #    if map_sort_by == MapTypes.MAP_SORT_PARAM_CM:
-            #        feature_cm = feature.get_cm_pos()
-            #        if feature_cm != "-":
-            #            if self._beauty_nums:
-            #                cm_pos = str("%0.2f" % float(feature_cm))
-            #            else:
-            #                cm_pos = feature_cm
-            #        else:
-            #            cm_pos = feature_cm
-            #        feature_data.append(cm_pos)
-            #    elif map_sort_by == MapTypes.MAP_SORT_PARAM_BP:
-            #        feature_data.append(str(feature.get_bp_pos()))
-            #    else:
-            #        raise m2pException("Unrecognized sort by "+map_sort_by+".")
-            #
             if map_has_cm_pos:
                 feature_cm = feature.get_cm_pos()
                 if feature_cm != "-":
@@ -622,8 +609,9 @@ class ExpandedPrinter(OutputPrinter):
 class CollapsedPrinter(OutputPrinter):
     def output_features_header(self, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param, load_annot = False, annotator = None):
         
-        #headers_row = []
-        headers_row = self.output_base_header(map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
+        headers_row = ["Row_type"]
+        base_headers_row = self.output_base_header(map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
+        headers_row.extend(base_headers_row)
         
         if load_annot:
             anntypes_config = annotator.get_anntypes_config()
@@ -640,9 +628,9 @@ class CollapsedPrinter(OutputPrinter):
     def output_features_pos(self, pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param,
                             load_annot = False, annotator = None):
         
-        #current_row = []
-        current_row = self.output_base_pos(pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
-        
+        current_row = [pos.get_row_type()]
+        base_row = self.output_base_pos(pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
+        current_row.extend(base_row)
         feature_data = []
         
         feature_type = pos.get_feature_type()

@@ -19,13 +19,13 @@ class FeaturesFactory(object):
         
         if feature_type == DatasetsConfig.DATASET_TYPE_GENETIC_MARKER:
             
-            feature = FeatureMapping(marker_id, dataset_id, dataset_name,
-                                     feature_type, mapping_result)
+            feature = MarkerMapping(marker_id, dataset_id, dataset_name,
+                                     feature_type, mapping_result, FeatureMapping.ROW_TYPE_ENRICHMENT)
             
         elif feature_type == DatasetsConfig.DATASET_TYPE_GENE:
             
             feature = GeneMapping(marker_id, dataset_id, dataset_name,
-                                    feature_type, mapping_result, annots = [])
+                                    feature_type, mapping_result, FeatureMapping.ROW_TYPE_ENRICHMENT, annots = [])
             
         else:
             raise m2pException("Unrecognized feature type "+str(feature_type)+".")
@@ -38,7 +38,7 @@ class FeaturesFactory(object):
         
         if feature_type == DatasetsConfig.DATASET_TYPE_GENETIC_MARKER:
             
-            feature = FeatureMapping.get_empty()
+            feature = MarkerMapping.get_empty()
             
         elif feature_type == DatasetsConfig.DATASET_TYPE_GENE:
             
@@ -48,7 +48,6 @@ class FeaturesFactory(object):
             raise m2pException("Unrecognized feature type "+str(feature_type)+".")
         
         return feature
-    
 
 # This is a class with features which can be attached to
 # a MappingResult, including genes or markers in the same position, etc.
@@ -58,15 +57,20 @@ class FeatureMapping(MappingResult):
     _dataset_name = ""
     _feature_type = "" # genetic_marker, gene, ... see DatasetsConfig
     _mapping_result = None # MappingResult object
+    _row_type = ""
     _empty = False
     
+    ROW_TYPE_MAPPING_RESULT = "+"
+    ROW_TYPE_ENRICHMENT = "."
+    
     def __init__(self, feature_id, dataset_id, dataset_name,
-                 feature_type, mapping_result, empty = False):
+                 feature_type, mapping_result, row_type = ROW_TYPE_MAPPING_RESULT, empty = False):
         self._feature_id = feature_id
         self._dataset_id = dataset_id
         self._dataset_name = dataset_name
         self._feature_type = feature_type
         self._mapping_result = mapping_result
+        self._row_type = ROW_TYPE_MAPPING_RESULT
         self._empty = empty
     
     def clone(self):
@@ -75,19 +79,20 @@ class FeatureMapping(MappingResult):
                             self.get_dataset_name(),
                             self.get_feature_type(),
                             self.get_mapping_result(),
+                            self.get_row_type(),
                             self.is_empty())
         
         return new
     
     def __str__(self):
         return " - ".join([self._feature_id, self._dataset_id, self._dataset_name,
-                           str(self._feature_type), str(self.get_mapping_result()), str(self._empty)])
+                           str(self._feature_type), str(self.get_mapping_result()), str(self._row_type), str(self._empty)])
     
     # An empty FeatureMapping is used in enriched maps
     # for those mapping positions without features associated
     @staticmethod
     def get_empty():
-        return FeatureMapping("-", "-", "-", "-", MappingResult.get_empty(), empty = True)
+        return FeatureMapping("-", "-", "-", "-", MappingResult.get_empty(), FeatureMapping.ROW_TYPE_MAPPING_RESULT, empty = True)
     
     def is_empty(self):
         return self._empty
@@ -112,6 +117,12 @@ class FeatureMapping(MappingResult):
     
     def get_feature_type(self):
         return self._feature_type
+    
+    def get_row_type(self):
+        return self._row_type
+    
+    def set_row_type(self, row_type):
+        self._row_type = row_type
     
     ########## MappingResult methods
     def get_marker_id(self):
@@ -160,19 +171,24 @@ class FeatureMapping(MappingResult):
         return self._mapping_result.get_sort_end_sec_pos(sort_by)
     
     ##############################
-
+# Prototype: currently not used
 class MarkerMapping(FeatureMapping):
-    _classes = [] # 'T', 'A'
-    _classes_genotypes = {} # 'T':Morex,..., 'A':Barke,...
-    _marker_type = "" # SNP, indel, ...
+    # An empty MarkerMapping is used in enriched maps
+    # for those mapping positions without features associated
+    @staticmethod
+    def get_empty():
+        return MarkerMapping("-", "-", "-", "-", MappingResult.get_empty(), FeatureMapping.ROW_TYPE_MAPPING_RESULT, empty = True)
     
-    _genes_hits = []
-    
-    def set_marker_type(self, marker_type):
-        self._marker_type = marker_type
-    
-    def get_marker_type(self):
-        return self._marker_type
+    def clone(self):
+        new = MarkerMapping(self.get_feature_id(),
+                            self.get_dataset_id(),
+                            self.get_dataset_name(),
+                            self.get_feature_type(),
+                            self.get_mapping_result(),
+                            self.get_row_type(),
+                            self.is_empty())
+        
+        return new
 
 ## This is a FeatureMapping
 ## which in addition can hold several anotations (see GenesAnnotator)
@@ -180,12 +196,14 @@ class GeneMapping(FeatureMapping):
     _annots = []
     
     def __init__(self, feature_id, dataset_id, dataset_name,
-                 feature_type, mapping_result, empty = False, annots = []):
+                 feature_type, mapping_result, row_type = FeatureMapping.ROW_TYPE_ENRICHMENT,
+                 empty = False, annots = []):
         self._feature_id = feature_id
         self._dataset_id = dataset_id
         self._dataset_name = dataset_name
         self._feature_type = feature_type
         self._mapping_result = mapping_result
+        self._row_type = row_type
         self._empty = empty
         self._annots = annots
     
@@ -195,6 +213,7 @@ class GeneMapping(FeatureMapping):
                             self.get_dataset_name(),
                             self.get_feature_type(),
                             self.get_mapping_result(),
+                            self.get_row_type(),
                             self.is_empty(),
                             self.get_annots())
         
@@ -202,7 +221,7 @@ class GeneMapping(FeatureMapping):
     
     def __str__(self):
         retvalue = " - ".join([self._feature_id, self._dataset_id, self._dataset_name,
-                           str(self._feature_type), str(self.get_mapping_result()), str(self._empty)])
+                           str(self._feature_type), str(self.get_mapping_result()), str(self._row_type), str(self._empty)])
         
         # Annotations
         if len(self._annots)>0:
@@ -214,7 +233,7 @@ class GeneMapping(FeatureMapping):
     # for those mapping positions without features associated
     @staticmethod
     def get_empty():
-        return GeneMapping("-", "-", "-", "-", MappingResult.get_empty(), empty = True, annots = [])
+        return GeneMapping("-", "-", "-", "-", MappingResult.get_empty(), FeatureMapping.ROW_TYPE_MAPPING_RESULT, empty = True, annots = [])
     
     def get_annots(self):
         return self._annots

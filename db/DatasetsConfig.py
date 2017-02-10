@@ -73,6 +73,7 @@ class DatasetsConfig(object):
     FILE_TYPE_FNA = "fna"
     FILE_TYPE_GTF = "gtf"
     FILE_TYPE_BED = "bed"
+    FILE_TYPE_MAP = "map"
     FILE_TYPE_GFF3 = "gff3"
     #FILE_TYPE_OTHER = "other"
     
