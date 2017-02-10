@@ -238,6 +238,7 @@ class MappingResults(object):
     
     _map_with_genes = None
     _map_with_markers = None
+    _map_with_anchored = None
     
     def __init__(self):
         return
@@ -292,5 +293,11 @@ class MappingResults(object):
     
     def get_map_with_markers(self):
         return self._map_with_markers
+    
+    def set_map_with_anchored(self, map_with_anchored):
+        self._map_with_anchored = map_with_anchored
+    
+    def get_map_with_anchored(self):
+        return self._map_with_anchored
     
 ## END

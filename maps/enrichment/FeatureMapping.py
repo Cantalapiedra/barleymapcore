@@ -7,6 +7,7 @@
 
 from barleymapcore.db.DatasetsConfig import DatasetsConfig
 from barleymapcore.maps.MappingResults import MappingResult
+from barleymapcore.m2p_exception import m2pException
 
 ## A class to create new FeatureMapping objects
 ## depending on feature_type (genetic_marker, gene, ...)
@@ -27,6 +28,11 @@ class FeaturesFactory(object):
             feature = GeneMapping(marker_id, dataset_id, dataset_name,
                                     feature_type, mapping_result, FeatureMapping.ROW_TYPE_ENRICHMENT, annots = [])
             
+        elif feature_type == DatasetsConfig.DATASET_TYPE_ANCHORED:
+            
+            feature = AnchoredMapping(marker_id, dataset_id, dataset_name,
+                                      feature_type, mapping_result, FeatureMapping.ROW_TYPE_ENRICHMENT)
+            
         else:
             raise m2pException("Unrecognized feature type "+str(feature_type)+".")
         
@@ -43,6 +49,10 @@ class FeaturesFactory(object):
         elif feature_type == DatasetsConfig.DATASET_TYPE_GENE:
             
             feature = GeneMapping.get_empty()
+            
+        elif feature_type == DatasetsConfig.DATASET_TYPE_ANCHORED:
+            
+            feature = AnchoredMapping.get_empty()
             
         else:
             raise m2pException("Unrecognized feature type "+str(feature_type)+".")
@@ -70,7 +80,7 @@ class FeatureMapping(MappingResult):
         self._dataset_name = dataset_name
         self._feature_type = feature_type
         self._mapping_result = mapping_result
-        self._row_type = ROW_TYPE_MAPPING_RESULT
+        self._row_type = row_type
         self._empty = empty
     
     def clone(self):
@@ -170,9 +180,28 @@ class FeatureMapping(MappingResult):
     def get_sort_end_sec_pos(self, sort_by):
         return self._mapping_result.get_sort_end_sec_pos(sort_by)
     
-    ##############################
-# Prototype: currently not used
+##############################
+#
 class MarkerMapping(FeatureMapping):
+    # An empty MarkerMapping is used in enriched maps
+    # for those mapping positions without features associated
+    @staticmethod
+    def get_empty():
+        return MarkerMapping("-", "-", "-", "-", MappingResult.get_empty(), FeatureMapping.ROW_TYPE_MAPPING_RESULT, empty = True)
+    
+    def clone(self):
+        new = MarkerMapping(self.get_feature_id(),
+                            self.get_dataset_id(),
+                            self.get_dataset_name(),
+                            self.get_feature_type(),
+                            self.get_mapping_result(),
+                            self.get_row_type(),
+                            self.is_empty())
+        
+        return new
+
+#
+class AnchoredMapping(FeatureMapping):
     # An empty MarkerMapping is used in enriched maps
     # for those mapping positions without features associated
     @staticmethod

@@ -11,6 +11,7 @@ from SearchEngines import SearchEnginesFactory
 from reader.MapReader import MapReader
 from mappers.Mappers import Mappers
 from enrichment.MapEnricher import MapEnricher
+from enrichment.Enrichers import EnricherFactory
 
 from barleymapcore.datasets.DatasetsFacade import DatasetsFacade
 from barleymapcore.alignment.AlignmentResult import *
@@ -80,26 +81,6 @@ class MapMarkers(object):
         
         self._mapping_results = mapping_results
         
-        ############# Perform alignments
-        ## Perform alignments
-        ## TODO: avoid aligning to the same DB as one of a previous map
-        ## this "TODO" would need to handle correctly best_score and hierarchical
-        #facade.perform_alignment(query_fasta_path, databases_ids, hierarchical, query_mode,
-        #                                   threshold_id, threshold_cov, n_threads, \
-        #                                   best_score)
-        #
-        #results = facade.get_alignment_results()
-        #unaligned = facade.get_alignment_unmapped()  
-        #
-        ############# MAPS
-        #mapMarkers = MapMarkers(maps_path, map_config, verbose_param)
-        #
-        #mapMarkers.create_map(results, unaligned, sort_by, multiple_param)
-        #
-        ## enrichment (OLD)
-        #
-        #mapping_results = mapMarkers.get_mapping_results()
-        
         return mapping_results
     
     ### Create a map from AlignmentResult list
@@ -122,91 +103,93 @@ class MapMarkers(object):
         return
     
     #
-    def enrichment(self, annotator, show_markers, show_genes, datasets_facade, extend_window, collapsed_view, constrain_fine_mapping = False):
-        if show_markers and not show_genes:
+    def enrichment(self, annotator, show_markers, show_genes, show_anchored,
+                   datasets_facade, extend_window, collapsed_view, constrain_fine_mapping = False):
+        
+        if not (show_genes or show_markers or show_anchored): return
+        
+        sys.stderr.write("MapMarkers: adding features...\n")
+        
+        # 1) Choose enricher flavour
+        if show_anchored:
             
-            # Enrich with markers
-            self.enrich_with_markers(datasets_facade, extend_window,
-                                            collapsed_view, constrain_fine_mapping)
+            enricher = EnricherFactory.get_anchored_enricher(self._mapReader)
             
-        ########### GENES
-        if show_genes:
+        elif show_genes:
             
-            # Enrich with genes
-            self.enrich_with_genes(datasets_facade, extend_window,
-                                         annotator, collapsed_view, constrain_fine_mapping)
+            enricher = EnricherFactory.get_gene_enricher(self._mapReader, annotator)
+            
+        elif show_markers:
+            
+            enricher = EnricherFactory.get_marker_enricher(self._mapReader)
+        
+        # 2) Obtain the map_enricher
+        
+        mapping_results = self.get_mapping_results()
+        
+        if not mapping_results: raise m2pException("MapMarkers: Map has not been initiallized.")
+        
+        sys.stderr.write("\tMap : "+self.get_map_config().get_name()+"\n")
+        
+        # Markers enrichment is limited to results from a single chromosome
+        # for example, in the web app
+        if constrain_fine_mapping:
+            fine_mapping = mapping_results.is_fine_mapping() # boolean: results from a single chromosome
+            if self._verbose: sys.stderr.write("\tFine mapping: "+str(fine_mapping)+"\n")
+            if not fine_mapping:
+                return
+        
+        map_enricher = MapEnricher(enricher, mapping_results, self._verbose)
+        
+        # 3) Load Map Data and translate it to intervals
+        
+        map_intervals = map_enricher.map_to_intervals(extend_window)
+        
+        # 4) Use those intervals to
+        #      obtain markers within those positions (map.as_physical)
+        #      obtain contigs within those positions and, afterwards, markers anchored to them (not map.as_physical)
+        # and add markers to the map
+        
+        enriched_map = map_enricher.enrich(map_intervals, datasets_facade, self._mapReader, collapsed_view)
+        
+        # 5) Update mapping results
+        if show_anchored:
+            
+            mapping_results.set_map_with_anchored(enriched_map)
+            
+        elif show_genes:
+            
+            mapping_results.set_map_with_genes(enriched_map)
+            
+        elif show_markers:
+            
+            mapping_results.set_map_with_markers(enriched_map)
+        
+        sys.stderr.write("MapMarkers: added other features.\n")
+        
+        return
+    
+    def enrich_with_anchored(self, datasets_facade, extend_window, \
+                            collapsed_view = False, constrain_fine_mapping = True):
+        
+        enrichment(self, None, False, False, True,
+                   datasets_facade, extend_window, collapsed_view, constrain_fine_mapping)
         
         return
     
     def enrich_with_markers(self, datasets_facade, extend_window, \
                             collapsed_view = False, constrain_fine_mapping = True):
         
-        sys.stderr.write("MapMarkers: adding other markers...\n")
-        
-        mapping_results = self.get_mapping_results()
-        
-        if not mapping_results: raise m2pException("MapMarkers: Map has not been initiallized.")
-        
-        sys.stderr.write("\tMap : "+self.get_map_config().get_name()+"\n")
-        
-        # Markers enrichment is limited to results from a single chromosome
-        # for example, in the web app
-        if constrain_fine_mapping:
-            fine_mapping = mapping_results.is_fine_mapping() # boolean: results from a single chromosome
-            if self._verbose: sys.stderr.write("\tFine mapping: "+str(fine_mapping)+"\n")
-            if not fine_mapping: return
-        
-        map_enricher = MapEnricher(mapping_results, self._verbose)
-        
-        ########## 1) Load Map Data and translate it to intervals
-        ##########
-        
-        map_intervals = map_enricher.map_to_intervals(extend_window)
-        
-        ########## 2) Use those intervals to
-        ##########      obtain markers within those positions (map.as_physical)
-        ##########      obtain contigs within those positions and, afterwards, markers anchored to them (not map.as_physical)
-        ########## and add markers to the map
-        
-        map_enricher.enrich_with_markers(map_intervals, datasets_facade, self._mapReader, collapsed_view)
-        
-        sys.stderr.write("MapMarkers: added other markers.\n")
+        enrichment(self, None, True, False, False,
+                   datasets_facade, extend_window, collapsed_view, constrain_fine_mapping)
         
         return
     
     def enrich_with_genes(self, datasets_facade, extend_window, \
                             annotator, collapsed_view = False, constrain_fine_mapping = True):
         
-        sys.stderr.write("MapMarkers: adding other genes...\n")
-        
-        mapping_results = self.get_mapping_results()
-        
-        if not mapping_results: raise m2pException("MapMarkers: Map has not been initiallized.")
-        
-        sys.stderr.write("\tMap : "+self.get_map_config().get_name()+"\n")
-        
-        # Markers enrichment is limited to results from a single chromosome
-        # for example, in the web app
-        if constrain_fine_mapping:
-            fine_mapping = mapping_results.is_fine_mapping() # boolean: results from a single chromosome
-            if self._verbose: sys.stderr.write("\tFine mapping: "+str(fine_mapping)+"\n")
-            if not fine_mapping: return
-        
-        map_enricher = MapEnricher(mapping_results, self._verbose)
-        
-        ########## 1) Load Map Data and translate it to intervals
-        ##########
-        
-        map_intervals = map_enricher.map_to_intervals(extend_window)
-        
-        ########## 2) Use those intervals to
-        ##########      obtain markers within those positions (map.as_physical)
-        ##########      obtain contigs within those positions and, afterwards, markers anchored to them (not map.as_physical)
-        ########## and add markers to the map
-        
-        map_enricher.enrich_with_genes(map_intervals, datasets_facade, self._mapReader, annotator, collapsed_view)
-        
-        sys.stderr.write("MapMarkers: added other markers.\n")
+        enrichment(self, annotator, False, True, False,
+                   datasets_facade, extend_window, collapsed_view, constrain_fine_mapping)
         
         return
 

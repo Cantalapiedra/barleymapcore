@@ -18,6 +18,7 @@ ROW_TYPE_BOTH = "both"
 
 ## Factory
 class EnricherFactory(object):
+    
     @staticmethod
     def get_marker_enricher(mapReader, verbose = False):
         return MarkerEnricher(mapReader, verbose)
@@ -26,6 +27,9 @@ class EnricherFactory(object):
     def get_gene_enricher(mapReader, load_annot, verbose = False):
         return GeneEnricher(mapReader, load_annot, verbose)
     
+    @staticmethod
+    def get_anchored_enricher(mapReader, verbose = False):
+        return AnchoredEnricher(mapReader, verbose)
 
 class Enricher(object):
     
@@ -230,6 +234,35 @@ class MarkerEnricher(Enricher):
     
     def get_enricher_type(self):
         return DatasetsConfig.DATASET_TYPE_GENETIC_MARKER
+
+class AnchoredEnricher(Enricher):
+    
+    def __init__(self, mapReader, verbose = False):
+        self._mapReader = mapReader
+        self._verbose = verbose
+        return
+    
+    def retrieve_features(self, map_config, map_intervals, datasets_facade, map_sort_by):
+        features = []
+        
+        sys.stderr.write("AnchoredEnricher: retrieve anchored features...\n")
+        
+        # 1) Obtain the translation to numeric chromosome (for sorting purposes)
+        # of chromosome names
+        chrom_dict = self._mapReader.get_chrom_dict()
+        
+        # 2) Obtain the markers in the intervals
+        #
+        features = datasets_facade.retrieve_features_by_pos(map_intervals, map_config, chrom_dict, map_sort_by,
+                                                           DatasetsConfig.DATASET_TYPE_ANCHORED)
+        
+        # 3) Sort the list by chrom and position
+        features = self.sort_features(features, map_sort_by)
+        
+        return features
+    
+    def get_enricher_type(self):
+        return DatasetsConfig.DATASET_TYPE_ANCHORED
     
 class GeneEnricher(Enricher):
     

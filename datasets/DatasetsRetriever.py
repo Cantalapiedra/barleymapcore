@@ -111,12 +111,11 @@ class DatasetsRetriever(object):
             if self._verbose:
                 sys.stderr.write("\t\t MAP: "+map_id+"\n")
                 sys.stderr.write("\t\t\t queries to search for: "+str(num_queries_left)+"\n")
-                sys.stderr.write("\t\t\t path: "+data_path+"[.hits]\n")
+                sys.stderr.write("\t\t\t path: "+data_path+"\n")
             
             ############ Retrieve dataset markers
             ############ either from mappings or from alignments
             data_mappings_path = data_path # mappings file
-            data_alignments_path = data_path+".hits" # alignments file
             
             if os.path.exists(data_mappings_path): # mapping results are available
                 
@@ -128,7 +127,8 @@ class DatasetsRetriever(object):
             ### THIS COULD BE IMPLEMENTED AGAIN
             ###
             #elif os.path.exists(data_alignments_path): # alignment results are available
-            #    
+            #
+            #    data_alignments_path = data_path+".hits" # alignments file
             #    alignments_parser = AlignmentsParser()
             #    map_results = alignments_parser.parse_alignments_file(temp_query_dict, data_alignments_path,
             #                                             dataset_synonyms, test_set)

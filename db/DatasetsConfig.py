@@ -67,6 +67,7 @@ class DatasetsConfig(object):
     # DATASET_TYPE values
     DATASET_TYPE_GENETIC_MARKER = "genetic_marker"
     DATASET_TYPE_GENE = "gene"
+    DATASET_TYPE_ANCHORED = "anchored"
     #DATASET_TYPE_OTHER = "other"
     
     # FILE_TYPE values

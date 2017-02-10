@@ -18,6 +18,7 @@ UNMAPPED_TITLE = "_Unmapped"
 UNALIGNED_TITLE = "_Unaligned"
 MAP_WITH_GENES_TITLE = "_with_genes"
 MAP_WITH_MARKERS_TITLE = "_with_markers"
+MAP_WITH_ANCHORED_TITLE = "_with_anchored_features"
 
 class MapHeaders(object):
     
@@ -218,13 +219,13 @@ class OutputPrinter(object):
     def output_features_pos(self, pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param, load_annot = False, annotator = None):
         raise m2pException("Method has to be implemented in child class inheriting from OutputPrinter")
     
-    def print_maps(self, maps_dict, show_genes, show_markers, show_unmapped, show_unaligned, multiple_param, load_annot, annotator):
+    def print_maps(self, maps_dict, show_genes, show_markers, show_anchored, show_unmapped, show_unaligned, multiple_param, load_annot, annotator):
         
         for map_id in maps_dict:
             mapping_results = maps_dict[map_id]
             map_config = mapping_results.get_map_config()
             
-            if not (show_genes or show_markers):
+            if not (show_genes or show_markers or show_anchored):
                 ########## OUTPUT FOR ONLY MAP
                 
                 self.print_map(mapping_results.get_mapped(), map_config, multiple_param)
@@ -238,6 +239,11 @@ class OutputPrinter(object):
                 ########### OUTPUT FOR MAP WITH MARKERS
                 
                 self.print_map_with_markers(mapping_results.get_map_with_markers(), map_config, multiple_param)
+                
+            elif show_anchored:
+                ########### OUTPUT FOR MAP WITH ANCHORED FEATURES
+                
+                self.print_map_with_anchored(mapping_results.get_map_with_anchored(), map_config, multiple_param)
                 
             # else: this could never happen!?
             
@@ -355,6 +361,42 @@ class OutputPrinter(object):
             self._output_desc.write("\t".join([str(x) for x in current_row])+"\n")
             
         sys.stderr.write("OutputFacade: map with markers printed.\n")
+        
+        if self._verbose: sys.stderr.write("\tlines printed "+str(len(positions))+"\n")
+        
+        return
+    
+    def print_map_with_anchored(self, mapping_results, map_config, multiple_param):
+        
+        map_name = map_config.get_name()
+        
+        sys.stderr.write("OutputFacade: creating output for map with anchored features "+str(map_name)+"\n")
+        
+        map_title = MAP_WITH_ANCHORED_TITLE
+        self._print_map_header(map_name, map_title)
+        
+        map_as_physical = map_config.as_physical()
+        #map_sort_by = mapping_results.get_sort_by()
+        map_has_cm_pos = map_config.has_cm_pos()
+        map_has_bp_pos = map_config.has_bp_pos()
+        
+        ## Header
+        if self._show_headers:
+            
+            headers_row = self.output_features_header(map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
+            
+            self._output_desc.write("#"+"\t".join(headers_row)+"\n")
+        
+        ## Rows
+        positions = mapping_results#.get_map_with_markers()
+        for pos in positions:
+            
+            current_row = self.output_features_pos(pos, map_as_physical, map_has_cm_pos, map_has_bp_pos,
+                                                    multiple_param)
+            
+            self._output_desc.write("\t".join([str(x) for x in current_row])+"\n")
+            
+        sys.stderr.write("OutputFacade: map with anchored features printed.\n")
         
         if self._verbose: sys.stderr.write("\tlines printed "+str(len(positions))+"\n")
         

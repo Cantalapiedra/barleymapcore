@@ -7,7 +7,7 @@
 
 import sys
 
-from Enrichers import *
+#from Enrichers import *
 
 from barleymapcore.maps.MapInterval import MapInterval
 from barleymapcore.maps.MapsBase import MapTypes
@@ -18,6 +18,7 @@ from barleymapcore.m2p_exception import m2pException
 ## with additional positional data
 class MapEnricher(object):
     
+    _enricher = None
     _mapping_results = None
     
     MAP_UNIT_PHYSICAL = 1 # 1 bp
@@ -26,7 +27,8 @@ class MapEnricher(object):
 
     _verbose = False
     
-    def __init__(self, mapping_results, verbose = False):
+    def __init__(self, enricher, mapping_results, verbose = False):
+        self._enricher = enricher
         self._mapping_results = mapping_results
         self._verbose = verbose
         
@@ -35,25 +37,71 @@ class MapEnricher(object):
     def get_mapping_results(self):
         return self._mapping_results
     
+    def enrich(self, map_intervals, datasets_facade, mapReader, collapsed_view):
+        
+        mapping_results = self.get_mapping_results()
+        map_config = mapping_results.get_map_config()
+        
+        # Obtain a physical- or anchored-map enricher
+        #enricher = EnricherFactory.get_anchored_enricher(mapReader)
+        
+        map_id = map_config.get_id()
+        map_sort_by = mapping_results.get_sort_by()
+        
+        ### Retrieve markers
+        sys.stderr.write("MapEnricher: retrieve anchored...\n")
+        features = self._enricher.retrieve_features(map_config, map_intervals, datasets_facade, map_sort_by)
+        if self._verbose: sys.stderr.write("\tanchored features retrieved: "+str(len(features))+"\n")
+        
+        ## Enrich map
+        sys.stderr.write("MapEnricher: enrich map...\n")
+        enriched_map = self._enricher.enrich(mapping_results, features, collapsed_view)
+        
+        return enriched_map
+    
+    def enrich_with_anchored(self, map_intervals, datasets_facade, mapReader, collapsed_view):
+        
+        mapping_results = self.get_mapping_results()
+        map_config = mapping_results.get_map_config()
+        
+        # Obtain a physical- or anchored-map enricher
+        #enricher = EnricherFactory.get_anchored_enricher(mapReader)
+        
+        map_id = map_config.get_id()
+        map_sort_by = mapping_results.get_sort_by()
+        
+        ### Retrieve markers
+        sys.stderr.write("MapEnricher: retrieve anchored...\n")
+        features = self._enricher.retrieve_features(map_config, map_intervals, datasets_facade, map_sort_by)
+        if self._verbose: sys.stderr.write("\tanchored features retrieved: "+str(len(features))+"\n")
+        
+        ## Enrich map
+        sys.stderr.write("MapEnricher: enrich map...\n")
+        enriched_map = self._enricher.enrich(mapping_results, features, collapsed_view)
+        
+        mapping_results.set_map_with_anchored(enriched_map)
+        
+        return
+    
     def enrich_with_markers(self, map_intervals, datasets_facade, mapReader, collapsed_view):
         
         mapping_results = self.get_mapping_results()
         map_config = mapping_results.get_map_config()
         
         # Obtain a physical- or anchored-map enricher
-        enricher = EnricherFactory.get_marker_enricher(mapReader)
+        #enricher = EnricherFactory.get_marker_enricher(mapReader)
         
         map_id = map_config.get_id()
         map_sort_by = mapping_results.get_sort_by()
         
         ### Retrieve markers
         sys.stderr.write("MapEnricher: retrieve markers...\n")
-        features = enricher.retrieve_features(map_config, map_intervals, datasets_facade, map_sort_by)
+        features = self._enricher.retrieve_features(map_config, map_intervals, datasets_facade, map_sort_by)
         if self._verbose: sys.stderr.write("\tmarkers retrieved: "+str(len(features))+"\n")
         
         ## Enrich map
         sys.stderr.write("MapEnricher: enrich map...\n")
-        enriched_map = enricher.enrich(mapping_results, features, collapsed_view)
+        enriched_map = self._enricher.enrich(mapping_results, features, collapsed_view)
         
         mapping_results.set_map_with_markers(enriched_map)
         
@@ -65,19 +113,19 @@ class MapEnricher(object):
         map_config = mapping_results.get_map_config()
         
         # Obtain a physical- or anchored-map enricher
-        enricher = EnricherFactory.get_gene_enricher(mapReader, annotator)
+        #enricher = EnricherFactory.get_gene_enricher(mapReader, annotator)
         
         map_id = map_config.get_id()
         map_sort_by = mapping_results.get_sort_by()
         
         ### Retrieve markers
         sys.stderr.write("MapEnricher: retrieve genes...\n")
-        features = enricher.retrieve_features(map_config, map_intervals, datasets_facade, map_sort_by)
+        features = self._enricher.retrieve_features(map_config, map_intervals, datasets_facade, map_sort_by)
         if self._verbose: sys.stderr.write("\tgenes retrieved: "+str(len(features))+"\n")
         
         ## Enrich map
         sys.stderr.write("MapEnricher: enrich map...\n")
-        enriched_map = enricher.enrich(mapping_results, features, collapsed_view)
+        enriched_map = self._enricher.enrich(mapping_results, features, collapsed_view)
         
         mapping_results.set_map_with_genes(enriched_map)
         
