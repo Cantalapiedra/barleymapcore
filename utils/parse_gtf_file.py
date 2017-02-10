@@ -66,7 +66,7 @@ def __bed_create_alignment_result(bed_data, db_list):
     alignment_result.set_subject_id(subject_id)
     alignment_result.set_local_position(start_pos)
     alignment_result.set_end_position(end_pos)
-    alignment_result.set_db_name(",".join(db_list))
+    alignment_result.set_db_id(",".join(db_list))
     alignment_result.set_algorithm("BEDfile")
     #alignment_result.set_strand("")
     
@@ -123,7 +123,7 @@ def __create_alignment_result(gtf_data, db_list, feature_type, file_type):
     alignment_result.set_strand(gtf_data[GTF_STRAND_COL])
     alignment_result.set_local_position(gtf_data[GTF_LOCAL_POSITION_COL])
     alignment_result.set_end_position(gtf_data[GTF_END_POSITION_COL])
-    alignment_result.set_db_name(",".join(db_list))
+    alignment_result.set_db_id(",".join(db_list))
     alignment_result.set_algorithm("GTF:"+gtf_data[GTF_ORIGIN_COL])
     
     return alignment_result

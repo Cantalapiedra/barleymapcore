@@ -102,22 +102,24 @@ class MapMarkers(object):
         
         return mapping_results
     
-    #def create_map(self, alignment_results, unaligned, sort_param, multiple_param):
-    #    
-    #    map_config = self.get_map_config()
-    #    
-    #    sys.stderr.write("MapMarkers: creating map: "+map_config.get_name()+"\n")
-    #    
-    #    map_as_physical = map_config.as_physical()
-    #    
-    #    mapper = Mappers.get_alignments_mapper(map_as_physical, self._mapReader, self._verbose)
-    #    
-    #    self._mapping_results = mapper.create_map(alignment_results, unaligned, map_config, sort_param, multiple_param)
-    #    
-    #    sys.stderr.write("MapMarkers: Map "+map_config.get_name()+" created.\n")
-    #    sys.stderr.write("\n")
-    #    
-    #    return
+    ### Create a map from AlignmentResult list
+    ### (do not remove, used in bmap_build_datasets.py)
+    def create_map(self, alignment_results, unaligned, sort_param, multiple_param):
+        
+        map_config = self.get_map_config()
+        
+        sys.stderr.write("MapMarkers: creating map: "+map_config.get_name()+"\n")
+        
+        map_as_physical = map_config.as_physical()
+        
+        mapper = Mappers.get_alignments_mapper(map_as_physical, self._mapReader, self._verbose)
+        
+        self._mapping_results = mapper.create_map(alignment_results, unaligned, map_config, sort_param, multiple_param)
+        
+        sys.stderr.write("MapMarkers: Map "+map_config.get_name()+" created.\n")
+        sys.stderr.write("\n")
+        
+        return
     
     #
     def enrichment(self, annotator, show_markers, show_genes, datasets_facade, extend_window, collapsed_view, constrain_fine_mapping = False):
