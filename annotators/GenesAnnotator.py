@@ -43,7 +43,7 @@ class GenesAnnotator(object):
     ## Filter out the dictionary of annotations (DatasetsAnnotation)
     ## to keep only those from the given dataset
     def get_dataset_annots(self, dataset_id):
-        dsannots = self._dsann_config.get_config_dict()
+        dsannots = self._dsann_config.get_dsann()
         dataset_annots = dict([(dsannot_id, dsannots[dsannot_id]) for dsannot_id in dsannots if dsannots[dsannot_id].get_dataset_id()==dataset_id])
         
         return dataset_annots

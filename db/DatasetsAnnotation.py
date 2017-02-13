@@ -82,10 +82,10 @@ class DatasetsAnnotation(object):
     def get_dsann_list(self):
         return self._config_list
     
-    def get_dsann(self, dsann_id):
-        return self.get_config_dict()[dsann_id]
+    def get_dsann_config(self, dsann_id):
+        return self.get_dsann()[dsann_id]
     
-    def get_config_dict(self):
+    def get_dsann(self):
         return self._config_dict
     
     

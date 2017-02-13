@@ -6,6 +6,7 @@
 # (terms of use can be found within the distributed LICENSE file).
 
 import sys
+from barleymapcore.m2p_exception import m2pException
 from barleymapcore.utils.data_utils import load_conf
 
 class DatasetConfig(object):
@@ -115,8 +116,11 @@ class DatasetsConfig(object):
             
             dataset = DatasetConfig(dataset_name, dataset_id, dataset_type, file_path, file_type, databases, synonyms)
             
-            self._config_dict[dataset_id] = dataset
-            self._config_list.append(dataset_id)
+            if dataset_id in self._config_dict:
+                raise m2pException("Duplicated dataset "+dataset_id+" in configuration file "+config_file+".")
+            else:
+                self._config_dict[dataset_id] = dataset
+                self._config_list.append(dataset_id)
         
         return
     
