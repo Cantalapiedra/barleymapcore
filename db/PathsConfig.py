@@ -80,7 +80,27 @@ class PathsConfig(object):
         self._stdalone_app = self._config_path_dict[self._STDALONE_APP]
         
         return
-
+    
+    def as_dict(self):
+        paths_config_dict = {self._APP_PATH:self.get_app_path(),
+                             self._GENMAP_PATH:self.get_genmap_path(),
+                             self._SPLIT_BLAST_PATH:self.get_split_blast_path(),
+                             self._TMP_FILES_PATH:self.get_tmp_files_path(),
+                             self._DATASETS_PATH:self.get_datasets_path(),
+                             self._MAPS_PATH:self.get_maps_path(),
+                             self._ANNOTATION_PATH:self.get_annot_path(),
+                             self._BLASTN_APP_PATH:self.get_blastn_app_path(),
+                             self._BLASTN_DBS_PATH:self.get_blastn_dbs_path(),
+                             self._GMAP_APP_PATH:self.get_gmap_app_path(),
+                             self._GMAP_DBS_PATH:self.get_gmap_dbs_path(),
+                             self._GMAPL_APP_PATH:self.get_gmapl_app_path(),
+                             self._HSBLASTN_APP_PATH:self.get_hsblastn_app_path(),
+                             self._HSBLASTN_DBS_PATH:self.get_hsblastn_dbs_path(),
+                             self._CITATION:self.get_citation(),
+                             self._STDALONE_APP:self.get_stdalone_app()}
+        
+        return paths_config_dict
+    
     def get_app_path(self):
         return self._app_path
     

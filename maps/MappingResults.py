@@ -117,8 +117,8 @@ class MappingResult(object):
             else:
                 raise m2pException("Map configuration is wrong: has not cm nor bp positions.")  
         
-        has_multiple_pos = mapping_data[pos_shift]
-        has_other_alignments = mapping_data[pos_shift + 1]
+        has_multiple_pos = True if mapping_data[pos_shift] == "Yes" or mapping_data[pos_shift] == True else False
+        has_other_alignments = True if mapping_data[pos_shift + 1] == "Yes" or mapping_data[pos_shift + 1] == True else False
         empty = False # a mapping result with data is not empty by definition
         
         return MappingResult(marker_id, chrom_name, chrom_order,

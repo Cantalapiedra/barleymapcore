@@ -134,6 +134,7 @@ class MapsConfig(object):
     _config_file = ""
     _verbose = False
     _config_dict = {} # dict with data from maps configuration file (default: conf/maps.conf)
+    _config_list = []
     
     def __init__(self, config_file, verbose = True):
         self._config_file = config_file
@@ -170,12 +171,16 @@ class MapsConfig(object):
                         map_physical, search_type, map_db_list, map_dir)
             
             self._config_dict[map_id] = map_config
+            self._config_list.append(map_id)
     
     def get_config_file(self):
         return self._config_file
     
     def get_maps(self):
         return self._config_dict
+    
+    def get_maps_list(self, ):
+        return self._config_list
     
     def get_map_config(self, map_id):        
         if map_id in self._config_dict:#self._config_dict:

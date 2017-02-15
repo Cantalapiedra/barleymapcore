@@ -79,7 +79,6 @@ class DatasetsRetriever(object):
             initial_num_queries += 1
         
         num_results = 0
-        map_results = []
         num_queries_left = initial_num_queries
         for dataset in dataset_list:
             sys.stderr.write("\t dataset: "+dataset+"\n")
@@ -117,12 +116,15 @@ class DatasetsRetriever(object):
             ############ either from mappings or from alignments
             data_mappings_path = data_path # mappings file
             
+            map_results = []
+            
             if os.path.exists(data_mappings_path): # mapping results are available
                 
                 mappings_parser = MappingsParser()
                 map_results = mappings_parser.parse_mapping_file(temp_query_dict, data_mappings_path, map_config, chrom_dict,
                                                       multiple_param, dataset_synonyms, test_set)
-                #retriever = MappingsRetriever(self._datasets_config, data_mappings_path, self._verbose)
+                
+                #retriever = MappingsRetriever(self._datasets_config, data_mappings_path, self._verbose)   
                 
             ### THIS COULD BE IMPLEMENTED AGAIN
             ###
