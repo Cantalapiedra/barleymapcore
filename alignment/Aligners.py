@@ -164,6 +164,8 @@ class GMAPAligner(BaseAligner):
         sys.stderr.write("GMAPAligner: DB --> "+str(db)+"\n")
         sys.stderr.write("GMAPAligner: to align "+str(len(fasta_headers))+"\n")
         
+        if self._verbose: sys.stderr.write("GMAPAligner: verbose\n")
+        
         # use GMAP or GMAPL
         if ref_type == REF_TYPE_STD:
             app_path = self._app_path

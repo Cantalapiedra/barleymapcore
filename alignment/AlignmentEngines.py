@@ -193,6 +193,8 @@ class GreedyEngine(AlignmentEngine):
         
         results = []
         
+        if self._verbose: sys.stderr.write("GreedyEngine: performing alignment...\n")
+        
         # Create a record for each DB
         for db in dbs_list:
             
@@ -229,6 +231,8 @@ class HierarchicalEngine(AlignmentEngine):
         fasta_to_align = query_fasta_path
         
         results = []
+        
+        if self._verbose: sys.stderr.write("HierarchicalEngine: performing alignment...\n")
         
         tmp_files_list = []
         tmp_files_dir = self._paths_config.get_tmp_files_path()
@@ -291,6 +295,8 @@ class BestScoreEngine(AlignmentEngine):
         fasta_to_align = query_fasta_path
         
         results = []
+        
+        if self._verbose: sys.stderr.write("BestScoreEngine: performing alignment...\n")
         
         # Create a record for each DB
         for db in dbs_list:
