@@ -60,7 +60,7 @@ def __split_blast(split_blast_path, blast_app_path, n_threads, query_fasta_path,
     if verbose:
         p = Popen(blast_cmd, shell=True, stdout=PIPE, stderr=sys.stderr)
     else:
-        p = Popen(blast_cmd, shell=True, stdout=PIPE, stderr=FNULL)
+        p = Popen(blast_cmd, shell=True, stdout=PIPE, stderr=PIPE)
     
     com_list = p.communicate()
     output = com_list[0]

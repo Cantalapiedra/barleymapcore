@@ -57,7 +57,7 @@ def __hs_blast(hsblastn_app_path, n_threads, query_fasta_path, hsblastn_dbs_path
     if verbose:
         p = Popen(blast_cmd, shell=True, stdout=PIPE, stderr=sys.stderr)
     else:
-        p = Popen(blast_cmd, shell=True, stdout=PIPE, stderr=FNULL)
+        p = Popen(blast_cmd, shell=True, stdout=PIPE, stderr=PIPE)
     
     com_list = p.communicate()
     output = com_list[0]

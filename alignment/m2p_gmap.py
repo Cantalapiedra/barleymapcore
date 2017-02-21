@@ -51,16 +51,16 @@ def __gmap(gmap_app_path, n_threads, threshold_id, threshold_cov, query_fasta_pa
     if verbose:
         p = Popen(gmap_cmd, shell=True, stdout=PIPE, stderr=sys.stderr)
     else:
-        p = Popen(gmap_cmd, shell=True, stdout=PIPE, stderr=FNULL)
+        p = Popen(gmap_cmd, shell=True, stdout=PIPE, stderr=PIPE)
     
     com_list = p.communicate()
     output = com_list[0]
     output_err = com_list[1]
     retValue = p.returncode
     
-    if retValue != 0: raise Exception("m2p_gmap: return != 0. "+gmap_cmd+"\n"+str(output_err)+"\n")
+    if retValue != 0: raise Exception("m2p_gmap: return != 0. "+gmap_cmd+"\nError: "+str(output_err)+"\nOutput: "+str(output)+"\n")
     
-    if verbose: sys.stderr.write("m2p_gmap: GMAP return value "+str(retValue)+"\n")
+    if verbose: sys.stderr.write("m2p_gmap: GMAP return value "+str(retValue)+"\n"+str(output_err)+"\n")
     
     results = __compress(output, db_name)
     
