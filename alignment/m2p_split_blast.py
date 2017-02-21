@@ -67,7 +67,12 @@ def __split_blast(split_blast_path, blast_app_path, n_threads, query_fasta_path,
     output_err = com_list[1]
     retValue = p.returncode
     
-    if retValue != 0: raise Exception("m2p_split_blast: Blast return != 0. "+blast_cmd+"\n"+str(output)+"\n"+str(output_err)+"\n")
+    if retValue != 0:
+        if verbose:
+            raise Exception("m2p_split_blast: Blast return != 0. "+blast_cmd+"\n"+str(output)+"\n")
+        else:
+            raise Exception("m2p_split_blast: Blast return != 0. "+blast_cmd+"\n"+str(output)+"\n"+str(output_err)+"\n")
+    
     if "error" in output or "Error" in output or "ERROR" in output:
         sys.stderr.write("m2p_split_blast: error in blast output. We will report 0 results for this alignment.\n")
         sys.stderr.write(output+"\n")

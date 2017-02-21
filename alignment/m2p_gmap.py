@@ -58,7 +58,11 @@ def __gmap(gmap_app_path, n_threads, threshold_id, threshold_cov, query_fasta_pa
     output_err = com_list[1]
     retValue = p.returncode
     
-    if retValue != 0: raise Exception("m2p_gmap: return != 0. "+gmap_cmd+"\nError: "+str(output_err)+"\nOutput: "+str(output)+"\n")
+    if retValue != 0:
+        if verbose:
+            raise Exception("m2p_gmap: return != 0. "+gmap_cmd+"\n")
+        else:
+            raise Exception("m2p_gmap: return != 0. "+gmap_cmd+"\nError: "+str(output_err)+"\n")
     
     if verbose: sys.stderr.write("m2p_gmap: GMAP return value "+str(retValue)+"\n"+str(output_err)+"\n")
     

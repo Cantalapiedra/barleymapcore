@@ -49,6 +49,7 @@ class AlignersFactory(object):
         # Which GMAP (gmap or gmapl) to use will be resolved later
         # once that ref_type of each given DB is obtained
         # or through ref_type_param when using DBs not configured (--databases-ids)
+        
         aligner = GMAPAligner(gmap_app_path, gmapl_app_path, n_threads, gmap_dbs_path, verbose)
         
         return aligner
@@ -151,7 +152,8 @@ class GMAPAligner(BaseAligner):
     
     _gmapl_app_path = None
     
-    def __init__(self, app_path, gmapl_app_path, n_threads, dbs_path, split_blast_path, verbose = False):
+    def __init__(self, app_path, gmapl_app_path, n_threads, dbs_path, verbose = False):
+        
         BaseAligner.__init__(self, app_path, n_threads, dbs_path, verbose)
         self._gmapl_app_path = gmapl_app_path
     
@@ -163,8 +165,6 @@ class GMAPAligner(BaseAligner):
         
         sys.stderr.write("GMAPAligner: DB --> "+str(db)+"\n")
         sys.stderr.write("GMAPAligner: to align "+str(len(fasta_headers))+"\n")
-        
-        if self._verbose: sys.stderr.write("GMAPAligner: verbose\n")
         
         # use GMAP or GMAPL
         if ref_type == REF_TYPE_STD:

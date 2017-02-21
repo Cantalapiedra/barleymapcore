@@ -64,7 +64,12 @@ def __hs_blast(hsblastn_app_path, n_threads, query_fasta_path, hsblastn_dbs_path
     output_err = com_list[1]
     retValue = p.returncode
     
-    if retValue != 0: raise Exception(os.path.basename(__file__)+": HS-Blastn return != 0. "+blast_cmd+"\n"+str(output)+"\n"+str(output_err)+"\n")
+    if retValue != 0:
+        if verbose:
+            raise Exception(os.path.basename(__file__)+": HS-Blastn return != 0. "+blast_cmd+"\n"+str(output)+"\n")
+        else:
+            raise Exception(os.path.basename(__file__)+": HS-Blastn return != 0. "+blast_cmd+"\n"+str(output)+"\n"+str(output_err)+"\n")
+    
     if "error" in output or "Error" in output or "ERROR" in output:
         sys.stderr.write("m2p_hs_blast: error in hs-blastn output. We will report 0 results for this alignment.\n")
         sys.stderr.write(output+"\n")
