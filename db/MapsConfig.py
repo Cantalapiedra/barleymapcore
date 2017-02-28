@@ -193,13 +193,13 @@ class MapsConfig(object):
     def get_maps_names(self, maps_ids):
         maps_names = []
         
-        for map_ids in maps_ids:
-            if map_ids in self._config_dict:
+        for map_id in maps_ids:
+            if map_id in self._config_dict:
                 map_config = self.get_map_config(map_id)
                 maps_names.append(map_config.get_name())
             else:
                 sys.stderr.write("MapsConfig: map ID "+database+" not found in config.\n")
-                maps_names.append(map_ids)
+                maps_names.append(map_id)
         
         return maps_names
     
