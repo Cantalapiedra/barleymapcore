@@ -11,7 +11,6 @@ from barleymapcore.db.ConfigBase import ConfigBase
 class PathsConfig(object):
     
     _config_path_dict = None
-    _verbose = False
     
     # Keys in config file
     _APP_PATH = "app_path"
@@ -54,9 +53,8 @@ class PathsConfig(object):
     _citation = ""
     _stdalone_app = ""
     
-    def __init__(self, app_abs_path, verbose = False):
-        self._verbose = verbose
-        self.load_config(app_abs_path)
+    def __init__(self):
+        return
     
     def load_config(self, app_abs_path):
         paths_conf_file = app_abs_path+"/"+ConfigBase.PATHS_CONF
@@ -100,6 +98,30 @@ class PathsConfig(object):
                              self._STDALONE_APP:self.get_stdalone_app()}
         
         return paths_config_dict
+    
+    @staticmethod
+    def from_dict(config_path_dict):
+        
+        paths_config = PathsConfig()
+        
+        paths_config._app_path = config_path_dict[paths_config._APP_PATH]
+        paths_config._genmap_path = config_path_dict[paths_config._GENMAP_PATH]
+        paths_config._split_blast_path = config_path_dict[paths_config._SPLIT_BLAST_PATH]
+        paths_config._tmp_files_path = config_path_dict[paths_config._TMP_FILES_PATH]
+        paths_config._datasets_path = config_path_dict[paths_config._DATASETS_PATH]
+        paths_config._maps_path = config_path_dict[paths_config._MAPS_PATH]
+        paths_config._annot_path = config_path_dict[paths_config._ANNOTATION_PATH]
+        paths_config._blastn_app_path = config_path_dict[paths_config._BLASTN_APP_PATH]
+        paths_config._blastn_dbs_path = config_path_dict[paths_config._BLASTN_DBS_PATH]
+        paths_config._gmap_app_path = config_path_dict[paths_config._GMAP_APP_PATH]
+        paths_config._gmap_dbs_path = config_path_dict[paths_config._GMAP_DBS_PATH]
+        paths_config._gmapl_app_path = config_path_dict[paths_config._GMAPL_APP_PATH]
+        paths_config._hsblastn_app_path = config_path_dict[paths_config._HSBLASTN_APP_PATH]
+        paths_config._hsblastn_dbs_path = config_path_dict[paths_config._HSBLASTN_DBS_PATH]
+        paths_config._citation = config_path_dict[paths_config._CITATION]
+        paths_config._stdalone_app = config_path_dict[paths_config._STDALONE_APP]
+        
+        return paths_config
     
     def get_app_path(self):
         return self._app_path
