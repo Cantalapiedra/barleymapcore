@@ -87,6 +87,8 @@ class SearchEngineDatasets(SearchEngine):
         
         mapping_results = mapper.create_map(mapping_results, mapping_unmapped, map_config, sort_param)
         
+        sys.stderr.write("SearchEngineDatasets:"+str(len(mapping_results.get_mapped()))+"\n")
+        
         return mapping_results
 
 class SearchEngineAlignments(SearchEngine):
@@ -116,6 +118,8 @@ class SearchEngineGreedy(SearchEngineAlignments):
         alignment_results = facade.perform_alignment(query_path, query_sets_ids, self._databases_config, self._alignment_type, self._aligner_list, \
                                 self._threshold_id, self._threshold_cov, self._n_threads)
         
+        sys.stderr.write("SearchEngineGreedy: aligned "+str(len(alignment_results.get_aligned()))+"\n")
+        
         aligned = alignment_results.get_aligned()
         unaligned = alignment_results.get_unaligned()
         
@@ -126,6 +130,8 @@ class SearchEngineGreedy(SearchEngineAlignments):
         mapper = Mappers.get_alignments_mapper(map_as_physical, map_reader, self._verbose)
         
         mapping_results = mapper.create_map(aligned, unaligned, map_config, sort_param, multiple_param)
+        
+        sys.stderr.write("SearchEngineGreedy: mapped "+str(len(mapping_results.get_mapped()))+"\n")
         
         return mapping_results
 
@@ -150,13 +156,19 @@ class SearchEngineExhaustive(SearchEngineAlignments):
                                                              self._databases_config, self._alignment_type, self._aligner_list, \
                                                                 self._threshold_id, self._threshold_cov, self._n_threads)
                 
+                sys.stderr.write("SearchEngineExhaustive: aligned "+str(len(alignment_results.get_aligned()))+"\n")
+                
                 aligned = alignment_results.get_aligned()
                 unaligned = alignment_results.get_unaligned()
                 
                 mapping_results = mapper.create_map(aligned, unaligned, map_config, sort_param, multiple_param)
                 
+                sys.stderr.write("SearchEngineExhaustive: mapped "+str(len(mapping_results.get_mapped()))+"\n")
+                
                 if prev_mapping_results:
                     mapping_results.extend(prev_mapping_results)
+                
+                sys.stderr.write("\toverall:"+str(len(mapping_results.get_mapped()))+"\n")
                 
                 unique_unmapped = set([record[0] for record in mapping_results.get_unmapped()])
                 num_unmapped = len(unique_unmapped)

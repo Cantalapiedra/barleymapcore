@@ -63,16 +63,18 @@ class AlignersFactory(object):
         tmp_files_dir = paths_config.get_tmp_files_path()
         
         if len(aligner_list) > 1:
-            aligner_list = []
+            aligners = []
+            
             for aligner_name in aligner_list:
                 
                 try:
-                    aligner = AlignersFactor.get_aligner([aligner_name], n_threads, paths_config, verbose)
-                    aligner_list.append(aligner)
+                    aligner = AlignersFactory.get_aligner([aligner_name], n_threads, paths_config, verbose)
+                    aligners.append(aligner)
+                    
                 except m2pException:
                     sys.stderr.write("WARNING: exception obtaining "+aligner_name+".\nSkipping to next aligner.\n")
                 
-            aligner = ListAligner(aligner_list, tmp_files_dir)
+            aligner = ListAligner(aligners, tmp_files_dir)
             
         else:
             aligner_name = aligner_list[0]
@@ -239,15 +241,17 @@ class ListAligner(BaseAligner):
                 if self._verbose: sys.stderr.write("ListAligner: "+str(aligner)+"\n")
                 
                 try:
-                    aligner.align(prev_aligner_to_align, db, threshold_id, threshold_cov)
+                    aligner.align(prev_aligner_to_align, db, ref_type, threshold_id, threshold_cov)
                 except m2pException as m2pe:
                     sys.stderr.write("\t"+m2pe.msg+"\n")
                     sys.stderr.write("\tContinuing with next aligner...\n")
                     continue
                 
-                prev_aligner_to_align = alignment_utils.extract_fasta_headers(fasta_path, \
-                                                                              aligner.get_unmapped(), self._tmp_files_dir)
+                prev_aligner_to_align = alignment_utils.extract_fasta_headers(fasta_path,
+                                                                              aligner.get_unaligned(), self._tmp_files_dir)
                 fasta_created = True
+                
+                sys.stderr.write("ListAligner: hits "+str(len(aligner.get_hits()))+"\n")
                 
                 self._results_hits = self._results_hits + aligner.get_hits()
                 self._results_unaligned = aligner.get_unaligned()
