@@ -5,6 +5,8 @@
 # Copyright (C)  2016-2017  Carlos P Cantalapiedra.
 # (terms of use can be found within the distributed LICENSE file).
 
+import sys
+
 from barleymapcore.maps.enrichment.FeatureMapping import GeneMapping
 from barleymapcore.db.DatasetsAnnotation import DatasetsAnnotation
 from barleymapcore.db.AnnotationTypes import AnnotationTypes
@@ -58,6 +60,12 @@ class GenesAnnotator(object):
             dataset_id = gene_mapping.get_dataset_id()
             dataset_annots = self.get_dataset_annots(dataset_id)
             
+            #if len(dataset_annots)>0:
+            #    sys.stderr.write(str(gene_mapping)+"\n\t"+str(dataset_annots)+"\n")
+            
+            # Obtain the records of this particular gene (GeneMapping)
+            gene_id = gene_mapping.get_feature_id()
+            
             for dataset_annot_id in dataset_annots:
                 
                 dataset_annot = dataset_annots[dataset_annot_id]
@@ -72,11 +80,11 @@ class GenesAnnotator(object):
                     
                 dataset_annot_data = self._annot_reader.get_loaded_annot(dataset_annot_id)
                 
-                # Obtain the records of this particular gene (GeneMapping)
-                gene_id = gene_mapping.get_feature_id()
                 if gene_id in dataset_annot_data:
                     gene_annotation = dataset_annot_data[gene_id]
                     gene_mapping.add_annot(gene_annotation)
+                    
+                    #sys.stderr.write("Gene:\t"+str(gene_id)+"\t"+str(anntype_id)+"\t"+str(gene_annotation)+"\n")
                     
                     # It was not registered previously,
                     # mark that data from this AnnotationType

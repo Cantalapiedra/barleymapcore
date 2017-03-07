@@ -65,7 +65,6 @@ class MapConfig(object):
     def get_map_dir(self):
         return self._map_dir
     
-    
     def check_sort_param(self, map_config, sort_param, DEFAULT_SORT_PARAM):
         sort_by = ""
         
@@ -143,6 +142,7 @@ class MapsConfig(object):
     
     def _load_config(self, config_file):
         self._config_dict = {}
+        self._config_list = []
         conf_rows = load_conf(config_file, self._verbose) # data_utils.load_conf
         
         for conf_row in conf_rows:
@@ -181,6 +181,15 @@ class MapsConfig(object):
     
     def get_maps_list(self, ):
         return self._config_list
+    
+    # Return tuples (map_id, map_name)
+    def get_maps_tuples(self, ):
+        maps_tuples = []
+        
+        for map_id in self._config_list:
+            maps_tuples.append((map_id, self.get_map_config(map_id).get_name()))
+        
+        return maps_tuples
     
     def get_map_config(self, map_id):        
         if map_id in self._config_dict:#self._config_dict:

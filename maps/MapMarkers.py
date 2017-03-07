@@ -57,6 +57,7 @@ class MapMarkers(object):
                                                    sort_param, multiple_param)
         
         sys.stderr.write("MapMarkers: Map "+self._map_config.get_name()+" created.\n")
+        if self._verbose: sys.stderr.write("\tNum. mapped results: "+str(len(mapping_results.get_mapped()))+".\n")
         sys.stderr.write("\n")
         
         self._mapping_results = mapping_results
@@ -102,28 +103,8 @@ class MapMarkers(object):
         
         return
     
-    #
-    def enrichment(self, annotator, show_markers, show_genes, show_anchored,
-                   datasets_facade, extend_window, collapsed_view, constrain_fine_mapping = False):
-        
-        if not (show_genes or show_markers or show_anchored): return
-        
-        sys.stderr.write("MapMarkers: adding features...\n")
-        
-        # 1) Choose enricher flavour
-        if show_anchored:
-            
-            enricher = EnricherFactory.get_anchored_enricher(self._mapReader)
-            
-        elif show_genes:
-            
-            enricher = EnricherFactory.get_gene_enricher(self._mapReader, annotator)
-            
-        elif show_markers:
-            
-            enricher = EnricherFactory.get_marker_enricher(self._mapReader)
-        
-        # 2) Obtain the map_enricher
+    def _get_enriched_map(self, enricher, datasets_facade, extend_window, collapsed_view, constrain_fine_mapping = False):
+        # 1) Obtain the map_enricher
         
         mapping_results = self.get_mapping_results()
         
@@ -141,28 +122,46 @@ class MapMarkers(object):
         
         map_enricher = MapEnricher(enricher, mapping_results, self._verbose)
         
-        # 3) Load Map Data and translate it to intervals
+        # 2) Load Map Data and translate it to intervals
         
         map_intervals = map_enricher.map_to_intervals(extend_window)
         
-        # 4) Use those intervals to
+        # 3) Use those intervals to
         #      obtain markers within those positions (map.as_physical)
         #      obtain contigs within those positions and, afterwards, markers anchored to them (not map.as_physical)
         # and add markers to the map
         
         enriched_map = map_enricher.enrich(map_intervals, datasets_facade, self._mapReader, collapsed_view)
         
-        # 5) Update mapping results
+        return enriched_map
+    
+    #
+    def enrichment(self, annotator, show_markers, show_genes, show_anchored,
+                   datasets_facade, extend_window, collapsed_view, constrain_fine_mapping = False):
+        
+        if not (show_genes or show_markers or show_anchored): return
+        
+        mapping_results = self.get_mapping_results()
+        
+        sys.stderr.write("MapMarkers: adding features...\n")
+        
+        #
         if show_anchored:
             
+            enricher = EnricherFactory.get_anchored_enricher(self._mapReader)
+            enriched_map = self._get_enriched_map(enricher, datasets_facade, extend_window, collapsed_view, constrain_fine_mapping)
             mapping_results.set_map_with_anchored(enriched_map)
+        
+        if show_genes:
             
-        elif show_genes:
-            
+            enricher = EnricherFactory.get_gene_enricher(self._mapReader, annotator)
+            enriched_map = self._get_enriched_map(enricher, datasets_facade, extend_window, collapsed_view, constrain_fine_mapping)
             mapping_results.set_map_with_genes(enriched_map)
+        
+        if show_markers:
             
-        elif show_markers:
-            
+            enricher = EnricherFactory.get_marker_enricher(self._mapReader)
+            enriched_map = self._get_enriched_map(enricher, datasets_facade, extend_window, collapsed_view, constrain_fine_mapping)
             mapping_results.set_map_with_markers(enriched_map)
         
         sys.stderr.write("MapMarkers: added other features.\n")

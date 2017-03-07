@@ -211,7 +211,10 @@ class OutputPrinter(object):
         self._verbose = verbose
         self._beauty_nums = beauty_nums
         self._show_headers = show_headers
-        
+    
+    def set_output_desc(self, output_desc):
+        self._output_desc = output_desc
+    
     # Methods to be implemented in the child class
     def output_features_header(self, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param, load_annot = False, annotator = None):
         raise m2pException("Method has to be implemented in child class inheriting from OutputPrinter")
