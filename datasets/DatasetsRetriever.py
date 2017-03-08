@@ -7,23 +7,25 @@
 
 import sys, os
 
-from MappingsRetriever import MappingsParser
-
 from barleymapcore.db.DatasetsConfig import DatasetsConfig
+from barleymapcore.maps.reader.MappingsParser import MappingsParser
+from barleymapcore.maps.enrichment.FeatureMapping import FeaturesFactory
 from barleymapcore.m2p_exception import m2pException
 
 class DatasetsRetriever(object):
     
     _datasets_config = None
     _datasets_path = None
+    _maps_path = None
     _verbose = False
     
     _results = None
     _unmapped = None
     
-    def __init__(self, datasets_config, datasets_path, verbose = False):
+    def __init__(self, datasets_config, datasets_path, maps_path, verbose = False):
         self._datasets_config = datasets_config
         self._datasets_path = datasets_path
+        self._maps_path = maps_path
         self._verbose = verbose
     
     def load_synonyms(self, synonyms):
@@ -60,14 +62,39 @@ class DatasetsRetriever(object):
         
         return retvalue
     
-    def retrieve_datasets(self, query_ids_path, dataset_list, map_config, chrom_dict,
-                                 multiple_param = True):
+    def get_dataset_path(self, dataset, map_id, feature_type = DatasetsConfig.DATASET_TYPE_GENETIC_MARKER):
+        dataset_map_path = None
+        
+        if feature_type == DatasetsConfig.DATASET_TYPE_MAP:
+            dataset_map_path = self._maps_path+"/"+str(map_id)+"/"+str(map_id)+"."+str(dataset)
+            sys.stderr.write("DatasetsRetriever: get_dataset_path MAP TYPE "+str(dataset_map_path)+"\n")
+        else:
+            dataset_map_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(map_id)
+            sys.stderr.write("DatasetsRetriever: get_dataset_path "+str(dataset_map_path)+"\n")
+        
+        return dataset_map_path
+    
+    def common_dbs(self, dataset_config, map_config):
+        ret_value = False
+        
+        dataset_db_list = dataset_config.get_db_list()
+        map_db_list = map_config.get_db_list()
+        
+        common_dbs = set(dataset_db_list).intersection(set(map_db_list))
+        
+        if (DatasetsConfig.DATABASES_ANY not in dataset_db_list) and (len(common_dbs)<1):
+            ret_value = False
+        else:
+            ret_value = True
+        
+        return ret_value
+    
+    def retrieve_datasets_by_id(self, query_ids_path, dataset_list, map_config, chrom_dict, multiple_param = True):
         self._results = []
         
         self._query_ids_path = query_ids_path
         
         map_id = map_config.get_id()
-        map_db_list = map_config.get_db_list()
         
         sys.stderr.write("MappingsRetriever: searching "+query_ids_path+"...\n")
         
@@ -80,61 +107,53 @@ class DatasetsRetriever(object):
         
         num_results = 0
         num_queries_left = initial_num_queries
+        
         for dataset in dataset_list:
+            
             sys.stderr.write("\t dataset: "+dataset+"\n")
             
+            # Check if map and dataset do share databases
             dataset_config = self._datasets_config.get_dataset_config(dataset)
-            dataset_db_list = dataset_config.get_db_list()
-            
-            common_dbs = set(dataset_db_list).intersection(set(map_db_list))
-            
-            if (DatasetsConfig.DATABASES_ANY not in dataset_db_list) and (len(common_dbs)<1):
+            if not self.common_dbs(dataset_config, map_config):
                 continue
             
-            synonyms_path = dataset_config.get_synonyms()
-            dataset_synonyms = self.load_synonyms(synonyms_path)
-            
-            # This is hierarchical or not,
-            # it is done because each marker has to have a uniq identifier
-            # so doing this we expect to do the search faster
+            # Check if there are not found queries
             temp_query_dict = dict([(query, 0) for query in query_ids_dict if query_ids_dict[query] == 0])
             num_queries_left = len(temp_query_dict)
             
             if num_queries_left == 0:
                 if self._verbose: sys.stderr.write("\t\t All queries found.\n")
                 break
+            else:
+                if self._verbose:
+                    sys.stderr.write("\t\t MAP: "+map_id+"\n")
+                    sys.stderr.write("\t\t queries to search for: "+str(num_queries_left)+"\n")
             
-            test_set = set(query for query in temp_query_dict)
-            
-            data_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(map_id)
-            if self._verbose:
-                sys.stderr.write("\t\t MAP: "+map_id+"\n")
-                sys.stderr.write("\t\t\t queries to search for: "+str(num_queries_left)+"\n")
-                sys.stderr.write("\t\t\t path: "+data_path+"\n")
+            # Obtain dataset.map file
+            dataset_type = dataset_config.get_dataset_type()
+            dataset_map_path = self.get_dataset_path(dataset, map_id, dataset_type)
             
             ############ Retrieve dataset markers
             ############ either from mappings or from alignments
-            data_mappings_path = data_path # mappings file
-            
             map_results = []
             
-            if os.path.exists(data_mappings_path): # mapping results are available
+            sys.stderr.write("\t\t path: "+dataset_map_path+"\n")
+            
+            if os.path.exists(dataset_map_path) and os.path.isfile(dataset_map_path): # mapping results are available
+                
+                sys.stderr.write("\t\t path: "+dataset_map_path+"\n")
+                
+                if self._verbose: sys.stderr.write("DatasetsRetriever: loading features from map data: "+dataset_map_path+"\n")
+                
+                synonyms_path = dataset_config.get_synonyms()
+                dataset_synonyms = self.load_synonyms(synonyms_path)
+                
+                test_set = set(query for query in temp_query_dict)
                 
                 mappings_parser = MappingsParser()
-                map_results = mappings_parser.parse_mapping_file(temp_query_dict, data_mappings_path, map_config, chrom_dict,
+                map_results = mappings_parser.parse_mapping_file_by_id(temp_query_dict, dataset_map_path, map_config, chrom_dict,
                                                       multiple_param, dataset_synonyms, test_set)
                 
-                #retriever = MappingsRetriever(self._datasets_config, data_mappings_path, self._verbose)   
-                
-            ### THIS COULD BE IMPLEMENTED AGAIN
-            ###
-            #elif os.path.exists(data_alignments_path): # alignment results are available
-            #
-            #    data_alignments_path = data_path+".hits" # alignments file
-            #    alignments_parser = AlignmentsParser()
-            #    map_results = alignments_parser.parse_alignments_file(temp_query_dict, data_alignments_path,
-            #                                             dataset_synonyms, test_set)
-            #    
             else:
                 # TODO refactor to handled exception
                 sys.stderr.write("WARNING: DatasetsRetriever: there is no available data for dataset "+dataset+"\n")
@@ -159,5 +178,55 @@ class DatasetsRetriever(object):
         self._unmapped = [query for query in query_ids_dict.keys() if query_ids_dict[query] == 0]
         
         return
+    
+    def retrieve_datasets_by_pos(self, map_intervals, dataset_list, map_config, chrom_dict,
+                                 multiple_param, map_sort_by, feature_type = DatasetsConfig.DATASET_TYPE_GENETIC_MARKER):
+        features = []
+        
+        map_id = map_config.get_id()
+        
+        # Look for markers for each dataset
+        for dataset in dataset_list:
+            
+            sys.stderr.write("\t dataset: "+dataset+"\n")
+            
+            # Check if map and dataset do share databases
+            dataset_config = self._datasets_config.get_dataset_config(dataset)
+            if not self.common_dbs(dataset_config, map_config):
+                continue
+            
+            dataset_type = dataset_config.get_dataset_type()
+            dataset_name = dataset_config.get_dataset_name()#datasets_dict[dataset]["dataset_name"]
+            
+            ####### If dataset type is the type requested, pass, else (dataset type does not match the one requested) continue
+            ###### Note that MAP type is a subtype of ANCHORED and therefore MAP types are accepted with ANCHORED filtering
+            if dataset_type == feature_type or (dataset_type == DatasetsConfig.DATASET_TYPE_MAP and feature_type == DatasetsConfig.DATASET_TYPE_ANCHORED):
+                pass
+            else:
+                continue
+            
+            if self._verbose: sys.stderr.write("\t dataset: "+dataset+"\n")
+            
+            ########## Retrieve markers within intervals
+            ##########
+            dataset_map_path = self.get_dataset_path(dataset, map_id, dataset_type)
+            
+            sys.stderr.write("\t\t path: "+dataset_map_path+"\n")
+            
+            if os.path.exists(dataset_map_path) and os.path.isfile(dataset_map_path):
+                if self._verbose: sys.stderr.write("DatasetsRetriever: loading features from map data: "+dataset_map_path+"\n")
+                
+                mappings_parser = MappingsParser()
+                mapping_results_list = mappings_parser.parse_mapping_file_by_pos(map_intervals, dataset_map_path, chrom_dict, map_config, map_sort_by)
+                
+                for mapping_result in mapping_results_list:
+                    marker_id = mapping_result.get_marker_id()
+                    
+                    feature_mapping = FeaturesFactory.get_feature(marker_id, dataset, dataset_name, feature_type, mapping_result)
+                    features.append(feature_mapping)
+                
+                #features.extend(dataset_features)
+        
+        return features
 
 ## END

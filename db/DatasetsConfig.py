@@ -19,6 +19,8 @@ class DatasetConfig(object):
     _db_list = []
     _synonyms = ""
     
+    _ignore_build = False
+    
     def __init__(self, dataset_name, dataset_id, dataset_type, file_path, file_type, db_list, synonyms):
         self._dataset_name = dataset_name
         self._dataset_id = dataset_id
@@ -27,6 +29,9 @@ class DatasetConfig(object):
         self._file_type = file_type
         self._db_list = db_list
         self._synonyms = synonyms
+    
+    def set_dataset_name(self, dataset_name):
+        self._dataset_name = dataset_name
     
     def get_dataset_name(self):
         return self._dataset_name
@@ -49,6 +54,12 @@ class DatasetConfig(object):
     def get_synonyms(self):
         return self._synonyms
     
+    def set_ignore_build(self, ignore_build):
+        self._ignore_build = ignore_build
+        
+    def get_ignore_build(self, ):
+        return self._ignore_build
+    
     def __str__(self):
         return self._dataset_name+" - "+self._dataset_id+" - "+self._dataset_type+" - "+\
                 self._file_path+" - "+self._file_type+" - "+",".join(self._db_list)+\
@@ -69,6 +80,7 @@ class DatasetsConfig(object):
     DATASET_TYPE_GENETIC_MARKER = "genetic_marker"
     DATASET_TYPE_GENE = "gene"
     DATASET_TYPE_ANCHORED = "anchored"
+    DATASET_TYPE_MAP = "map" # It is a subtype of anchored feature
     #DATASET_TYPE_OTHER = "other"
     
     # FILE_TYPE values
@@ -116,6 +128,10 @@ class DatasetsConfig(object):
             
             dataset = DatasetConfig(dataset_name, dataset_id, dataset_type, file_path, file_type, databases, synonyms)
             
+            if dataset_name.startswith(">"):
+                dataset.set_dataset_name(dataset_name[1:]) # remove the ">" from the name
+                dataset.set_ignore_build(True) # mark the dataset as to be ignored in the build datasets script
+                
             if dataset_id in self._config_dict:
                 raise m2pException("Duplicated dataset "+dataset_id+" in configuration file "+config_file+".")
             else:
