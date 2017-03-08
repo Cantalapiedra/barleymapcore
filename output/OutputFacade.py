@@ -658,20 +658,29 @@ class CollapsedPrinter(OutputPrinter):
         base_headers_row = self.output_base_header(map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
         headers_row.extend(base_headers_row)
         
+        #sys.stderr.write("CollapsedViewPrinter: "+str(load_annot)+" - "+str(annotator)+"\n")
+        
         if load_annot:
             anntypes_config = annotator.get_anntypes_config()
             anntypes_list = anntypes_config.get_anntypes_list()
             loaded_anntypes = annotator.get_loaded_anntypes()
+            
+            sys.stderr.write("\tanntypes_list: "+str(anntypes_list)+"\n")
+            sys.stderr.write("\tloaded_anntypes: "+str(loaded_anntypes)+"\n")
             
             for anntype_id in anntypes_list:
                 if anntype_id in loaded_anntypes:
                     anntype = anntypes_config.get_anntype(anntype_id)
                     headers_row.append(anntype.get_name())
         
+        #sys.stderr.write("\theaders_row: "+str(headers_row)+"\n")
+        
         return headers_row
     
     def output_features_pos(self, pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param,
                             load_annot = False, annotator = None):
+        
+        #sys.stderr.write("CollapsedViewPrinter: "+str(load_annot)+" - "+str(annotator)+"\n")
         
         current_row = [pos.get_row_type()]
         base_row = self.output_base_pos(pos, map_as_physical, map_has_cm_pos, map_has_bp_pos, multiple_param)
@@ -698,6 +707,8 @@ class CollapsedPrinter(OutputPrinter):
                             feature_data.append(data_line)
                     else:
                         feature_data.append("-")
+        
+        #sys.stderr.write("\tfeature_data: "+str(feature_data)+"\n")
         
         current_row.extend(feature_data)
         

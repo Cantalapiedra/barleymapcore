@@ -315,55 +315,55 @@ class GeneEnricher(Enricher):
 ######## the markers from alignment results (which report contigs)
 ######## instead of from mapping results (which report map positions)
 
-class ContigsMarkerEnricher(MarkerEnricher):
-    
-    def __init__(self, mapReader, verbose):
-        self._mapReader = mapReader
-        self._verbose = verbose
-        return
-    
-    def retrieve_markers(self, map_config, map_intervals, datasets_facade, map_sort_by):
-        
-        sys.stderr.write("AnchoredEnricher: retrieve markers...\n")
-        
-        # 1) Obtain the contigs found in those map intervals
-        # and also the translation to numeric chromosome (for sorting purposes)
-        # of chromosome names
-        contig_list = self._mapReader.retrieve_contigs(map_intervals, map_sort_by)
-        
-        chrom_dict = self._mapReader.get_chrom_dict()
-        
-        # 2) Obtain the markers which hit to those contigs and add them to each contig
-        #   in contig_list (field "markers" of each contig)
-        
-        datasets_facade.retrieve_markers_by_anchor(contig_list, map_config)
-        
-        # 3) Reformat to have the markers but with the map positions of the contigs
-        # and sort the list by chrom and position
-        markers = self.__get_list_of_markers(contig_list, chrom_dict)
-        
-        markers = self.sort_features(markers)
-        
-        return markers
-    
-    def __get_list_of_markers(self, contig_list, chrom_dict):
-        markers = []
-        
-        for contig_dict in contig_list:
-            
-            if len(contig_dict["markers"]) == 0: continue
-            
-            pos = contig_dict["map_file_pos"]
-            chrom = contig_dict["map_file_chr"]
-            chrom_order = chrom_dict[chrom]
-            for marker in contig_dict["markers"]:
-                alignment_result = marker["alignment_result"]
-                dataset_name = marker["dataset_name"]
-                query_id = alignment_result.get_query_id()
-                
-                marker_mapping = MarkerMapping(query_id, dataset_name, chrom, chrom_order, pos)
-                markers.append(marker_mapping)
-        
-        return markers
+#class ContigsMarkerEnricher(MarkerEnricher):
+#    
+#    def __init__(self, mapReader, verbose):
+#        self._mapReader = mapReader
+#        self._verbose = verbose
+#        return
+#    
+#    def retrieve_markers(self, map_config, map_intervals, datasets_facade, map_sort_by):
+#        
+#        sys.stderr.write("AnchoredEnricher: retrieve markers...\n")
+#        
+#        # 1) Obtain the contigs found in those map intervals
+#        # and also the translation to numeric chromosome (for sorting purposes)
+#        # of chromosome names
+#        contig_list = self._mapReader.retrieve_contigs(map_intervals, map_sort_by)
+#        
+#        chrom_dict = self._mapReader.get_chrom_dict()
+#        
+#        # 2) Obtain the markers which hit to those contigs and add them to each contig
+#        #   in contig_list (field "markers" of each contig)
+#        
+#        datasets_facade.retrieve_markers_by_anchor(contig_list, map_config)
+#        
+#        # 3) Reformat to have the markers but with the map positions of the contigs
+#        # and sort the list by chrom and position
+#        markers = self.__get_list_of_markers(contig_list, chrom_dict)
+#        
+#        markers = self.sort_features(markers)
+#        
+#        return markers
+#    
+#    def __get_list_of_markers(self, contig_list, chrom_dict):
+#        markers = []
+#        
+#        for contig_dict in contig_list:
+#            
+#            if len(contig_dict["markers"]) == 0: continue
+#            
+#            pos = contig_dict["map_file_pos"]
+#            chrom = contig_dict["map_file_chr"]
+#            chrom_order = chrom_dict[chrom]
+#            for marker in contig_dict["markers"]:
+#                alignment_result = marker["alignment_result"]
+#                dataset_name = marker["dataset_name"]
+#                query_id = alignment_result.get_query_id()
+#                
+#                marker_mapping = MarkerMapping(query_id, dataset_name, chrom, chrom_order, pos)
+#                markers.append(marker_mapping)
+#        
+#        return markers
 
 ## END

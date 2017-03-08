@@ -239,7 +239,7 @@ class CSVWriter(object):
         
         return file_name
     
-    def output_maps(self, all_mapping_results, form, annotator):
+    def output_maps(self, all_mapping_results, form):
         
         csv_files = CSVFiles()
         
@@ -272,6 +272,7 @@ class CSVWriter(object):
                 map_csv_files.set_map_with_markers(csv_file)
             
             if form.get_show_genes() and mapping_results.get_map_with_genes():
+                annotator = mapping_results.get_annotator()
                 csv_file = self._output_map_with_genes(mapping_results, output_printer, multiple_param, annotator)
                 map_csv_files.set_map_with_genes(csv_file)
             

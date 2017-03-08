@@ -9,6 +9,7 @@ import sys, os
 
 from barleymapcore.maps.MappingResults import MappingResult
 from barleymapcore.maps.MapInterval import MapInterval
+from MapFiles import MapFile
 
 ### Class to obtain mapping results from pre-calculated datasets
 ### "mapping results" are those which have already map positions
@@ -88,6 +89,9 @@ class MappingsParser(object):
             if hit.startswith(">") or hit.startswith("#"): continue
             hit_data = hit.strip().split("\t")
             
+            #sys.stderr.write(hit+"\n")
+            #sys.stderr.write("\t"+str(current_interval)+"\n")
+            
             mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_is_physical, map_has_cm_pos, map_has_bp_pos)
             
             chrom_name = mapping_result.get_chrom_name()
@@ -104,10 +108,15 @@ class MappingsParser(object):
             
             while (float(map_pos) > float(current_interval.get_end_pos())):
                 current_interval_pos += 1
-                if current_interval_pos >= len(map_intervals): break
+                if current_interval_pos >= len(map_intervals):
+                    break
                 current_interval = map_intervals[current_interval_pos]
+                if current_interval.get_chrom() != chrom_name:
+                    break
             
             if current_interval_pos >= len(map_intervals): break
+            
+            if chrom_name != current_interval.get_chrom(): continue
             
             if float(map_end_pos) < float(current_interval.get_ini_pos()): continue
             
@@ -122,5 +131,66 @@ class MappingsParser(object):
                 mapping_results_list.append(mapping_result)
         
         return mapping_results_list
+    
+    ## This is an old function used in Mappers
+    ## to build the final maps
+    ## It could be refactored to use MappingsResults
+    ## but this should be handled in Mappers also
+    def parse_mapping_file_by_contig(self, contig_set, map_config, maps_path, verbose):
+        positions_dict = {}
+        # [contig_id] = {"chr", "cm_pos", "bp_pos"}
+        
+        map_id = map_config.get_id()
+        map_db_list = map_config.get_db_list()
+        map_dir = map_config.get_map_dir()
+        
+        #contig_set = set(contig_list) # A clone of contig_list. Used to shorten the search of contigs
+        
+        # For this genetic_map, read the info related to each database of contigs
+        for db in map_db_list:
+            db_records_read = 0
+            
+            # File with map-DB positions
+            map_path = maps_path+map_dir+"/"+map_dir+"."+db
+            if verbose: sys.stderr.write("\tMappingsParser: map file --> "+map_path+"\n")
+            
+            # Map data for this database
+            for map_line in open(map_path, 'r'):
+                db_records_read += 1
+                map_data = map_line.strip().split("\t")
+                
+                contig_id = map_data[MapFile.MAP_FILE_CONTIG]
+                
+                # Create positions for this contig
+                if contig_id in contig_set:
+                    
+                    map_pos_chr = map_data[MapFile.MAP_FILE_CHR]
+                    
+                    if not contig_id in positions_dict:
+                        positions_dict[contig_id] = {}
+                    
+                    positions_dict[contig_id]["chr"] = map_pos_chr
+                    
+                    map_has_cm_pos = map_config.has_cm_pos()
+                    if map_has_cm_pos:
+                        positions_dict[contig_id]["cm_pos"] = map_data[MapFile.MAP_FILE_CM]#float(map_data[MapFile.MAP_FILE_CM])
+                    else:
+                        positions_dict[contig_id]["cm_pos"] = -1.0
+                    
+                    map_has_bp_pos = map_config.has_bp_pos()
+                    if map_has_bp_pos: # "has_bp_pos"
+                        positions_dict[contig_id]["bp_pos"] = map_data[MapFile.MAP_FILE_BP]#long(map_data[MapFile.MAP_FILE_BP])
+                    else:
+                        positions_dict[contig_id]["bp_pos"] = -1
+                        
+                    contig_set.remove(contig_id)
+                    
+                    if len(contig_set) == 0:
+                        if self._verbose: sys.stderr.write("\t\t all sequences found -->")
+                        break
+            
+            if self._verbose: sys.stderr.write("\t\t records read: "+str(db_records_read)+"\n")
+            
+        return positions_dict
 
 ## END

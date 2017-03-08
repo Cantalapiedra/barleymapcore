@@ -131,7 +131,7 @@ class MapMarkers(object):
         #      obtain contigs within those positions and, afterwards, markers anchored to them (not map.as_physical)
         # and add markers to the map
         
-        enriched_map = map_enricher.enrich(map_intervals, datasets_facade, self._mapReader, collapsed_view)
+        enriched_map = map_enricher.enrich(map_intervals, datasets_facade, collapsed_view)
         
         return enriched_map
     

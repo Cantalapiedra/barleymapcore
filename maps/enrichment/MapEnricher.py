@@ -37,7 +37,7 @@ class MapEnricher(object):
     def get_mapping_results(self):
         return self._mapping_results
     
-    def enrich(self, map_intervals, datasets_facade, mapReader, collapsed_view):
+    def enrich(self, map_intervals, datasets_facade, collapsed_view):
         
         mapping_results = self.get_mapping_results()
         map_config = mapping_results.get_map_config()
@@ -56,7 +56,7 @@ class MapEnricher(object):
         
         return enriched_map
     
-    def enrich_with_anchored(self, map_intervals, datasets_facade, mapReader, collapsed_view):
+    def enrich_with_anchored(self, map_intervals, datasets_facade, collapsed_view):
         
         mapping_results = self.get_mapping_results()
         map_config = mapping_results.get_map_config()
@@ -80,7 +80,7 @@ class MapEnricher(object):
         
         return
     
-    def enrich_with_markers(self, map_intervals, datasets_facade, mapReader, collapsed_view):
+    def enrich_with_markers(self, map_intervals, datasets_facade, collapsed_view):
         
         mapping_results = self.get_mapping_results()
         map_config = mapping_results.get_map_config()
@@ -104,7 +104,7 @@ class MapEnricher(object):
         
         return
     
-    def enrich_with_genes(self, map_intervals, datasets_facade, mapReader, annotator, collapsed_view):
+    def enrich_with_genes(self, map_intervals, datasets_facade, annotator, collapsed_view):
         
         mapping_results = self.get_mapping_results()
         map_config = mapping_results.get_map_config()
