@@ -114,11 +114,11 @@ class MapMarkers(object):
         
         # Markers enrichment is limited to results from a single chromosome
         # for example, in the web app
-        if constrain_fine_mapping:
-            fine_mapping = mapping_results.is_fine_mapping() # boolean: results from a single chromosome
-            if self._verbose: sys.stderr.write("\tFine mapping: "+str(fine_mapping)+"\n")
-            if not fine_mapping:
-                return
+        #if constrain_fine_mapping:
+        #    fine_mapping = mapping_results.is_fine_mapping() # boolean: results from a single chromosome
+        #    if self._verbose: sys.stderr.write("\tFine mapping: "+str(fine_mapping)+"\n")
+        #    if not fine_mapping:
+        #        return
         
         map_enricher = MapEnricher(enricher, mapping_results, self._verbose)
         

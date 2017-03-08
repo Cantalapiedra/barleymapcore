@@ -42,16 +42,13 @@ class MapEnricher(object):
         mapping_results = self.get_mapping_results()
         map_config = mapping_results.get_map_config()
         
-        # Obtain a physical- or anchored-map enricher
-        #enricher = EnricherFactory.get_anchored_enricher(mapReader)
-        
         map_id = map_config.get_id()
         map_sort_by = mapping_results.get_sort_by()
         
-        ### Retrieve markers
-        sys.stderr.write("MapEnricher: retrieve anchored...\n")
+        ### Retrieve features (what type depends on the enricher used to retrieve them)
+        sys.stderr.write("MapEnricher: retrieve features...\n")
         features = self._enricher.retrieve_features(map_config, map_intervals, datasets_facade, map_sort_by)
-        if self._verbose: sys.stderr.write("\tanchored features retrieved: "+str(len(features))+"\n")
+        if self._verbose: sys.stderr.write("\t features retrieved: "+str(len(features))+"\n")
         
         ## Enrich map
         sys.stderr.write("MapEnricher: enrich map...\n")

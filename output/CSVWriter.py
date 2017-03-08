@@ -69,6 +69,9 @@ class CSVFiles(object):
     def __init__(self, ):
         pass
     
+    def get_maps_csv_files(self, ):
+        return self._map_csv_files
+    
     def get_map_csv_files(self, map_id):
         return self._map_csv_files[map_id]
     

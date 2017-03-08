@@ -167,7 +167,7 @@ class Enricher(object):
         else:
             raise m2pException("Enricher: unrecognized row type "+str(row_type)+".")
         
-        if self._verbose: sys.stderr.write("MapEnricher: new enriched row created: "+str(row)+"\n")
+        if self._verbose: sys.stderr.write("Enricher: new enriched row created: "+str(row)+"\n")
         
         return row
     
@@ -287,6 +287,8 @@ class GeneEnricher(Enricher):
         #
         features = datasets_facade.retrieve_features_by_pos(map_intervals, map_config, chrom_dict, map_sort_by,
                                                            DatasetsConfig.DATASET_TYPE_GENE)
+        
+        sys.stderr.write("GeneEnricher: num features "+str(len(features))+"\n")
         
         # 3) Sort the list by chrom and position
         features = self.sort_features(features, map_sort_by)
