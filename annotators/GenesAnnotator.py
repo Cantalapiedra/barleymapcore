@@ -36,11 +36,14 @@ class GenesAnnotator(object):
     _annot_reader = None
     _loaded_anntypes = set()
     
-    def __init__(self, dsann_config, anntypes_config, annot_path):
+    _verbose = False
+    
+    def __init__(self, dsann_config, anntypes_config, annot_path, verbose = False):
         self._dsann_config = dsann_config
         self._anntypes_config = anntypes_config
         self._annot_reader = AnnotationFileReader(annot_path)
         self._loaded_anntypes = set()
+        self._verbose = verbose
     
     ## Filter out the dictionary of annotations (DatasetsAnnotation)
     ## to keep only those from the given dataset
@@ -54,14 +57,19 @@ class GenesAnnotator(object):
     ## of features (GeneMappings)
     def annotate_features(self, features):
         
+        sys.stderr.write("GenesAnnotator: annotate_features\n")
+        
         for gene_mapping in features:
             
             # Obtain the annotations of this dataset (DatasetsAnnotation)
             dataset_id = gene_mapping.get_dataset_id()
             dataset_annots = self.get_dataset_annots(dataset_id)
             
-            #if len(dataset_annots)>0:
-            #    sys.stderr.write(str(gene_mapping)+"\n\t"+str(dataset_annots)+"\n")
+            if self._verbose:
+                if len(dataset_annots)>0:
+                    sys.stderr.write(str(gene_mapping)+"\n\t"+str(dataset_annots)+"\n")
+                else:
+                    sys.stderr.write("No annotation for dataset "+dataset_id+"\n")
             
             # Obtain the records of this particular gene (GeneMapping)
             gene_id = gene_mapping.get_feature_id()
