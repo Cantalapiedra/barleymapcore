@@ -60,7 +60,34 @@ class MapInterval(object):
     @staticmethod
     def overlaps(int1, int2):
         return (float(int1.get_ini_pos())>=float(int2.get_ini_pos()) and float(int1.get_ini_pos())<=float(int2.get_end_pos()))
+
+# Composite of MapInterval and list of features associated
+# to that MapInterval
+class FeaturedMapInterval(object):
+    _features = None
+    _map_interval = None
+    #_mapping_result = None
     
+    def __init__(self, map_interval):
+        self._features = []
+        self._map_interval = map_interval
     
+    #def get_mapping_result(self, ):
+    #    return self._mapping_result
+    #
+    #def set_mapping_result(self, mapping_result):
+    #    self._mapping_result = mapping_result
     
+    def get_features(self, ):
+        return self._features
+    
+    def set_features(self, features):
+        self._features = features
+    
+    def get_map_interval(self, ):
+        return self._map_interval
+    
+    def set_map_interval(self, map_interval):
+        self._map_interval = map_interval
+
 ## END

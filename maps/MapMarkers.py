@@ -10,7 +10,7 @@ import sys
 from SearchEngines import SearchEnginesFactory
 from reader.MapReader import MapReader
 from mappers.Mappers import Mappers
-from enrichment.MapEnricher import MapEnricher
+from enrichment.MapEnricher import MapEnricherFactory, MapEnricher
 from enrichment.Enrichers import EnricherFactory
 
 from barleymapcore.datasets.DatasetsFacade import DatasetsFacade
@@ -103,41 +103,26 @@ class MapMarkers(object):
         
         return
     
-    def _get_enriched_map(self, enricher, datasets_facade, extend_window, collapsed_view, constrain_fine_mapping = False):
-        # 1) Obtain the map_enricher
-        
-        mapping_results = self.get_mapping_results()
-        
-        if not mapping_results: raise m2pException("MapMarkers: Map has not been initiallized.")
+    def _get_enriched_map(self, map_enricher, datasets_facade, datasets_ids, extend_window, collapsed_view, constrain_fine_mapping = False):
         
         sys.stderr.write("\tMap : "+self.get_map_config().get_name()+"\n")
         
-        # Markers enrichment is limited to results from a single chromosome
-        # for example, in the web app
-        #if constrain_fine_mapping:
-        #    fine_mapping = mapping_results.is_fine_mapping() # boolean: results from a single chromosome
-        #    if self._verbose: sys.stderr.write("\tFine mapping: "+str(fine_mapping)+"\n")
-        #    if not fine_mapping:
-        #        return
-        
-        map_enricher = MapEnricher(enricher, mapping_results, self._verbose)
-        
-        # 2) Load Map Data and translate it to intervals
+        # 1) Translate mapping results to intervals
         
         map_intervals = map_enricher.map_to_intervals(extend_window)
         
-        # 3) Use those intervals to
+        # 2) Use those intervals to
         #      obtain markers within those positions (map.as_physical)
         #      obtain contigs within those positions and, afterwards, markers anchored to them (not map.as_physical)
         # and add markers to the map
         
-        enriched_map = map_enricher.enrich(map_intervals, datasets_facade, collapsed_view)
+        enriched_map = map_enricher.enrich(map_intervals, datasets_facade, datasets_ids, collapsed_view)
         
         return enriched_map
     
     #
-    def enrichment(self, annotator, show_markers, show_genes, show_anchored,
-                   datasets_facade, extend_window, collapsed_view, constrain_fine_mapping = False):
+    def enrichment(self, annotator, show_markers, show_genes, show_anchored, show_how,
+                   datasets_facade, datasets_ids, extend_window, collapsed_view, constrain_fine_mapping = False):
         
         if not (show_genes or show_markers or show_anchored): return
         
@@ -148,47 +133,56 @@ class MapMarkers(object):
         #
         if show_anchored:
             
-            enricher = EnricherFactory.get_anchored_enricher(self._mapReader)
-            enriched_map = self._get_enriched_map(enricher, datasets_facade, extend_window, collapsed_view, constrain_fine_mapping)
+            enricher_factory = MapEnricherFactory.get_enricher_factory(show_how)
+            enricher = enricher_factory.get_anchored_enricher(self._mapReader)
+            map_enricher = MapEnricherFactory.get_map_enricher(show_how, enricher, mapping_results, self._verbose)
+            
+            enriched_map = self._get_enriched_map(map_enricher, datasets_facade, datasets_ids, extend_window, collapsed_view, constrain_fine_mapping)
             mapping_results.set_map_with_anchored(enriched_map)
         
         if show_genes:
             
-            enricher = EnricherFactory.get_gene_enricher(self._mapReader, annotator)
-            enriched_map = self._get_enriched_map(enricher, datasets_facade, extend_window, collapsed_view, constrain_fine_mapping)
+            enricher_factory = MapEnricherFactory.get_enricher_factory(show_how)
+            enricher = enricher_factory.get_gene_enricher(self._mapReader, annotator)
+            map_enricher = MapEnricherFactory.get_map_enricher(show_how, enricher, mapping_results, self._verbose)
+            
+            enriched_map = self._get_enriched_map(map_enricher, datasets_facade, datasets_ids, extend_window, collapsed_view, constrain_fine_mapping)
             mapping_results.set_map_with_genes(enriched_map)
         
         if show_markers:
             
-            enricher = EnricherFactory.get_marker_enricher(self._mapReader)
-            enriched_map = self._get_enriched_map(enricher, datasets_facade, extend_window, collapsed_view, constrain_fine_mapping)
+            enricher_factory = MapEnricherFactory.get_enricher_factory(show_how)
+            enricher = enricher_factory.get_marker_enricher(self._mapReader)
+            map_enricher = MapEnricherFactory.get_map_enricher(show_how, enricher, mapping_results, self._verbose)
+            
+            enriched_map = self._get_enriched_map(map_enricher, datasets_facade, datasets_ids, extend_window, collapsed_view, constrain_fine_mapping)
             mapping_results.set_map_with_markers(enriched_map)
         
         sys.stderr.write("MapMarkers: added other features.\n")
         
         return
     
-    def enrich_with_anchored(self, datasets_facade, extend_window, \
+    def enrich_with_anchored(self, show_how, datasets_facade, datasets_ids, extend_window, \
                             collapsed_view = False, constrain_fine_mapping = True):
         
-        enrichment(self, None, False, False, True,
-                   datasets_facade, extend_window, collapsed_view, constrain_fine_mapping)
+        enrichment(self, None, False, False, True, show_how,
+                   datasets_facade, datasets_ids, extend_window, collapsed_view, constrain_fine_mapping)
         
         return
     
-    def enrich_with_markers(self, datasets_facade, extend_window, \
+    def enrich_with_markers(self, show_how, datasets_facade, datasets_ids, extend_window, \
                             collapsed_view = False, constrain_fine_mapping = True):
         
-        enrichment(self, None, True, False, False,
-                   datasets_facade, extend_window, collapsed_view, constrain_fine_mapping)
+        enrichment(self, None, True, False, False, show_how,
+                   datasets_facade, datasets_ids, extend_window, collapsed_view, constrain_fine_mapping)
         
         return
     
-    def enrich_with_genes(self, datasets_facade, extend_window, \
+    def enrich_with_genes(self, show_how, datasets_facade, datasets_ids, extend_window, \
                             annotator, collapsed_view = False, constrain_fine_mapping = True):
         
-        enrichment(self, annotator, False, True, False,
-                   datasets_facade, extend_window, collapsed_view, constrain_fine_mapping)
+        enrichment(self, annotator, False, True, False, show_how,
+                   datasets_facade, datasets_ids, extend_window, collapsed_view, constrain_fine_mapping)
         
         return
 

@@ -9,6 +9,8 @@ import sys, os
 
 from barleymapcore.maps.MappingResults import MappingResult
 from barleymapcore.maps.MapInterval import MapInterval
+from barleymapcore.maps.enrichment.FeatureMapping import FeaturesFactory
+
 from MapFiles import MapFile
 
 ### Class to obtain mapping results from pre-calculated datasets
@@ -132,6 +134,87 @@ class MappingsParser(object):
         
         return mapping_results_list
     
+    def parse_mapping_file_on_pos(self, map_intervals, data_path, chrom_dict, map_config, map_sort_by,
+                                  dataset, dataset_name, feature_type):
+        
+        map_name = map_config.get_name()
+        map_is_physical = map_config.as_physical()
+        map_has_cm_pos = map_config.has_cm_pos()
+        map_has_bp_pos = map_config.has_bp_pos()
+        
+        current_interval_pos = 0
+        featured_current_interval = map_intervals[current_interval_pos]
+        current_interval = featured_current_interval.get_map_interval()
+        current_features = featured_current_interval.get_features()
+        
+        #sys.stderr.write("MappingsParser \n")
+        #sys.stderr.write("\t"+str(current_interval)+"\n")
+        #sys.stderr.write("\t"+str(len(current_features))+"\n")
+        #for feature in current_features:
+        #    sys.stderr.write("\t\t"+str(feature)+"\n")
+        
+        # Find all the hits for this map
+        for hit in open(data_path, 'r'):
+            if hit.startswith(">") or hit.startswith("#"): continue
+            hit_data = hit.strip().split("\t")
+            
+            #sys.stderr.write(hit+"\n")
+            #sys.stderr.write("\t"+str(current_interval)+"\n")
+            
+            mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_is_physical, map_has_cm_pos, map_has_bp_pos)
+            
+            chrom_name = mapping_result.get_chrom_name()
+            
+            if chrom_name != current_interval.get_chrom(): continue
+            
+            map_end_pos = mapping_result.get_sort_end_pos(map_sort_by)
+            
+            if float(map_end_pos) < float(current_interval.get_ini_pos()): continue
+            
+            marker_id = mapping_result.get_marker_id()
+            chrom_order = mapping_result.get_chrom_order()
+            map_pos = mapping_result.get_sort_pos(map_sort_by)#float(mapping_result.get_sort_pos(map_sort_by))
+            
+            dataset_interval = MapInterval(chrom_name, map_pos, map_end_pos)
+            
+            does_overlap = MapInterval.intervals_overlap(dataset_interval, current_interval)
+            # This if-else could be unnecessary, but hopefully is useful to read the code
+            if does_overlap:
+                next_interval_pos = current_interval_pos
+                next_interval = current_interval
+                next_features = current_features
+                while (does_overlap):
+                    feature = FeaturesFactory.get_feature(marker_id, dataset, dataset_name, feature_type, mapping_result)
+                    next_features.append(feature)
+                    
+                    next_interval_pos += 1
+                    if next_interval_pos >= len(map_intervals):
+                        break
+                    featured_next_interval = map_intervals[next_interval_pos]
+                    next_interval = featured_next_interval.get_map_interval()
+                    next_features = featured_next_interval.get_features()
+                    
+                    does_overlap = MapInterval.intervals_overlap(dataset_interval, next_interval)
+                    
+            else:
+                while (float(map_pos) > float(current_interval.get_end_pos())):
+                    current_interval_pos += 1
+                    if current_interval_pos >= len(map_intervals):
+                        break
+                    featured_current_interval = map_intervals[current_interval_pos]
+                    current_interval = featured_current_interval.get_map_interval()
+                    current_features = featured_current_interval.get_features()
+        
+        #sys.stderr.write("MappingsParser generated intervals\n")
+        #for featured_map_interval in map_intervals:
+        #    map_interval = featured_map_interval.get_map_interval()
+        #    sys.stderr.write("\tinterval: "+str(map_interval)+"\n")
+        #    features = featured_map_interval.get_features()
+        #    for feature in features:
+        #        sys.stderr.write("\t\tfeature: "+str(feature)+"\n")
+        
+        return map_intervals
+    
     ## This is an old function used in Mappers
     ## to build the final maps
     ## It could be refactored to use MappingsResults
@@ -186,10 +269,10 @@ class MappingsParser(object):
                     contig_set.remove(contig_id)
                     
                     if len(contig_set) == 0:
-                        if self._verbose: sys.stderr.write("\t\t all sequences found -->")
+                        if verbose: sys.stderr.write("\t\t all sequences found -->")
                         break
             
-            if self._verbose: sys.stderr.write("\t\t records read: "+str(db_records_read)+"\n")
+            if verbose: sys.stderr.write("\t\t records read: "+str(db_records_read)+"\n")
             
         return positions_dict
 

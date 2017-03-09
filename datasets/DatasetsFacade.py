@@ -47,7 +47,7 @@ class DatasetsFacade(DatasetsRetriever):
     
     ### Obtain markers aligned to a series of alignment intervals
     ###
-    def retrieve_features_by_pos(self, map_intervals, map_config, chrom_dict, map_sort_by,
+    def retrieve_features_by_pos(self, map_intervals, map_config, chrom_dict, map_sort_by, dataset_list, 
                                  feature_type = DatasetsConfig.DATASET_TYPE_GENETIC_MARKER):
         
         if self._verbose: sys.stderr.write("DatasetsFacade: loading markers associated to physical positions...\n")
@@ -56,12 +56,29 @@ class DatasetsFacade(DatasetsRetriever):
         
         ## Search datasets for markers
         ## associated to those contigs
-        dataset_list = self._datasets_config.get_datasets().keys()
+        #dataset_list = self._datasets_config.get_datasets().keys()
         multiple_param = True
         
         features = self._datasets_retriever.retrieve_datasets_by_pos(map_intervals, dataset_list, map_config, chrom_dict,
                                                                    multiple_param, map_sort_by, feature_type)
         
         return features
+    
+    ### Obtain markers aligned on each of a series of alignment intervals
+    ###
+    def retrieve_features_on_pos(self, map_intervals, map_config, chrom_dict, map_sort_by, dataset_list,
+                                 feature_type = DatasetsConfig.DATASET_TYPE_GENETIC_MARKER):
+        
+        if self._verbose: sys.stderr.write("DatasetsFacade: loading markers associated to physical positions...\n")
+        
+        ## Search datasets for markers
+        ## associated to those contigs
+        #dataset_list = self._datasets_config.get_datasets().keys()
+        multiple_param = True
+        
+        featured_map_intervals = self._datasets_retriever.retrieve_datasets_on_pos(map_intervals, dataset_list, map_config, chrom_dict,
+                                                                   multiple_param, map_sort_by, feature_type)
+        
+        return featured_map_intervals
     
 ## END

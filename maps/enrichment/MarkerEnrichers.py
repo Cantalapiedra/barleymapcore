@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Enrichers.py is part of Barleymap.
-# Copyright (C)  2013-2014  Carlos P Cantalapiedra.
+# MarkerEnrichers.py is part of Barleymap.
 # Copyright (C)  2017  Carlos P Cantalapiedra.
 # (terms of use can be found within the distributed LICENSE file).
 
@@ -18,7 +17,7 @@ ROW_TYPE_FEATURE = "feature"
 ROW_TYPE_BOTH = "both"
 
 ## Factory
-class EnricherFactory(object):
+class MarkerEnricherFactory(object):
     
     def __init__(self, ):
         pass
@@ -46,7 +45,7 @@ class Enricher(object):
     def get_map_reader(self):
         return self._mapReader
     
-    def retrieve_features(self, map_config, map_intervals, datasets_facade, dataset_list, map_sort_by):
+    def retrieve_features(self, map_config, map_intervals, datasets_facade, map_sort_by):
         raise m2pException("Method 'retrieve_features' should be implemented in a class inheriting Enricher.")
     
     def sort_features(self, features, map_sort_by):
@@ -61,102 +60,119 @@ class Enricher(object):
         
         enriched_map = []
         
-        mapped = mapping_results.get_mapped()
-        map_sort_by = mapping_results.get_sort_by()
+        #sys.stderr.write("MarkerEnrichers.\n")
         
-        p = 0
-        num_pos = len(mapped)
-        m = 0
-        num_features = len(features)
-        
-        while (p<num_pos and m<num_features):
+        for featured_map_interval in features:
+            map_interval = featured_map_interval.get_map_interval()
+            #sys.stderr.write("\tinterval: "+str(map_interval)+"\n")
             
-            # Load position data
-            #if p<num_pos:
-            map_position = mapped[p]
-            map_chrom_name = map_position.get_chrom_name()
-            map_chrom_order = map_position.get_chrom_order()
-            map_pos = float(map_position.get_sort_pos(map_sort_by))
-            map_end_pos = float(map_position.get_sort_end_pos(map_sort_by))
-            map_interval = MapInterval(map_chrom_order, map_pos, map_end_pos)
-            #print map_position
-            
-            #if m<num_features:
-            feature_mapping = features[m]
-            feature_chrom = feature_mapping.get_chrom_name()
-            feature_chrom_order = feature_mapping.get_chrom_order()
-            feature_pos = float(feature_mapping.get_sort_pos(map_sort_by))
-            feature_end_pos = float(feature_mapping.get_sort_end_pos(map_sort_by))
-            feature_interval = MapInterval(feature_chrom_order, feature_pos, feature_end_pos)
-            #print feature_mapping
-            
-            if MapInterval.intervals_overlap(map_interval, feature_interval):
-                if collapsed_view:
-                    if map_pos <= feature_pos:
-                        # create position
-                        row_type = ROW_TYPE_POSITION
-                        p+=1
-                        
-                        row = self._create_row(map_position, None, ROW_TYPE_POSITION, collapsed_view)
-                        enriched_map.append(row)
-                        
-                    else: # feature_pos < map_pos:
-                        # create feature
-                        row_type = ROW_TYPE_FEATURE
-                        m+=1
-                        row = self._create_row(None, feature_mapping, ROW_TYPE_FEATURE, collapsed_view)
-                        enriched_map.append(row)
-                    
-                else: # Combined row with the MappingResult and the FeatureMapping
-                    row_type = ROW_TYPE_BOTH
-                    p+=1
-                    m+=1
-                    row = self._create_row(map_position, feature_mapping, row_type, collapsed_view)
-                    enriched_map.append(row)
-                
-            else:
-                if map_chrom_order < feature_chrom_order:
-                    # create position
-                    row_type = ROW_TYPE_POSITION
-                    p+=1
-                    
-                elif feature_chrom_order < map_chrom_order:
-                    # create feature
-                    row_type = ROW_TYPE_FEATURE
-                    m+=1
-                else:
-                    if map_pos < feature_pos:
-                        # create position
-                        row_type = ROW_TYPE_POSITION
-                        p+=1
-                        
-                    elif feature_pos < map_pos:
-                        # create feature
-                        row_type = ROW_TYPE_FEATURE
-                        m+=1
-                        
-                    else:
-                        raise m2pException("Enrichers: intervals which do not overlap should have different positions: "+str(map_interval)+\
-                                           " - "+str(feature_interval))
-                
-                row = self._create_row(map_position, feature_mapping, row_type, collapsed_view)
+            positions = map_interval.get_positions()
+            for position in positions:
+                #sys.stderr.write("\tposition: "+str(position)+"\n")
+                row = self._create_row(position, None, ROW_TYPE_POSITION, collapsed_view)
                 enriched_map.append(row)
+            
+            
+            features = featured_map_interval.get_features()
+            for feature in features:
+                #sys.stderr.write("\tfeature:"+str(feature)+"\n")
+                row = self._create_row(None, feature, ROW_TYPE_FEATURE, collapsed_view)
+                enriched_map.append(row)
+            
+            
         
-        # When there are only MappingResults left
-        while (p<num_pos):
-            # create position
-            map_position = mapped[p]
-            row = self._create_row(map_position, None, ROW_TYPE_POSITION, collapsed_view)
-            enriched_map.append(row)
-            p+=1
-        
-        # When there are only FeatureMappings left
-        while (m<num_features):
-            # create feature
-            feature_mapping = features[m]
-            row = self._create_row(None, feature_mapping, ROW_TYPE_FEATURE, collapsed_view)
-            enriched_map.append(row)
-            m+=1
+        #mapped = mapping_results.get_mapped()
+        #map_sort_by = mapping_results.get_sort_by()
+        #
+        #p = 0
+        #num_pos = len(mapped)
+        #m = 0
+        #num_features = len(features)
+        #
+        #while (p<num_pos and m<num_features):
+        #    
+        #    # Load position data
+        #    #if p<num_pos:
+        #    map_position = mapped[p]
+        #    map_chrom_name = map_position.get_chrom_name()
+        #    map_chrom_order = map_position.get_chrom_order()
+        #    map_pos = float(map_position.get_sort_pos(map_sort_by))
+        #    map_end_pos = float(map_position.get_sort_end_pos(map_sort_by))
+        #    map_interval = MapInterval(map_chrom_order, map_pos, map_end_pos)
+        #    #print map_position
+        #    
+        #    #if m<num_features:
+        #    feature_mapping = features[m]
+        #    feature_chrom = feature_mapping.get_chrom_name()
+        #    feature_chrom_order = feature_mapping.get_chrom_order()
+        #    feature_pos = float(feature_mapping.get_sort_pos(map_sort_by))
+        #    feature_end_pos = float(feature_mapping.get_sort_end_pos(map_sort_by))
+        #    feature_interval = MapInterval(feature_chrom_order, feature_pos, feature_end_pos)
+        #    #print feature_mapping
+        #    
+        #    if MapInterval.intervals_overlap(map_interval, feature_interval):
+        #        
+        #        row_type = ROW_TYPE_BOTH
+        #        p+=1
+        #        m+=1
+        #        
+        #        if collapsed_view: # One row for the MappingResult and another for the FeatureMapping
+        #            row = self._create_row(map_position, None, ROW_TYPE_POSITION, collapsed_view)
+        #            enriched_map.append(row)
+        #            row = self._create_row(None, feature_mapping, ROW_TYPE_FEATURE, collapsed_view)
+        #            enriched_map.append(row)
+        #            
+        #        else: # Combined row with the MappingResult and the FeatureMapping
+        #            row = self._create_row(map_position, feature_mapping, row_type, collapsed_view)
+        #            enriched_map.append(row)
+        #        
+        #    else:
+        #        if map_chrom_order < feature_chrom_order:
+        #            # create position
+        #            row_type = ROW_TYPE_POSITION
+        #            p+=1
+        #            
+        #        elif feature_chrom_order < map_chrom_order:
+        #            # create feature
+        #            row_type = ROW_TYPE_FEATURE
+        #            m+=1
+        #        else:
+        #            if map_pos < feature_pos:
+        #                # create position
+        #                row_type = ROW_TYPE_POSITION
+        #                p+=1
+        #                
+        #            elif feature_pos < map_pos:
+        #                # create feature
+        #                row_type = ROW_TYPE_FEATURE
+        #                m+=1
+        #                
+        #            else: # feature_pos == map_pos
+        #                raise m2pException("Enrichers: intervals which do not overlap should have different positions: "+str(map_interval)+\
+        #                                   " - "+str(feature_interval))
+        #                # create position-feature
+        #                #row_type = ROW_TYPE_BOTH
+        #                #p+=1
+        #                #m+=1
+        #        
+        #        row = self._create_row(map_position, feature_mapping, row_type, collapsed_view)
+        #        enriched_map.append(row)
+        #
+        ## When there are only MappingResults left
+        #while (p<num_pos):
+        #    # create position
+        #    map_position = mapped[p]
+        #    row = self._create_row(map_position, None, ROW_TYPE_POSITION, collapsed_view)
+        #    enriched_map.append(row)
+        #    p+=1
+        #
+        ## When there are only FeatureMappings left
+        #while (m<num_features):
+        #    # create feature
+        #    feature_mapping = features[m]
+        #    row = self._create_row(None, feature_mapping, ROW_TYPE_FEATURE, collapsed_view)
+        #    enriched_map.append(row)
+        #    m+=1
         
         return enriched_map
     
@@ -222,7 +238,6 @@ class MarkerEnricher(Enricher):
         return
     
     def retrieve_features(self, map_config, map_intervals, datasets_facade, dataset_list, map_sort_by):
-        features = []
         
         sys.stderr.write("MarkerEnricher: retrieve markers...\n")
         
@@ -232,13 +247,16 @@ class MarkerEnricher(Enricher):
         
         # 2) Obtain the markers in the intervals
         #
-        features = datasets_facade.retrieve_features_by_pos(map_intervals, map_config, chrom_dict, map_sort_by, dataset_list,
+        featured_map_intervals = datasets_facade.retrieve_features_on_pos(map_intervals, map_config, chrom_dict, map_sort_by, dataset_list,
                                                            DatasetsConfig.DATASET_TYPE_GENETIC_MARKER)
         
         # 3) Sort the list by chrom and position
-        features = self.sort_features(features, map_sort_by)
+        for featured_map_interval in featured_map_intervals:
+            features = featured_map_interval.get_features()
+            features = self.sort_features(features, map_sort_by)
+            featured_map_interval.set_features(features)
         
-        return features
+        return featured_map_intervals
     
     def get_enricher_type(self):
         return DatasetsConfig.DATASET_TYPE_GENETIC_MARKER
@@ -251,7 +269,6 @@ class AnchoredEnricher(Enricher):
         return
     
     def retrieve_features(self, map_config, map_intervals, datasets_facade, dataset_list, map_sort_by):
-        features = []
         
         sys.stderr.write("AnchoredEnricher: retrieve anchored features...\n")
         
@@ -261,13 +278,16 @@ class AnchoredEnricher(Enricher):
         
         # 2) Obtain the markers in the intervals
         #
-        features = datasets_facade.retrieve_features_by_pos(map_intervals, map_config, chrom_dict, map_sort_by, dataset_list,
+        featured_map_intervals = datasets_facade.retrieve_features_on_pos(map_intervals, map_config, chrom_dict, map_sort_by, dataset_list,
                                                            DatasetsConfig.DATASET_TYPE_ANCHORED)
         
         # 3) Sort the list by chrom and position
-        features = self.sort_features(features, map_sort_by)
+        for featured_map_interval in featured_map_intervals:
+            features = featured_map_interval.get_features()
+            features = self.sort_features(features, map_sort_by)
+            featured_map_interval.set_features(features)
         
-        return features
+        return featured_map_intervals
     
     def get_enricher_type(self):
         return DatasetsConfig.DATASET_TYPE_ANCHORED
@@ -283,7 +303,6 @@ class GeneEnricher(Enricher):
         return
     
     def retrieve_features(self, map_config, map_intervals, datasets_facade, dataset_list, map_sort_by):
-        features = []
         
         sys.stderr.write("GeneEnricher: retrieve genes...\n")
         
@@ -293,24 +312,30 @@ class GeneEnricher(Enricher):
         
         # 2) Obtain the genes in the intervals
         #
-        features = datasets_facade.retrieve_features_by_pos(map_intervals, map_config, chrom_dict, map_sort_by, dataset_list,
+        featured_map_intervals = datasets_facade.retrieve_features_on_pos(map_intervals, map_config, chrom_dict, map_sort_by, dataset_list,
                                                            DatasetsConfig.DATASET_TYPE_GENE)
         
-        sys.stderr.write("GeneEnricher: num features "+str(len(features))+"\n")
+        #sys.stderr.write("GeneEnricher: num features "+str(len(features))+"\n")
         
         # 3) Sort the list by chrom and position
-        features = self.sort_features(features, map_sort_by)
-        
         # 4) If required, annotate genes
-        if self._annotator:
-            features = self._annotator.annotate_features(features)
+        for featured_map_interval in featured_map_intervals:
+            features = featured_map_interval.get_features()
+            features = self.sort_features(features, map_sort_by)
+            featured_map_interval.set_features(features)
+            if self._annotator:
+                features = self._annotator.annotate_features(features)
         
-        #print "ENRICHERS"
-        #for gene_mapping in features:
-        #    print gene_mapping
-        #print ""
+        #sys.stderr.write("GeneEnricher\n")
+        #
+        #for featured_map_interval in featured_map_intervals:
+        #    map_interval = featured_map_interval.get_map_interval()
+        #    sys.stderr.write("\tinterval: "+str(map_interval)+"\n")
+        #    features = featured_map_interval.get_features()
+        #    for feature in features:
+        #        sys.stderr.write("\t\tfeature: "+str(feature)+"\n")
         
-        return features
+        return featured_map_intervals
     
     def get_enricher_type(self):
         return DatasetsConfig.DATASET_TYPE_GENE

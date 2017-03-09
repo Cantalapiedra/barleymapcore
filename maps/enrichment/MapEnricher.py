@@ -9,11 +9,48 @@ import sys
 
 #from Enrichers import *
 
-from barleymapcore.maps.MapInterval import MapInterval
+from barleymapcore.maps.MapInterval import MapInterval, FeaturedMapInterval
 from barleymapcore.maps.MapsBase import MapTypes
 
 from barleymapcore.m2p_exception import m2pException
 
+from Enrichers import EnricherFactory
+from MarkerEnrichers import MarkerEnricherFactory
+
+SHOW_ON_INTERVALS = "0"
+SHOW_ON_MARKERS = "1"
+
+class MapEnricherFactory(object):
+    @staticmethod
+    def get_map_enricher(show_how, enricher, mapping_results, verbose):
+        map_enricher = None
+        
+        if show_how == SHOW_ON_INTERVALS:
+            map_enricher = MapEnricher(enricher, mapping_results, verbose)
+            
+        elif show_how == SHOW_ON_MARKERS:
+            map_enricher = MarkerEnricher(enricher, mapping_results, verbose)
+            
+        else:
+            raise m2pException("Unrecognized show_how parameter "+str(show_how)+".")
+        
+        return map_enricher
+    
+    @staticmethod
+    def get_enricher_factory(show_how):
+        enricher_factory = None
+        
+        if show_how == SHOW_ON_INTERVALS:
+            enricher_factory = EnricherFactory()
+            
+        elif show_how == SHOW_ON_MARKERS:
+            enricher_factory = MarkerEnricherFactory()
+            
+        else:
+            raise m2pException("Unrecognized show_how parameter "+str(show_how)+".")
+        
+        return enricher_factory
+    
 ## Main class to enrich a regular map from barleymap
 ## with additional positional data
 class MapEnricher(object):
@@ -37,7 +74,7 @@ class MapEnricher(object):
     def get_mapping_results(self):
         return self._mapping_results
     
-    def enrich(self, map_intervals, datasets_facade, collapsed_view):
+    def enrich(self, map_intervals, datasets_facade, dataset_list, collapsed_view):
         
         mapping_results = self.get_mapping_results()
         map_config = mapping_results.get_map_config()
@@ -47,7 +84,7 @@ class MapEnricher(object):
         
         ### Retrieve features (what type depends on the enricher used to retrieve them)
         sys.stderr.write("MapEnricher: retrieve features...\n")
-        features = self._enricher.retrieve_features(map_config, map_intervals, datasets_facade, map_sort_by)
+        features = self._enricher.retrieve_features(map_config, map_intervals, datasets_facade, dataset_list, map_sort_by)
         if self._verbose: sys.stderr.write("\t features retrieved: "+str(len(features))+"\n")
         
         ## Enrich map
@@ -69,7 +106,7 @@ class MapEnricher(object):
         
         ### Retrieve markers
         sys.stderr.write("MapEnricher: retrieve anchored...\n")
-        features = self._enricher.retrieve_features(map_config, map_intervals, datasets_facade, map_sort_by)
+        features = self._enricher.retrieve_features(map_config, map_intervals, datasets_facade, dataset_list, map_sort_by)
         if self._verbose: sys.stderr.write("\tanchored features retrieved: "+str(len(features))+"\n")
         
         ## Enrich map
@@ -93,7 +130,7 @@ class MapEnricher(object):
         
         ### Retrieve markers
         sys.stderr.write("MapEnricher: retrieve markers...\n")
-        features = self._enricher.retrieve_features(map_config, map_intervals, datasets_facade, map_sort_by)
+        features = self._enricher.retrieve_features(map_config, map_intervals, datasets_facade, dataset_list, map_sort_by)
         if self._verbose: sys.stderr.write("\tmarkers retrieved: "+str(len(features))+"\n")
         
         ## Enrich map
@@ -117,7 +154,7 @@ class MapEnricher(object):
         
         ### Retrieve markers
         sys.stderr.write("MapEnricher: retrieve genes...\n")
-        features = self._enricher.retrieve_features(map_config, map_intervals, datasets_facade, map_sort_by)
+        features = self._enricher.retrieve_features(map_config, map_intervals, datasets_facade, dataset_list, map_sort_by)
         if self._verbose: sys.stderr.write("\tgenes retrieved: "+str(len(features))+"\n")
         
         ## Enrich map
@@ -166,10 +203,11 @@ class MapEnricher(object):
             pos_marker = map_position.get_marker_id() #position[MapFields.MARKER_NAME_POS]
             pos_chr = map_position.get_chrom_name() #position[MapFields.MARKER_CHR_POS]
             pos_pos = map_position.get_sort_pos(map_sort_by) #float(position[map_sort_by])
+            pos_end_pos = map_position.get_sort_end_pos(map_sort_by)
             
-            #if self._verbose: sys.stderr.write("\tMap position: "+str(position)+"\n")
+            #if self._verbose: sys.stderr.write("\tMap position: "+str(map_position)+"\n")
             
-            interval = self._get_new_interval(map_position, pos_chr, pos_pos, extend_window)
+            interval = self._get_new_interval(map_position, pos_chr, pos_pos, pos_end_pos, extend_window)
             
             ## check whether intervals overlap to each other
             if prev_position:
@@ -182,7 +220,7 @@ class MapEnricher(object):
                 else:
                     # Check if there is overlap
                     if MapInterval.intervals_overlap(prev_interval, interval):
-                        self._add_position_to_interval(prev_interval, map_position, pos_pos, extend_window)
+                        self._add_position_to_interval(prev_interval, map_position, pos_end_pos, extend_window)
                         interval = prev_interval
                         #if self._verbose: sys.stdout.write("\t\toverlap --> Updated interval "+str(prev_interval)+"\n")
                     else:
@@ -210,13 +248,13 @@ class MapEnricher(object):
         
         return
     
-    def _get_new_interval(self, position, pos_chr, pos_pos, extend_window):
+    def _get_new_interval(self, position, pos_chr, pos_pos, pos_end_pos, extend_window = 0):
         interval_chr = pos_chr
         interval_ini_pos = float(pos_pos) - extend_window
         if interval_ini_pos < 0:
             interval_ini_pos = 0 #self.MAP_UNIT
         
-        interval_end_pos = float(pos_pos) + extend_window
+        interval_end_pos = float(pos_end_pos) + extend_window
         
         interval = MapInterval(interval_chr, interval_ini_pos, interval_end_pos)
         interval.add_position(position)
@@ -233,4 +271,73 @@ class MapEnricher(object):
         
         return
 
+class MarkerEnricher(MapEnricher):
+    
+    def __init__(self, enricher, mapping_results, verbose = False):
+        self._enricher = enricher
+        self._mapping_results = mapping_results
+        self._verbose = verbose
+        
+        return
+    
+    ### Overwrites _map_intervals of MapEnricher
+    def _map_intervals(self, sorted_map, map_sort_by, extend_window):
+        map_intervals = []
+        
+        map_intervals = self.__map_intervals(sorted_map, map_sort_by)
+        
+        return map_intervals
+    
+    def __map_intervals(self, sorted_map, map_sort_by):
+        map_intervals = []
+        
+        if self._verbose: sys.stderr.write("MarkerEnricher: creating intervals on markers\n")
+        
+        sys.stderr.write("MarkerEnricher: map sort by "+str(map_sort_by)+"\n")
+        
+        if map_sort_by == MapTypes.MAP_SORT_PARAM_BP:
+            self.MAP_UNIT = self.MAP_UNIT_PHYSICAL
+        elif map_sort_by == MapTypes.MAP_SORT_PARAM_CM:
+            self.MAP_UNIT = self.MAP_UNIT_GENETIC
+        else:
+            raise m2pException("Unrecognized map sort unit "+str(map_sort_by)+".")
+        
+        # Loop over consecutive positions to compare them and create intervals
+        prev_position = None
+        prev_interval = None
+        for map_position in sorted_map:
+            #sys.stderr.write("\tMap position: "+str(map_position)+"\n")
+            
+            pos_marker = map_position.get_marker_id() #position[MapFields.MARKER_NAME_POS]
+            pos_chr = map_position.get_chrom_name() #position[MapFields.MARKER_CHR_POS]
+            pos_pos = map_position.get_sort_pos(map_sort_by) #float(position[map_sort_by])
+            pos_end_pos = map_position.get_sort_end_pos(map_sort_by)
+            
+            interval = self._get_new_interval(map_position, pos_chr, pos_pos, pos_end_pos)
+            #sys.stderr.write("\tInterval "+str(interval)+"\n")
+            
+            self._append_interval(map_intervals, interval)
+        
+        sys.stderr.write("MapEnricher: "+str(len(map_intervals))+" intervals created.\n")
+        
+        return map_intervals
+    
+    ### Overwrites _get_new_itnerval of MapEnricher
+    ### to create FeaturedMapInterval instead of MapInterval
+    def _get_new_interval(self, position, pos_chr, pos_pos, pos_end_pos, extend_window = 0):
+        interval_chr = pos_chr
+        interval_ini_pos = float(pos_pos) - extend_window
+        if interval_ini_pos < 0:
+            interval_ini_pos = 0 #self.MAP_UNIT
+        
+        interval_end_pos = float(pos_end_pos) + extend_window
+        
+        interval = MapInterval(interval_chr, interval_ini_pos, interval_end_pos)
+        interval.add_position(position)
+        interval = FeaturedMapInterval(interval)
+        
+        #if self._verbose: sys.stdout.write("\t\tnew interval "+str(interval)+"\n")
+        
+        return interval
+    
 ## END

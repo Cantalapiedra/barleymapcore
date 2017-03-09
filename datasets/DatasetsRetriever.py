@@ -228,5 +228,49 @@ class DatasetsRetriever(object):
                 #features.extend(dataset_features)
         
         return features
+    
+    ## This method searches features in each map_interval
+    ## independently of the other map_intervals
+    def retrieve_datasets_on_pos(self, map_intervals, dataset_list, map_config, chrom_dict,
+                                 multiple_param, map_sort_by, feature_type = DatasetsConfig.DATASET_TYPE_GENETIC_MARKER):
+        
+        map_id = map_config.get_id()
+        
+        # Look for markers for each dataset
+        for dataset in dataset_list:
+            
+            sys.stderr.write("\t dataset: "+dataset+"\n")
+            
+            # Check if map and dataset do share databases
+            dataset_config = self._datasets_config.get_dataset_config(dataset)
+            if not self.common_dbs(dataset_config, map_config):
+                continue
+            
+            dataset_type = dataset_config.get_dataset_type()
+            dataset_name = dataset_config.get_dataset_name()#datasets_dict[dataset]["dataset_name"]
+            
+            ####### If dataset type is the type requested, pass, else (dataset type does not match the one requested) continue
+            ###### Note that MAP type is a subtype of ANCHORED and therefore MAP types are accepted with ANCHORED filtering
+            if dataset_type == feature_type or (dataset_type == DatasetsConfig.DATASET_TYPE_MAP and feature_type == DatasetsConfig.DATASET_TYPE_ANCHORED):
+                pass
+            else:
+                continue
+            
+            if self._verbose: sys.stderr.write("\t dataset: "+dataset+"\n")
+            
+            ########## Retrieve markers within intervals
+            ##########
+            dataset_map_path = self.get_dataset_path(dataset, map_id, dataset_type)
+            
+            sys.stderr.write("\t\t path: "+dataset_map_path+"\n")
+            
+            if os.path.exists(dataset_map_path) and os.path.isfile(dataset_map_path):
+                if self._verbose: sys.stderr.write("DatasetsRetriever: loading features from map data: "+dataset_map_path+"\n")
+                
+                mappings_parser = MappingsParser()
+                featured_map_intervals = mappings_parser.parse_mapping_file_on_pos(map_intervals, dataset_map_path, chrom_dict, map_config, map_sort_by,
+                                                                                   dataset, dataset_name, feature_type)
+        
+        return featured_map_intervals
 
 ## END
