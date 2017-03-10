@@ -284,13 +284,6 @@ class MarkerEnricher(MapEnricher):
     def _map_intervals(self, sorted_map, map_sort_by, extend_window):
         map_intervals = []
         
-        map_intervals = self.__map_intervals(sorted_map, map_sort_by)
-        
-        return map_intervals
-    
-    def __map_intervals(self, sorted_map, map_sort_by):
-        map_intervals = []
-        
         if self._verbose: sys.stderr.write("MarkerEnricher: creating intervals on markers\n")
         
         sys.stderr.write("MarkerEnricher: map sort by "+str(map_sort_by)+"\n")
@@ -313,7 +306,7 @@ class MarkerEnricher(MapEnricher):
             pos_pos = map_position.get_sort_pos(map_sort_by) #float(position[map_sort_by])
             pos_end_pos = map_position.get_sort_end_pos(map_sort_by)
             
-            interval = self._get_new_interval(map_position, pos_chr, pos_pos, pos_end_pos)
+            interval = self._get_new_interval(map_position, pos_chr, pos_pos, pos_end_pos, extend_window)
             #sys.stderr.write("\tInterval "+str(interval)+"\n")
             
             self._append_interval(map_intervals, interval)
