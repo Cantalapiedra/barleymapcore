@@ -133,19 +133,20 @@ class PathsConfig(object):
     def get_split_blast_path(self):
         return self._app_path+"/"+self._split_blast_path
     
+    # Absolute paths
+    
     def get_tmp_files_path(self):
-        return self._app_path+"/"+self._tmp_files_path
+        return self._tmp_files_path
     
     def get_datasets_path(self):
-        return self._app_path+"/"+self._datasets_path
+        return self._datasets_path
     
     def get_maps_path(self):
-        return self._app_path+"/"+self._maps_path
+        return self._maps_path
     
     def get_annot_path(self):
-        return self._app_path+"/"+self._annot_path
+        return self._annot_path
     
-    # Absolute paths
     def get_blastn_app_path(self):
         return self._blastn_app_path
     
