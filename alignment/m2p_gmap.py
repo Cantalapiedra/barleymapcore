@@ -233,6 +233,7 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, db_name, verbose
         
         line_data = line.split(" ")
         
+        #sys.stderr.write("Line "+str(line)+"\n")
         #sys.stderr.write("Data "+str(line_data)+"\n")
         
         query_id = line_data[0][1:]
@@ -254,7 +255,7 @@ def __filter_gmap_results(results, threshold_id, threshold_cov, db_name, verbose
             end_position = long(line_data[9].split(":")[1].split("..")[0])
             #local_position = long(s_pos.group(2))
         else:
-            raise Exception("m2p_gmap: wrong strand.")
+            raise Exception("m2p_gmap: wrong strand "+str(strand)+".")
         
         #sys.stderr.write("Local position "+str(local_position)+"\n")
         
