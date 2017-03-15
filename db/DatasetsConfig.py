@@ -18,10 +18,11 @@ class DatasetConfig(object):
     _file_type = ""
     _db_list = []
     _synonyms = ""
+    _prefixes = []
     
     _ignore_build = False
     
-    def __init__(self, dataset_name, dataset_id, dataset_type, file_path, file_type, db_list, synonyms):
+    def __init__(self, dataset_name, dataset_id, dataset_type, file_path, file_type, db_list, synonyms, prefixes):
         self._dataset_name = dataset_name
         self._dataset_id = dataset_id
         self._dataset_type = dataset_type
@@ -29,6 +30,7 @@ class DatasetConfig(object):
         self._file_type = file_type
         self._db_list = db_list
         self._synonyms = synonyms
+        self._prefixes = prefixes
     
     def set_dataset_name(self, dataset_name):
         self._dataset_name = dataset_name
@@ -54,6 +56,9 @@ class DatasetConfig(object):
     def get_synonyms(self):
         return self._synonyms
     
+    def get_prefixes(self, ):
+        return self._prefixes
+    
     def set_ignore_build(self, ignore_build):
         self._ignore_build = ignore_build
         
@@ -63,7 +68,7 @@ class DatasetConfig(object):
     def __str__(self):
         return self._dataset_name+" - "+self._dataset_id+" - "+self._dataset_type+" - "+\
                 self._file_path+" - "+self._file_type+" - "+",".join(self._db_list)+\
-                self._synonyms
+                self._synonyms+" - "+",".join(self._prefixes)
     
 class DatasetsConfig(object):
     
@@ -75,6 +80,7 @@ class DatasetsConfig(object):
     FILE_TYPE = 4 # fna, gtf, other
     DATABASES = 5 # ANY, [db,...]
     SYNONYMS = 6 # no, file path
+    PREFIXES = 7
     
     # DATASET_TYPE values
     DATASET_TYPE_GENETIC_MARKER = "genetic_marker"
@@ -125,8 +131,9 @@ class DatasetsConfig(object):
             file_type = conf_row[DatasetsConfig.FILE_TYPE]
             databases = conf_row[DatasetsConfig.DATABASES].strip().split(",")
             synonyms = conf_row[DatasetsConfig.SYNONYMS]
+            prefixes = conf_row[DatasetsConfig.PREFIXES].strip().split(",")
             
-            dataset = DatasetConfig(dataset_name, dataset_id, dataset_type, file_path, file_type, databases, synonyms)
+            dataset = DatasetConfig(dataset_name, dataset_id, dataset_type, file_path, file_type, databases, synonyms, prefixes)
             
             if dataset_name.startswith(">"):
                 dataset.set_dataset_name(dataset_name[1:]) # remove the ">" from the name

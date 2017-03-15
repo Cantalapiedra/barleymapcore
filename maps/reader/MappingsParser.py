@@ -6,6 +6,7 @@
 # (terms of use can be found within the distributed LICENSE file).
 
 import sys, os
+import cPickle
 
 from barleymapcore.maps.MappingResults import MappingResult
 from barleymapcore.maps.MapInterval import MapInterval
@@ -35,7 +36,7 @@ class MappingsParser(object):
         
         return mapping_results_list
     
-    def parse_mapping_file_by_id(self, query_ids_dict, data_path, map_config, chrom_dict,
+    def _parse_mapping_file_by_id(self, query_ids_dict, data_path, map_config, chrom_dict,
                                         multiple_param, dataset_synonyms = {}, test_set = None):
         mapping_results_list = []
         
@@ -45,33 +46,124 @@ class MappingsParser(object):
         map_is_physical = map_config.as_physical()
         
         for hit in open(data_path, 'r'):
+            #sys.stderr.write(" ONE**************************\n")
             #sys.stderr.write(str(hit)+"\n")
             if hit.startswith(">") or hit.startswith("#"): continue
             hit_data = hit.strip().split("\t")
             
-            mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_is_physical, map_has_cm_pos, map_has_bp_pos)
-            hit_query = mapping_result.get_marker_id()#[AlignmentResults.QUERY_ID]
-            has_multiple = mapping_result.has_multiple_pos()
-            
-            if has_multiple and multiple_param == False: continue
+            #sys.stderr.write("data\n")
             
             if test_set:
+                hit_query = hit_data[0]
+                
+                #sys.stderr.write("CHECK TESTSET\n")
                 if hit_query in dataset_synonyms:
                     hit_synonyms = dataset_synonyms[hit_query]
                     synonyms_found = test_set.intersection(hit_synonyms)
                     if len(synonyms_found) > 0:
+                        mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_is_physical, map_has_cm_pos, map_has_bp_pos)
+                        
+                        for synonym in synonyms_found: # all found
+                            query_ids_dict[synonym] = 1
+                        
+                        if mapping_result.has_multiple_pos():
+                            if multiple_param == False:
+                                continue
+                        else: # just for sake of readability
+                            for synonym in synonyms_found: # all found
+                                if synonym in test_set:
+                                    test_set.remove(synonym)
+                                
                         mapping_result.set_marker_id("|".join(synonyms_found))
                         mapping_results_list.append(mapping_result)
-                        for synonym in synonyms_found:
-                            query_ids_dict[synonym] = 1
                 else:
                     if hit_query in test_set:
-                        #sys.stderr.write(str(hit_query)+"\n")
-                        mapping_results_list.append(mapping_result)
+                        #sys.stderr.write("create mapping data\n")
+                        mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_is_physical, map_has_cm_pos, map_has_bp_pos)
+                        
                         query_ids_dict[hit_query] = 1 # found
-                        #if hierarchical: query_ids_dict[hit_query] = 1
+                        
+                        #sys.stderr.write("append\n")
+                        if mapping_result.has_multiple_pos():
+                            if multiple_param == False:
+                                continue
+                        else: # just for sake of readability
+                            test_set.remove(hit_query)
+                            
+                        mapping_results_list.append(mapping_result)
+                        
             else: # retrieve all mapping results
+                mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_is_physical, map_has_cm_pos, map_has_bp_pos)
+                
+                query_ids_dict[hit_query] = 1 # found
+                
+                if mapping_result.has_multiple_pos():
+                    if multiple_param == False:
+                        continue
+                
                 mapping_results_list.append(mapping_result)
+            
+            #sys.stderr.write("**********NEXT\n")
+            if len(test_set) == 0: break
+        
+        return mapping_results_list
+    
+    def _parse_index_file_by_id(self, query_ids_dict, index_path, data_path, map_config, chrom_dict,
+                                                                    multiple_param, dataset_synonyms, test_set):
+        mapping_results_list = []
+        
+        ## TODO: DO SOMETHING WITH THE SYNONYMS!!!
+        ##
+        
+        map_name = map_config.get_name()
+        map_has_cm_pos = map_config.has_cm_pos()
+        map_has_bp_pos = map_config.has_bp_pos()
+        map_is_physical = map_config.as_physical()
+        
+        sys.stderr.write("MappingsParser: loading index "+str(index_path)+"...\n")
+        
+        with open(index_path, 'r') as index_f:
+            index = cPickle.load(index_f)
+        
+        sys.stderr.write("MappingsParser: loaded index with "+str(len(index))+" entries.\n")
+        
+        sys.stderr.write("MappingsParser: obtaining index of queries...\n")
+        queries_bytes = []
+        for query in test_set:
+            if query in index:
+                query_bytes = index[query]
+                
+                query_ids_dict[query] = 1 # found
+                
+                queries_bytes.append(query_bytes)
+        
+        with open(data_path, 'r') as data_f:
+            for query_bytes in queries_bytes:
+                data_f.seek(query_bytes)
+                mapping_line = data_f.readline()
+                mapping_data = mapping_line.strip().split("\t")
+                mapping_result = MappingResult.init_from_data(mapping_data, map_name, chrom_dict, map_is_physical, map_has_cm_pos, map_has_bp_pos)
+                
+                if mapping_result.has_multiple_pos():
+                    if multiple_param == False:
+                        continue
+                
+                mapping_results_list.append(mapping_result)
+        
+        return mapping_results_list
+    
+    def parse_mapping_file_by_id(self, query_ids_dict, data_path, map_config, chrom_dict,
+                                        multiple_param, dataset_synonyms = {}, test_set = None):
+        mapping_results_list = []
+        
+        # check if there is an index
+        index_path = data_path+".idx"
+        if os.path.exists(index_path) and os.path.isfile(index_path):
+            mapping_results_list = self._parse_index_file_by_id(query_ids_dict, index_path, data_path, map_config, chrom_dict,
+                                                                    multiple_param, dataset_synonyms, test_set)
+        else:
+            mapping_results_list = self._parse_mapping_file_by_id(query_ids_dict, data_path, map_config, chrom_dict,
+                                                                    multiple_param, dataset_synonyms, test_set)
         
         return mapping_results_list
     

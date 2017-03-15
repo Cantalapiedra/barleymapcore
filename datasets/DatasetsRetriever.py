@@ -67,10 +67,10 @@ class DatasetsRetriever(object):
         
         if feature_type == DatasetsConfig.DATASET_TYPE_MAP:
             dataset_map_path = self._maps_path+"/"+str(map_id)+"/"+str(map_id)+"."+str(dataset)
-            sys.stderr.write("DatasetsRetriever: get_dataset_path MAP TYPE "+str(dataset_map_path)+"\n")
+            #sys.stderr.write("DatasetsRetriever: get_dataset_path MAP TYPE "+str(dataset_map_path)+"\n")
         else:
             dataset_map_path = self._datasets_path+str(dataset)+"/"+str(dataset)+"."+str(map_id)
-            sys.stderr.write("DatasetsRetriever: get_dataset_path "+str(dataset_map_path)+"\n")
+            #sys.stderr.write("DatasetsRetriever: get_dataset_path "+str(dataset_map_path)+"\n")
         
         return dataset_map_path
     
@@ -96,7 +96,7 @@ class DatasetsRetriever(object):
         
         map_id = map_config.get_id()
         
-        sys.stderr.write("MappingsRetriever: searching "+query_ids_path+"...\n")
+        sys.stderr.write("DatasetsRetriever: searching "+query_ids_path+"...\n")
         
         # Load list of queries to search for
         initial_num_queries = 0
@@ -117,17 +117,31 @@ class DatasetsRetriever(object):
             if not self.common_dbs(dataset_config, map_config):
                 continue
             
+            dataset_prefixes = dataset_config.get_prefixes()
+            
             # Check if there are not found queries
             temp_query_dict = dict([(query, 0) for query in query_ids_dict if query_ids_dict[query] == 0])
             num_queries_left = len(temp_query_dict)
             
             if num_queries_left == 0:
-                if self._verbose: sys.stderr.write("\t\t All queries found.\n")
+                sys.stderr.write("DatasetsRetriever: All queries found.\n")
                 break
             else:
                 if self._verbose:
                     sys.stderr.write("\t\t MAP: "+map_id+"\n")
                     sys.stderr.write("\t\t queries to search for: "+str(num_queries_left)+"\n")
+            
+            # If there are dataset prefixes, search for this dataset only those queries
+            # which start with those prefixes
+            if len(dataset_prefixes) >= 1 and dataset_prefixes[0] != "no":
+                # Check if there are not found queries
+                temp_query_dict = dict([(query, 0) for query in query_ids_dict if query_ids_dict[query] == 0 and
+                                                                                query.startswith(tuple(dataset_prefixes))])
+            
+            # If there are not queries with those prefixes (given that there are prefixes), continue
+            if len(temp_query_dict) <= 0: continue
+            
+            #sys.stderr.write(str(temp_query_dict)+"\n")
             
             # Obtain dataset.map file
             dataset_type = dataset_config.get_dataset_type()
@@ -137,18 +151,22 @@ class DatasetsRetriever(object):
             ############ either from mappings or from alignments
             map_results = []
             
-            sys.stderr.write("\t\t path: "+dataset_map_path+"\n")
-            
             if os.path.exists(dataset_map_path) and os.path.isfile(dataset_map_path): # mapping results are available
                 
                 sys.stderr.write("\t\t path: "+dataset_map_path+"\n")
                 
-                if self._verbose: sys.stderr.write("DatasetsRetriever: loading features from map data: "+dataset_map_path+"\n")
+                if self._verbose: sys.stderr.write("\t\t loading synonyms\n")
                 
                 synonyms_path = dataset_config.get_synonyms()
                 dataset_synonyms = self.load_synonyms(synonyms_path)
                 
+                if self._verbose: sys.stderr.write("\t\t creating test set\n")
+                
                 test_set = set(query for query in temp_query_dict)
+                
+                #sys.stderr.write(str(temp_query_dict)+"\n")
+                
+                if self._verbose: sys.stderr.write("\t\t parsing dataset file\n")
                 
                 mappings_parser = MappingsParser()
                 map_results = mappings_parser.parse_mapping_file_by_id(temp_query_dict, dataset_map_path, map_config, chrom_dict,
@@ -161,7 +179,9 @@ class DatasetsRetriever(object):
             num_results += len(map_results)
             if self._verbose:
                 num_queries = len(set([result.get_marker_id() for result in map_results]))
-                sys.stderr.write("\t\t\t hits found: "+str(len(map_results))+" for "+str(num_queries)+" queries.\n")
+                sys.stderr.write("\t\t hits found: "+str(len(map_results))+" for "+str(num_queries)+" queries.\n")
+            
+            sys.stderr.write("\t\t updating map results\n")
             
             query_ids_dict.update(temp_query_dict)
             
