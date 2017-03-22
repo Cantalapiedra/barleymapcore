@@ -62,101 +62,103 @@ class Enricher(object):
         enriched_map = []
         
         mapped = mapping_results.get_mapped()
-        map_sort_by = mapping_results.get_sort_by()
-        
-        p = 0
         num_pos = len(mapped)
-        m = 0
-        num_features = len(features)
         
-        while (p<num_pos and m<num_features):
+        if num_pos > 0:
+            map_sort_by = mapping_results.get_sort_by()
             
-            # Load position data
-            #if p<num_pos:
-            map_position = mapped[p]
-            map_chrom_name = map_position.get_chrom_name()
-            map_chrom_order = map_position.get_chrom_order()
-            map_pos = float(map_position.get_sort_pos(map_sort_by))
-            map_end_pos = float(map_position.get_sort_end_pos(map_sort_by))
-            map_interval = MapInterval(map_chrom_order, map_pos, map_end_pos)
-            #print map_position
+            p = 0
+            m = 0
+            num_features = len(features)
             
-            #if m<num_features:
-            feature_mapping = features[m]
-            feature_chrom = feature_mapping.get_chrom_name()
-            feature_chrom_order = feature_mapping.get_chrom_order()
-            feature_pos = float(feature_mapping.get_sort_pos(map_sort_by))
-            feature_end_pos = float(feature_mapping.get_sort_end_pos(map_sort_by))
-            feature_interval = MapInterval(feature_chrom_order, feature_pos, feature_end_pos)
-            #print feature_mapping
-            
-            if MapInterval.intervals_overlap(map_interval, feature_interval):
-                if collapsed_view:
-                    if map_pos <= feature_pos:
+            while (p<num_pos and m<num_features):
+                
+                # Load position data
+                #if p<num_pos:
+                map_position = mapped[p]
+                map_chrom_name = map_position.get_chrom_name()
+                map_chrom_order = map_position.get_chrom_order()
+                map_pos = float(map_position.get_sort_pos(map_sort_by))
+                map_end_pos = float(map_position.get_sort_end_pos(map_sort_by))
+                map_interval = MapInterval(map_chrom_order, map_pos, map_end_pos)
+                #print map_position
+                
+                #if m<num_features:
+                feature_mapping = features[m]
+                feature_chrom = feature_mapping.get_chrom_name()
+                feature_chrom_order = feature_mapping.get_chrom_order()
+                feature_pos = float(feature_mapping.get_sort_pos(map_sort_by))
+                feature_end_pos = float(feature_mapping.get_sort_end_pos(map_sort_by))
+                feature_interval = MapInterval(feature_chrom_order, feature_pos, feature_end_pos)
+                #print feature_mapping
+                
+                if MapInterval.intervals_overlap(map_interval, feature_interval):
+                    if collapsed_view:
+                        if map_pos <= feature_pos:
+                            # create position
+                            row_type = ROW_TYPE_POSITION
+                            p+=1
+                            
+                            row = self._create_row(map_position, None, ROW_TYPE_POSITION, collapsed_view)
+                            enriched_map.append(row)
+                            
+                        else: # feature_pos < map_pos:
+                            # create feature
+                            row_type = ROW_TYPE_FEATURE
+                            m+=1
+                            row = self._create_row(None, feature_mapping, ROW_TYPE_FEATURE, collapsed_view)
+                            enriched_map.append(row)
+                        
+                    else: # Combined row with the MappingResult and the FeatureMapping
+                        row_type = ROW_TYPE_BOTH
+                        p+=1
+                        m+=1
+                        row = self._create_row(map_position, feature_mapping, row_type, collapsed_view)
+                        enriched_map.append(row)
+                    
+                else:
+                    if map_chrom_order < feature_chrom_order:
                         # create position
                         row_type = ROW_TYPE_POSITION
                         p+=1
                         
-                        row = self._create_row(map_position, None, ROW_TYPE_POSITION, collapsed_view)
-                        enriched_map.append(row)
-                        
-                    else: # feature_pos < map_pos:
+                    elif feature_chrom_order < map_chrom_order:
                         # create feature
                         row_type = ROW_TYPE_FEATURE
                         m+=1
-                        row = self._create_row(None, feature_mapping, ROW_TYPE_FEATURE, collapsed_view)
-                        enriched_map.append(row)
+                    else:
+                        if map_pos < feature_pos:
+                            # create position
+                            row_type = ROW_TYPE_POSITION
+                            p+=1
+                            
+                        elif feature_pos < map_pos:
+                            # create feature
+                            row_type = ROW_TYPE_FEATURE
+                            m+=1
+                            
+                        else:
+                            raise m2pException("Enrichers: intervals which do not overlap should have different positions: "+str(map_interval)+\
+                                               " - "+str(feature_interval))
                     
-                else: # Combined row with the MappingResult and the FeatureMapping
-                    row_type = ROW_TYPE_BOTH
-                    p+=1
-                    m+=1
                     row = self._create_row(map_position, feature_mapping, row_type, collapsed_view)
                     enriched_map.append(row)
-                
-            else:
-                if map_chrom_order < feature_chrom_order:
-                    # create position
-                    row_type = ROW_TYPE_POSITION
-                    p+=1
-                    
-                elif feature_chrom_order < map_chrom_order:
-                    # create feature
-                    row_type = ROW_TYPE_FEATURE
-                    m+=1
-                else:
-                    if map_pos < feature_pos:
-                        # create position
-                        row_type = ROW_TYPE_POSITION
-                        p+=1
-                        
-                    elif feature_pos < map_pos:
-                        # create feature
-                        row_type = ROW_TYPE_FEATURE
-                        m+=1
-                        
-                    else:
-                        raise m2pException("Enrichers: intervals which do not overlap should have different positions: "+str(map_interval)+\
-                                           " - "+str(feature_interval))
-                
-                row = self._create_row(map_position, feature_mapping, row_type, collapsed_view)
+            
+            # When there are only MappingResults left
+            while (p<num_pos):
+                # create position
+                map_position = mapped[p]
+                row = self._create_row(map_position, None, ROW_TYPE_POSITION, collapsed_view)
                 enriched_map.append(row)
-        
-        # When there are only MappingResults left
-        while (p<num_pos):
-            # create position
-            map_position = mapped[p]
-            row = self._create_row(map_position, None, ROW_TYPE_POSITION, collapsed_view)
-            enriched_map.append(row)
-            p+=1
-        
-        # When there are only FeatureMappings left
-        while (m<num_features):
-            # create feature
-            feature_mapping = features[m]
-            row = self._create_row(None, feature_mapping, ROW_TYPE_FEATURE, collapsed_view)
-            enriched_map.append(row)
-            m+=1
+                p+=1
+            
+            # When there are only FeatureMappings left
+            while (m<num_features):
+                # create feature
+                feature_mapping = features[m]
+                row = self._create_row(None, feature_mapping, ROW_TYPE_FEATURE, collapsed_view)
+                enriched_map.append(row)
+                m+=1
         
         return enriched_map
     

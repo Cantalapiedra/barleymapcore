@@ -84,7 +84,9 @@ class MapEnricher(object):
         
         ### Retrieve features (what type depends on the enricher used to retrieve them)
         sys.stderr.write("MapEnricher: retrieve features...\n")
-        features = self._enricher.retrieve_features(map_config, map_intervals, datasets_facade, dataset_list, map_sort_by)
+        features = []
+        if len(map_intervals)>0:
+            features = self._enricher.retrieve_features(map_config, map_intervals, datasets_facade, dataset_list, map_sort_by)
         if self._verbose: sys.stderr.write("\t features retrieved: "+str(len(features))+"\n")
         
         ## Enrich map
