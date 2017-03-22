@@ -6,6 +6,8 @@
 # (terms of use can be found within the distributed LICENSE file).
 
 import sys
+
+from barleymapcore.m2p_exception import m2pException
 from barleymapcore.utils.data_utils import load_conf
 
 # Fields in references.conf file
@@ -76,7 +78,7 @@ class DatabasesConfig(object):
                         break
                 
                 if not found:
-                    sys.stderr.write("DatabasesConfig: database name "+database_name+" not found in config.\n")
+                    sys.stderr.write("WARNING: DatabasesConfig: database name "+database_name+" not found in config.\n")
         else:
             databases_ids = self._config_dict.keys()
         
@@ -92,7 +94,7 @@ class DatabasesConfig(object):
                 found = True
             
             if not found:
-                sys.stderr.write("DatabasesConfig: database ID "+database+" not found in config.\n")
+                sys.stderr.write("WARNING: DatabasesConfig: database ID "+database+" not found in config.\n")
                 databases_names.append(database)
         
         return databases_names

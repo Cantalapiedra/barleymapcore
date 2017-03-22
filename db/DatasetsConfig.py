@@ -6,6 +6,7 @@
 # (terms of use can be found within the distributed LICENSE file).
 
 import sys
+
 from barleymapcore.m2p_exception import m2pException
 from barleymapcore.utils.data_utils import load_conf
 
@@ -174,7 +175,7 @@ class DatasetsConfig(object):
                     found = True
                 
                 if not found:
-                    sys.stderr.write("DatasetsConfig: dataset ID "+dataset+" not found in config.\n")
+                    sys.stderr.write("WARNING: DatasetsConfig: dataset ID "+dataset+" not found in config.\n")
                     datasets_names.append(dataset)
         else:
             datasets_names = [dataset_config.get_dataset_name() for dataset_config in self.get_datasets_configs()]

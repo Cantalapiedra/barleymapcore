@@ -203,7 +203,7 @@ class MapsConfig(object):
         if map_id in self._config_dict:#self._config_dict:
             map_config = self._config_dict[map_id]
         else:
-            raise m2pException("Genetic map "+map_id+" is not in config file.")
+            sys.stderr.write("WARNING: MapsConfig: map ID "+map_id+" is not in config file.\n")
         
         return map_config
     
@@ -215,7 +215,7 @@ class MapsConfig(object):
                 map_config = self.get_map_config(map_id)
                 maps_names.append(map_config.get_name())
             else:
-                sys.stderr.write("MapsConfig: map ID "+database+" not found in config.\n")
+                sys.stderr.write("WARNING: MapsConfig: map ID "+database+" not found in config.\n")
                 maps_names.append(map_id)
         
         return maps_names
@@ -238,7 +238,7 @@ class MapsConfig(object):
                     map_id = map_names_set[map_name]
                     maps_ids.append(map_id)
                 else:
-                    raise m2pException("MapsConfig: map name "+map_name+" not found in config.")
+                    sys.stderr.write("MapsConfig: map name "+map_name+" not found in config.\n")
         else:
             maps_ids = self._config_dict.keys()
         
