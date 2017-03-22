@@ -15,7 +15,7 @@ def read_paths(config_file_path, verbose = False): # TODO pass this to utils pac
     if verbose: sys.stderr.write("Reading paths from config file...\n")
     
     for config_line in open(config_file_path, 'r'):
-        if config_line.startswith("#"): continue
+        if config_line.startswith("#") or not config_line.strip(): continue # line.strip() is False if is an empty line "^$"
         config_data = config_line.strip().split(" ")
         config_path_dict[config_data[0]] = config_data[1]
     
