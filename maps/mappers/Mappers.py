@@ -123,9 +123,13 @@ class Mapper(object):
             
             for pos in positions:
                 # marker - chr - cm_pos - bp_pos - multiple - has_contigs_with_no_pos - map_name
-                chrom_order = chrom_dict[pos["chr"]] # Numeric value of chromsome (for sorting purposes)
+                chr_pos = pos["chr"]
+                # If the chromosome is not in the genome, skip this alignment result
+                if not chr_pos in chrom_dict: continue
                 
-                mapping_result = MappingResult(marker_id, pos["chr"], chrom_order,
+                chrom_order = chrom_dict[chr_pos] # Numeric value of chromsome (for sorting purposes)
+                
+                mapping_result = MappingResult(marker_id, chr_pos, chrom_order,
                                                pos["cm_pos"], pos["cm_end_pos"], pos["bp_pos"], pos["bp_end_pos"], pos["strand"],
                                        num_marker_pos > 1, num_contig_no_pos > 0, map_name)
                 positions_list.append(mapping_result)

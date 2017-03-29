@@ -17,6 +17,13 @@ from barleymapcore.alignment.AlignmentEngines import ALIGNMENT_TYPE_GREEDY, ALIG
 
 class SearchEnginesFactory(object):
     @staticmethod
+    def get_search_engine_positions(maps_path, verbose):
+        
+        search_engine = SearchEnginePositions(maps_path, verbose)
+        
+        return search_engine
+    
+    @staticmethod
     def get_search_engine_datasets(maps_path, verbose):
         
         search_engine = SearchEngineDatasets(maps_path, verbose)
@@ -67,6 +74,34 @@ class SearchEngine(object):
     def create_map(self, query_path, query_sets_ids, map_config, facade, sort_param, multiple_param, tmp_files_dir = None):
         raise m2pException("To be implemented in child classes.")
 
+# An engine to search for specific positions
+# in the maps
+class SearchEnginePositions(SearchEngine):
+    
+    def create_map(self, query_path, query_sets_ids, map_config, facade, sort_param, multiple_param, tmp_files_dir = None):
+        
+        sys.stderr.write("SearchEnginePositions: creating map: "+map_config.get_name()+"\n")
+        
+        ############ Retrieve pre-computed alignments
+        alignment_results = facade.create_alignment_results(query_path)
+        
+        aligned = alignment_results.get_aligned()
+        unaligned = alignment_results.get_unaligned()
+        
+        map_as_physical = map_config.as_physical()
+        
+        map_reader = MapReader(self._maps_path, map_config, self._verbose)
+        
+        mapper = Mappers.get_alignments_mapper(map_as_physical, map_reader, self._verbose)
+        
+        mapping_results = mapper.create_map(aligned, unaligned, map_config, sort_param, multiple_param)
+        
+        sys.stderr.write("SearchEnginePositions:"+str(len(mapping_results.get_mapped()))+"\n")
+        
+        return mapping_results
+    
+# An engine to search for markers or genes in
+# precalculated datasets
 class SearchEngineDatasets(SearchEngine):
     
     def create_map(self, query_path, query_sets_ids, map_config, facade, sort_param, multiple_param, tmp_files_dir = None):
@@ -91,6 +126,9 @@ class SearchEngineDatasets(SearchEngine):
         
         return mapping_results
 
+# Base class of alignments engine
+# To search fasta sequences in the
+# maps
 class SearchEngineAlignments(SearchEngine):
     
     _alignment_type = ""

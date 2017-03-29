@@ -9,7 +9,6 @@
 import os, sys
 
 import m2p_split_blast, m2p_gmap, m2p_hsblastn
-import AlignmentResult
 import barleymapcore.utils.alignment_utils as alignment_utils
 from barleymapcore.m2p_exception import m2pException
 from barleymapcore.db.DatabasesConfig import REF_TYPE_STD, REF_TYPE_BIG, DatabasesConfig

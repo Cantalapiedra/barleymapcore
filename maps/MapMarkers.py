@@ -48,6 +48,21 @@ class MapMarkers(object):
     def get_map_config(self):
         return self._map_config
     
+    def locate_positions(self, query_pos_path, sort_param, multiple_param):
+        
+        search_engine = SearchEnginesFactory.get_search_engine_positions(self._maps_path, self._verbose)
+        
+        mapping_results = search_engine.create_map(query_pos_path, None, self._map_config, self._facade,
+                                                   sort_param, multiple_param)
+        
+        sys.stderr.write("MapMarkers: Map "+self._map_config.get_name()+" created.\n")
+        if self._verbose: sys.stderr.write("\tNum. mapped results: "+str(len(mapping_results.get_mapped()))+".\n")
+        sys.stderr.write("\n")
+        
+        self._mapping_results = mapping_results
+        
+        return mapping_results
+    
     # previously: setup_map
     def retrieve_mappings(self, query_ids_path, datasets_ids, sort_param, multiple_param):
         

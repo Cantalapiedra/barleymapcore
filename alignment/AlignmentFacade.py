@@ -8,8 +8,10 @@
 
 import os, sys
 
-from AlignmentEngines import AlignmentEnginesFactory
 from barleymapcore.db.DatabasesConfig import REF_TYPE_STD
+
+from AlignmentEngines import AlignmentEnginesFactory
+from AlignmentResult import AlignmentResults, AlignmentResult
 
 class AlignmentFacade():
     
@@ -22,6 +24,55 @@ class AlignmentFacade():
     def __init__(self, paths_config, verbose = False):
         self._paths_config = paths_config
         self._verbose = verbose
+    
+    def _create_alignment_results(self, query_path):
+        results = []
+        
+        with open(query_path, 'r') as query_file:
+            for line in query_file:
+                if line.startswith("#") or not line.strip(): continue
+                line_data = line.strip().split("\t")
+                if len(line_data)!=2:
+                    sys.stderr.write("WARNING: position data on file has no 2 fields "+str(line)+"\n")
+                    sys.stderr.write("\tcontinue to next line in query file...\n")
+                    continue
+                
+                sys.stderr.write(line+"\n")
+                
+                subject_id = line_data[0]
+                local_position = line_data[1]
+                
+                # create fields for pseudoalignment
+                query_id = subject_id+"_"+local_position
+                align_ident = "100"
+                query_cov = "100"
+                align_score = "0"
+                strand = "+"
+                qstart_pos = "1"
+                qend_pos = "2"
+                end_position = str(long(local_position) + 1)
+                db_name = "-"
+                algorithm = "-"
+                
+                result = AlignmentResult()
+                result.create_from_attributes(query_id, subject_id,
+                                        align_ident, query_cov, align_score,
+                                        strand, qstart_pos, qend_pos, local_position, end_position,
+                                        db_name, algorithm)
+                results.append(result)
+                sys.stderr.write(str(result)+"\n\n")
+        
+        return results
+    
+    # Creates AlignmentResults directly from positions
+    def create_alignment_results(self, query_path):
+        
+        results = self._create_alignment_results(query_path)
+        unaligned = []
+        alignment_results = AlignmentResults(results, unaligned) # reset alignment results
+        
+        self._alignment_results = alignment_results
+        return alignment_results
     
     # Performs the alignment of fasta sequences different DBs
     def perform_alignment(self, query_fasta_path, dbs_list, databases_config, search_type, aligner_list, \
