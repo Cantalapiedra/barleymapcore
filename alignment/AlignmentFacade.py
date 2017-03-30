@@ -32,12 +32,16 @@ class AlignmentFacade():
             for line in query_file:
                 if line.startswith("#") or not line.strip(): continue
                 line_data = line.strip().split("\t")
+                # If not tab separated, try space separated
+                if len(line_data)!=2: line_data = line.strip().split(" ")
+                # Try commas also
+                if len(line_data)!=2: line_data = line.strip().split(",")
                 if len(line_data)!=2:
                     sys.stderr.write("WARNING: position data on file has no 2 fields "+str(line)+"\n")
                     sys.stderr.write("\tcontinue to next line in query file...\n")
                     continue
                 
-                sys.stderr.write(line+"\n")
+                #sys.stderr.write(line+"\n")
                 
                 subject_id = line_data[0]
                 local_position = line_data[1]
@@ -60,7 +64,7 @@ class AlignmentFacade():
                                         strand, qstart_pos, qend_pos, local_position, end_position,
                                         db_name, algorithm)
                 results.append(result)
-                sys.stderr.write(str(result)+"\n\n")
+                #sys.stderr.write(str(result)+"\n\n")
         
         return results
     
