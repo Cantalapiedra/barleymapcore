@@ -157,6 +157,8 @@ class DatasetsRetriever(object):
                 
                 if self._verbose: sys.stderr.write("\t\t loading synonyms\n")
                 
+                sys.stderr.write("\t\t path: "+synonyms_path+"\n")
+                
                 synonyms_path = dataset_config.get_synonyms()
                 dataset_synonyms = self.load_synonyms(synonyms_path)
                 
