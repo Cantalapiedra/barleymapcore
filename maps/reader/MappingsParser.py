@@ -46,8 +46,8 @@ class MappingsParser(object):
         map_is_physical = map_config.as_physical()
         
         for hit in open(data_path, 'r'):
-            #sys.stderr.write(" ONE**************************\n")
-            #sys.stderr.write(str(hit)+"\n")
+            sys.stderr.write(" ONE**************************\n")
+            sys.stderr.write(str(hit)+"\n")
             if hit.startswith(">") or hit.startswith("#"): continue
             hit_data = hit.strip().split("\t")
             

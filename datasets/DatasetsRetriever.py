@@ -115,7 +115,7 @@ class DatasetsRetriever(object):
             # Check if map and dataset do share databases
             dataset_config = self._datasets_config.get_dataset_config(dataset)
             if not self.common_dbs(dataset_config, map_config):
-                sys.stderr.write("\t dataset SKIPPED: "+dataset+"\n")
+                #sys.stderr.write("\t dataset SKIPPED: "+dataset+"\n")
                 continue
             
             dataset_prefixes = dataset_config.get_prefixes()
@@ -141,7 +141,7 @@ class DatasetsRetriever(object):
             
             # If there are not queries with those prefixes (given that there are prefixes), continue
             if len(temp_query_dict) <= 0:
-                sys.stderr.write("\t dataset WITHOUT APPRO PREFIX: "+dataset+"\n")
+                #sys.stderr.write("\t dataset WITHOUT APPRO PREFIX: "+dataset+"\n")
                 sys.stderr.write("-".join(dataset_prefixes)+"\n")
                 
                 continue
