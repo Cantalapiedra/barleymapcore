@@ -54,7 +54,8 @@ class MappingsParser(object):
             #sys.stderr.write("data\n")
             
             if test_set:
-                sys.stderr.write(str(test_set)+"\n")
+                if hit_query == "12_30924":
+                    sys.stderr.write(str(test_set)+"\n")
                 hit_query = hit_data[0]
                 
                 #sys.stderr.write("CHECK TESTSET\n")
@@ -64,7 +65,7 @@ class MappingsParser(object):
                     synonyms_found = test_set.intersection(hit_synonyms)
                     
                     if len(synonyms_found) > 0:
-                        if (hit_query == "12_30924"):
+                        if hit_query == "12_30924":
                             sys.stderr.write("-".join(synonyms_found)+"\n")
                         mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_is_physical,
                                                                       map_has_cm_pos, map_has_bp_pos)
