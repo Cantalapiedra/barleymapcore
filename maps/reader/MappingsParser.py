@@ -58,6 +58,7 @@ class MappingsParser(object):
                 
                 #sys.stderr.write("CHECK TESTSET\n")
                 if hit_query in dataset_synonyms:
+                    sys.stderr.write("IS IN SYNONYMS\n")
                     hit_synonyms = dataset_synonyms[hit_query]
                     synonyms_found = test_set.intersection(hit_synonyms)
                     if len(synonyms_found) > 0:
@@ -77,6 +78,7 @@ class MappingsParser(object):
                         mapping_result.set_marker_id("|".join(synonyms_found))
                         mapping_results_list.append(mapping_result)
                 else:
+                    sys.stderr.write("IS NOT IN SYNONYMS\n")
                     if hit_query in test_set:
                         #sys.stderr.write("create mapping data\n")
                         mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_is_physical, map_has_cm_pos, map_has_bp_pos)
