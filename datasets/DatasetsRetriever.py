@@ -115,6 +115,7 @@ class DatasetsRetriever(object):
             # Check if map and dataset do share databases
             dataset_config = self._datasets_config.get_dataset_config(dataset)
             if not self.common_dbs(dataset_config, map_config):
+                sys.stderr.write("\t dataset SKIPPED: "+dataset+"\n")
                 continue
             
             dataset_prefixes = dataset_config.get_prefixes()
@@ -266,7 +267,6 @@ class DatasetsRetriever(object):
             # Check if map and dataset do share databases
             dataset_config = self._datasets_config.get_dataset_config(dataset)
             if not self.common_dbs(dataset_config, map_config):
-                sys.stderr.write("\t dataset SKIPPED: "+dataset+"\n")
                 continue
             
             dataset_type = dataset_config.get_dataset_type()
@@ -277,7 +277,6 @@ class DatasetsRetriever(object):
             if dataset_type == feature_type or (dataset_type == DatasetsConfig.DATASET_TYPE_MAP and feature_type == DatasetsConfig.DATASET_TYPE_ANCHORED):
                 pass
             else:
-                sys.stderr.write("\t dataset SKIPPED: "+dataset_type+"-"+feature_type+"\n")
                 continue
             
             if self._verbose: sys.stderr.write("\t dataset: "+dataset+"\n")
