@@ -140,7 +140,9 @@ class DatasetsRetriever(object):
                                                                                 query.startswith(tuple(dataset_prefixes))])
             
             # If there are not queries with those prefixes (given that there are prefixes), continue
-            if len(temp_query_dict) <= 0: continue
+            if len(temp_query_dict) <= 0:
+                sys.stderr.write("\t dataset WITHOUT APPRO PREFIX: "+dataset+"\n")
+                continue
             
             #sys.stderr.write(str(temp_query_dict)+"\n")
             
