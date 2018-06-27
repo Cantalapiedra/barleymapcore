@@ -46,23 +46,28 @@ class MappingsParser(object):
         map_is_physical = map_config.as_physical()
         
         for hit in open(data_path, 'r'):
-            sys.stderr.write(" ONE**************************\n")
-            sys.stderr.write(str(hit)+"\n")
+            #sys.stderr.write(" ONE**************************\n")
+            #sys.stderr.write(str(hit)+"\n")
             if hit.startswith(">") or hit.startswith("#"): continue
             hit_data = hit.strip().split("\t")
             
             #sys.stderr.write("data\n")
             
             if test_set:
+                sys.stderr.write(str(test_set)+"\n")
                 hit_query = hit_data[0]
                 
                 #sys.stderr.write("CHECK TESTSET\n")
                 if hit_query in dataset_synonyms:
-                    sys.stderr.write("IS IN SYNONYMS\n")
+                    #sys.stderr.write("IS IN SYNONYMS\n")
                     hit_synonyms = dataset_synonyms[hit_query]
                     synonyms_found = test_set.intersection(hit_synonyms)
+                    
                     if len(synonyms_found) > 0:
-                        mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_is_physical, map_has_cm_pos, map_has_bp_pos)
+                        if (hit_query == "12_30924"):
+                            sys.stderr.write("-".join(synonyms_found)+"\n")
+                        mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_is_physical,
+                                                                      map_has_cm_pos, map_has_bp_pos)
                         
                         for synonym in synonyms_found: # all found
                             query_ids_dict[synonym] = 1
@@ -78,7 +83,7 @@ class MappingsParser(object):
                         mapping_result.set_marker_id("|".join(synonyms_found))
                         mapping_results_list.append(mapping_result)
                 else:
-                    sys.stderr.write("IS NOT IN SYNONYMS\n")
+                    #sys.stderr.write("IS NOT IN SYNONYMS\n")
                     if hit_query in test_set:
                         #sys.stderr.write("create mapping data\n")
                         mapping_result = MappingResult.init_from_data(hit_data, map_name, chrom_dict, map_is_physical, map_has_cm_pos, map_has_bp_pos)
