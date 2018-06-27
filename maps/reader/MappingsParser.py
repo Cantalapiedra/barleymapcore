@@ -54,10 +54,12 @@ class MappingsParser(object):
             #sys.stderr.write("data\n")
             
             if test_set:
-                if hit_query == "12_30924":
-                    sys.stderr.write(str(test_set)+"\n")
+                
                 hit_query = hit_data[0]
                 
+                if hit_query == "12_30924":
+                    sys.stderr.write(str(test_set)+"\n")
+                    
                 #sys.stderr.write("CHECK TESTSET\n")
                 if hit_query in dataset_synonyms:
                     #sys.stderr.write("IS IN SYNONYMS\n")
